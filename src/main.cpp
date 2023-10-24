@@ -10,19 +10,16 @@ const unsigned int WINDOW_HEIGHT = 720;
 
 void key_callback(GLFWwindow*, int, int, int, int);
 void error_callback(int, const char*);
+void cursor_position_callback(GLFWwindow*, double, double);
+void mouse_button_callback(GLFWwindow*, int, int, int);
 
 struct Vertex {
     float x, y;
     float r, g, b;
 };
-const int VertexSiz = 5;
-const Vertex vertices[VertexSiz] = {
-    {-0.6, -0.4, 1.0, 1.0, 1.0},
-    {0.6, -0.4, 1.0, 1.0, 1.0},
-    {0.0, 0.6, 1.0, 1.0, 1.0},
-    {1.0, 0.8, 1.0, 1.0, 1.0},
-    {1.0, -0.8, 1.0, 1.0, 1.0}
-};
+const int VertexSiz = 2500;
+const int VertexEdge = 50;
+Vertex vertices[VertexSiz];
 
 static const char* vertex_shader_text =
 "#version 110\n"
@@ -45,6 +42,18 @@ static const char* fragment_shader_text =
 "}\n";
 
 int main() {
+    // Vertex initialization
+    for (int i = 0; i < VertexSiz; i++) {
+        float x = i/VertexEdge, y = i%VertexEdge;
+        vertices[i] = Vertex {
+            x: 0.02f * x - 0.5f,
+            y: 0.02f * y - 0.5f,
+            r: 1.0f,
+            g: 1.0f,
+            b: 1.0f
+        };
+    }
+
     // Check the computer environment
     if (!glfwInit()) {
         std::cerr << "Failed to initialize glfw." << std::endl;
@@ -66,6 +75,8 @@ int main() {
     glfwMakeContextCurrent(window);
     glfwSetKeyCallback(window, key_callback);
     glfwSetErrorCallback(error_callback);
+    glfwSetCursorPosCallback(window, cursor_position_callback);
+    glfwSetMouseButtonCallback(window, mouse_button_callback);
 
     // Load the functions of OpenGL
     if (!gladLoadGLLoader(reinterpret_cast<GLADloadproc>(glfwGetProcAddress))) {
@@ -116,7 +127,7 @@ int main() {
     while (!glfwWindowShouldClose(window)) {
         float ratio;
         int width, height;
-        glm::mat4 m, v, p, mvp;
+        glm::mat4 M, V, P, mvp;
  
         glfwGetFramebufferSize(window, &width, &height);
         ratio = width / (float) height;
@@ -125,29 +136,30 @@ int main() {
         glClear(GL_COLOR_BUFFER_BIT);
 
         // Projection
-        p = glm::perspective(45.0f, ratio, 0.1f, 100.0f);
+        P = glm::perspective(45.0f, ratio, 0.1f, 100.0f);
             // fovy(deg):   Degree of zoom (30 - 90)
             // aspect(w/h): Aspect ratio
             // znear:       Near clipping plane
             // zfar:        Far clipping plane
         // View
-        v = glm::lookAt(
-            glm::vec3(0.0, 0.0, -3.0), // Camera position
+        V = glm::lookAt(
+            glm::vec3(0.0, 0.0, -3.0),  // Camera position
             glm::vec3(0.0, 0.0, 0.0),   // Viewing position
             glm::vec3(0.0, 1.0, 0.0)    // Upward direction of Camera
         );  
         // Model
-        m = glm::mat4(1.0f);
-        m = glm::rotate(m, (float)glfwGetTime(), glm::vec3(0.f, 0.f, 1.f)); // Rotate Model with z-axis
-        mvp = p * v * m;
-    
-        // Select the used program
+        M = glm::mat4(1.0f);
+        // M = glm::rotate(M, (float)glfwGetTime(), glm::vec3(0.f, 0.f, 1.f)); // Rotate Model with z-axis
+        mvp = P * V * M;
+
+        // Execute program
         glUseProgram(program);
         glUniformMatrix4fv(mvp_location, 1, GL_FALSE, glm::value_ptr(mvp));
         glDrawArrays(GL_POINTS, 0, VertexSiz);
 
         glfwSwapBuffers(window);
-        glfwPollEvents();
+        // glfwPollEvents()    // Processes only received events and then returns immediately
+        glfwWaitEvents();   // Wait for receiving new input
     }
 
     glfwTerminate();
@@ -166,4 +178,15 @@ void key_callback(GLFWwindow *window, int key, int scannode, int action, int mod
 
 void error_callback(int error, const char* description) {
     fprintf(stderr, "Error: %s\n", description);
+}
+
+void cursor_position_callback(GLFWwindow *window, double xpos, double ypos) {
+    std::cout << xpos << " " << ypos << std::endl;
+}
+
+void mouse_button_callback(GLFWwindow *window, int button, int action, int mods) {
+    // action: GLFW_PRESS or GLFW_RELEASE
+    if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
+        std::cout << "PRESSED" << std::endl;
+    }
 }
