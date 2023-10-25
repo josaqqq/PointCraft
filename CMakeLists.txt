@@ -10,7 +10,11 @@ add_subdirectory(include/glad)
 
 add_compile_options(-O2 -Wall)
 
-add_executable(PointCraft ./src/main.cpp)
+add_executable(PointCraft
+    ./src/main.cpp
+    ./src/model.cpp
+    ./src/geometry.cpp
+)
 
 target_link_libraries(PointCraft glad glfw ${CMAKE_DL_LIBS})
 
