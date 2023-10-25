@@ -6,9 +6,17 @@
 #include <iostream>
 #include <vector>
 
+#include "model.hpp"
+#include "geometry.hpp"
+
+float INF = 100000.0f;
+float EPS = 1e-5;
+
+// Window
 const unsigned int WINDOW_WIDTH = 1280;
 const unsigned int WINDOW_HEIGHT = 720;
-const float GRID_SIZE= 0.02f;
+const float GRID_SIZE= 0.04f;
+bool Sketching = false;
 
 // Modle View Projection values
 glm::mat4 M;    // Model matrix
@@ -30,17 +38,21 @@ void error_callback(int, const char*);
 void cursor_position_callback(GLFWwindow*, double, double);
 void mouse_button_callback(GLFWwindow*, int, int, int);
 
-struct Vertex {
-    float x, y;     // TODO: 2D -> 3D
-    float r, g, b;  // TODO: send color information to shader with glUniform4f https://stackoverflow.com/questions/54583368/how-to-draw-multiple-objects-in-opengl-using-multiple-vao-and-vbo
-};
-const int VertexMaxSiz = 10000;
-const int VertexSiz = 2500;
-const int VertexEdge = 50;
-int cur_vertexsiz = 2500;
-std::vector<Vertex> vertices;
-std::vector<Vertex> vertices_2;
+// Vertices
+const int VBO_MAX_SIZ = 1000000;
+const int VERTEX_SIZ = 2500;
+const int VERTEX_EDGE = 50;
 
+GLuint vertex_buffer; 
+int vertex_siz = 0;
+std::vector<Vertex> vertices(VBO_MAX_SIZ);
+std::vector<int> vertices_history;
+
+GLuint sketch_buffer;
+int sketch_siz = 0;
+std::vector<Vertex> sketch(VBO_MAX_SIZ);
+
+// Shader
 static const char* vertex_shader_text =
 "#version 110\n"
 "uniform mat4 MVP;\n"       // ModelViewProjection
@@ -63,29 +75,32 @@ static const char* fragment_shader_text =
 
 int main() {
     // Vertex initialization
-    vertices.resize(VertexMaxSiz);
-    for (int i = 0; i < VertexSiz; i++) {
-        float x = i%VertexEdge, y = i/VertexEdge;
-        vertices[i] = Vertex {
-            x: GRID_SIZE * x - GRID_SIZE * VertexEdge * 0.5f,
-            y: GRID_SIZE * y - GRID_SIZE * VertexEdge * 0.5f,
-            r: 1.0f,
-            g: 1.0f,
-            b: 1.0f
-        };
-    }
+    for (int i = 0; i < VERTEX_SIZ; i++) {
+        float grid_x = i%VERTEX_EDGE, grid_y = i/VERTEX_EDGE;
 
-    vertices_2.resize(VertexMaxSiz);
-    for (int i = 0; i < VertexSiz; i++) {
-        float x = i%VertexEdge, y = i/VertexEdge;
-        vertices_2[i] = Vertex {
-            x: GRID_SIZE * x,
-            y: GRID_SIZE * y,
+        float x = (float)GRID_SIZE * grid_x - (float)GRID_SIZE * (float)VERTEX_EDGE * 0.5f;
+        float y = (float)GRID_SIZE * grid_y - (float)GRID_SIZE * (float)VERTEX_EDGE * 0.5f;
+        
+        float f = x*x + y*y - 0.1f;
+        float g = (x - 0.5f)*(x - 0.5f) + (y - 0.5f)*(y - 0.5f) - 0.15f;
+        float h = (x + 0.5f)*(x + 0.5f) + (y - 0.5f)*(y - 0.5f) - 0.15f;
+        float j = (x - 0.5f)*(x - 0.5f) + (y + 0.5f)*(y + 0.5f) - 0.15f;
+        float k = (x + 0.5f)*(x + 0.5f) + (y + 0.5f)*(y + 0.5f) - 0.15f;
+
+        if (f < 0.0f || g < 0.0f || h < 0.0f || j < 0.0f || k < 0.0f) {
+            continue;
+        }
+
+        vertices[vertex_siz] = Vertex {
+            x: x,
+            y: y,
             r: 1.0f,
             g: 1.0f,
             b: 1.0f
         };
+        vertex_siz++;
     }
+    vertices_history.push_back(vertex_siz);
 
     // Check the computer environment
     if (!glfwInit()) {
@@ -119,20 +134,21 @@ int main() {
     }
 
     // Buffer & Shader & Program
-    GLuint vertex_buffer, vertex_buffer_2, vertex_shader, fragment_shader, program;
+    GLuint vertex_shader, fragment_shader, program;
     GLint mvp_location, vpos_location, vcol_location;
 
     // Register vertices to GL_ARRAY_BUFFER
     glGenBuffers(1, &vertex_buffer);
     glBindBuffer(GL_ARRAY_BUFFER, vertex_buffer);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(Vertex) * vertices.size(), vertices.data(), GL_DYNAMIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(Vertex) * VBO_MAX_SIZ, vertices.data(), GL_DYNAMIC_DRAW);
         // GL_STATIC_DRAW: The data store contents will be modified once and used many times as the source for GL drawing commands.
         // GL_DYNAMIC_DRAW: The data store contents will be modified repeatedly and used many times as the source for GL drawing commands. 
-    glGenBuffers(1, &vertex_buffer_2);
-    glBindBuffer(GL_ARRAY_BUFFER, vertex_buffer_2);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(Vertex) * vertices_2.size(), vertices_2.data(), GL_DYNAMIC_DRAW);
 
-    
+    // Register sketch to GL_ARRAY_BUFFER
+    glGenBuffers(1, &sketch_buffer);
+    glBindBuffer(GL_ARRAY_BUFFER, sketch_buffer);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(Vertex) * VBO_MAX_SIZ, NULL, GL_DYNAMIC_DRAW);
+
     // Register vertex_shader_text to GL_VERTEX_SHADER
     vertex_shader = glCreateShader(GL_VERTEX_SHADER);
     glShaderSource(vertex_shader, 1, &vertex_shader_text, NULL);
@@ -177,17 +193,20 @@ int main() {
         glUseProgram(program);
         glUniformMatrix4fv(mvp_location, 1, GL_FALSE, glm::value_ptr(mvp));
 
-        // Bind vertex_buffer
+        // Draw vertices
         glBindBuffer(GL_ARRAY_BUFFER, vertex_buffer);
-        glVertexAttribPointer(vpos_location, 2, GL_FLOAT, GL_FALSE, sizeof(vertices[0]), (void*) 0);
-        glVertexAttribPointer(vcol_location, 3, GL_FLOAT, GL_FALSE, sizeof(vertices[0]), (void*) (sizeof(float) * 2));
-        glDrawArrays(GL_POINTS, 0, cur_vertexsiz);
+        glVertexAttribPointer(vpos_location, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*) 0);
+        glVertexAttribPointer(vcol_location, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*) (sizeof(float) * 2));
+        glDrawArrays(GL_POINTS, 0, vertex_siz);
 
-        // Draw vertex_buffer_2
-        // glBindBuffer(GL_ARRAY_BUFFER, vertex_buffer_2);
-        // glVertexAttribPointer(vpos_location, 2, GL_FLOAT, GL_FALSE, sizeof(vertices_2[0]), (void*) 0);
-        // glVertexAttribPointer(vcol_location, 3, GL_FLOAT, GL_FALSE, sizeof(vertices_2[0]), (void*) (sizeof(float) * 2));
-        // glDrawArrays(GL_POINTS, 0, cur_vertexsiz);
+        // Draw sketch
+        if (Sketching) {
+            glBindBuffer(GL_ARRAY_BUFFER, sketch_buffer);
+            glVertexAttribPointer(vpos_location, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*) 0);
+            glVertexAttribPointer(vcol_location, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*) (sizeof(float) * 2));
+            // glDrawArrays(GL_LINE_LOOP, 0, sketch_siz);  // Draw a not closed line
+            glDrawArrays(GL_LINE_STRIP, 0, sketch_siz); // Draw a closed line
+        }
 
         glfwSwapBuffers(window);
         // glfwPollEvents()    // Processes only received events and then returns immediately
@@ -207,7 +226,8 @@ void key_callback(GLFWwindow *window, int key, int scannode, int action, int mod
             break;
         case GLFW_KEY_Z:
             if (action == GLFW_PRESS) {
-                cur_vertexsiz = VertexSiz;
+                if (vertices_history.size() != 1) vertices_history.pop_back();
+                vertex_siz = *vertices_history.rbegin();
             }
             break;
     }
@@ -217,9 +237,9 @@ void error_callback(int error, const char* description) {
     fprintf(stderr, "Error: %s\n", description);
 }
 
-bool Dragging = false;
 void cursor_position_callback(GLFWwindow *window, double xpos, double ypos) {
-    if (Dragging) {
+    if (Sketching) {
+        // Window coordinates into world coordinates
         int width, height;
         glfwGetFramebufferSize(window, &width, &height);
         glm::vec3 wolrd_pos = glm::unProject(
@@ -228,15 +248,25 @@ void cursor_position_callback(GLFWwindow *window, double xpos, double ypos) {
             P,
             glm::vec4(0.0f, 0.0f, (float)width, (float)height)
         );
-        vertices[cur_vertexsiz] = Vertex {
+
+        // Skip if distance from previous point is not sufficient
+        if (sketch.size() != 0) {
+            glm::vec2 prev_vertex = glm::vec2(sketch[sketch_siz - 1].x, sketch[sketch_siz - 1].y);
+            glm::vec2 cur_vertex = glm::vec2(wolrd_pos.x, wolrd_pos.y);
+            if (glm::distance(prev_vertex, cur_vertex) < GRID_SIZE) return;
+        }
+
+        // Add vertex to sketch
+        sketch[sketch_siz] = Vertex {
             x: wolrd_pos.x,
             y: wolrd_pos.y,
             r: 1.0f,
-            g: 1.0f,
-            b: 1.0f
+            g: 0.0f,
+            b: 0.0f
         };
-        cur_vertexsiz = std::min(VertexMaxSiz, cur_vertexsiz + 1);
-        glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(Vertex)*cur_vertexsiz, vertices.data());
+        sketch_siz = std::min(VBO_MAX_SIZ, sketch_siz + 1);
+        glBindBuffer(GL_ARRAY_BUFFER, sketch_buffer);
+        glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(Vertex)*sketch_siz, sketch.data());
     }
 }
 
@@ -246,12 +276,47 @@ void mouse_button_callback(GLFWwindow *window, int button, int action, int mods)
         // mods:    GLFW_MOD_SHIFT, GLFW_MOD_CONTROL, GLFW_MOD_ALT ...
 
     if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
-        std::cout << "Dragging" << std::endl;
-        Dragging = true;
+        std::cout << "Sketching" << std::endl;
+
+        Sketching = true;
     } else if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE) {
         std::cout << "Released" << std::endl;
-        Dragging = false;
-    } else if (button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_PRESS) {
-        cur_vertexsiz = std::max(0, cur_vertexsiz - 1);
+
+        // Calculate the bound box of sketch
+        float min_x = INF, max_x = -INF;
+        float min_y = INF, max_y = -INF;
+        for (int i = 0; i < sketch_siz; i++) {
+            min_x = std::min(min_x, sketch[i].x);
+            max_x = std::max(max_x, sketch[i].x);
+            min_y = std::min(min_y, sketch[i].y);
+            max_y = std::max(max_y, sketch[i].y);
+        }
+
+        // Add points to vertices
+        for (int i = glm::floor(min_x/GRID_SIZE); i < glm::ceil(max_x/GRID_SIZE); i++) {
+            for (int j = glm::floor(min_y/GRID_SIZE); j < glm::ceil(max_y/GRID_SIZE); j++) {
+                float x = GRID_SIZE * i;
+                float y = GRID_SIZE * j;
+
+                // Internal/External judgements
+                if (!inside_polygon(x, y, sketch, sketch_siz)) continue;
+
+                // Add vertex to vertices
+                vertices[vertex_siz] = Vertex {
+                    x: x,
+                    y: y,
+                    r: 1.0f,
+                    g: 1.0f,
+                    b: 1.0f
+                };
+                vertex_siz = std::min(VBO_MAX_SIZ, vertex_siz + 1);
+                glBindBuffer(GL_ARRAY_BUFFER, vertex_buffer);
+                glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(Vertex)*vertex_siz, vertices.data());
+            }
+        }
+        if (*vertices_history.rbegin() != vertex_siz) vertices_history.push_back(vertex_siz);
+
+        Sketching = false;
+        sketch_siz = 0;
     }
 }
