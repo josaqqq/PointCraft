@@ -208,6 +208,8 @@ int main() {
 
     // Display window
     glPointSize(3.0f);
+    glEnable(GL_LINE_SMOOTH);
+    glLineWidth(5.0f);
     while (!glfwWindowShouldClose(window)) {
         float aspect;
         int width, height;
