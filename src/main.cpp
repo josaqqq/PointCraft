@@ -5,6 +5,7 @@
 
 #include <iostream>
 #include <vector>
+#include <set>
 
 #include "model.hpp"
 #include "geometry.hpp"
@@ -46,6 +47,7 @@ const int VERTEX_EDGE = 50;
 GLuint vertex_buffer; 
 int vertex_siz = 0;
 std::vector<Vertex> vertices(VBO_MAX_SIZ);
+std::set<std::pair<int, int>> vertices_set;
 std::vector<int> vertices_history;
 
 GLuint sketch_buffer;
@@ -54,7 +56,7 @@ std::vector<Vertex> sketch(VBO_MAX_SIZ);
 
 // Shader
 static const char* vertex_shader_text =
-"#version 110\n"
+"#version 140\n"
 "uniform mat4 MVP;\n"       // ModelViewProjection
 "attribute vec2 vPos;\n"    // Vertex position
 "attribute vec3 vCol;\n"    // Color information
@@ -66,7 +68,7 @@ static const char* vertex_shader_text =
 "}\n";
  
 static const char* fragment_shader_text =
-"#version 110\n"
+"#version 140\n"
 "varying vec3 color;\n"
 "void main()\n"
 "{\n"
@@ -76,10 +78,10 @@ static const char* fragment_shader_text =
 int main() {
     // Vertex initialization
     for (int i = 0; i < VERTEX_SIZ; i++) {
-        float grid_x = i%VERTEX_EDGE, grid_y = i/VERTEX_EDGE;
+        int grid_x = i%VERTEX_EDGE, grid_y = i/VERTEX_EDGE;
 
-        float x = (float)GRID_SIZE * grid_x - (float)GRID_SIZE * (float)VERTEX_EDGE * 0.5f;
-        float y = (float)GRID_SIZE * grid_y - (float)GRID_SIZE * (float)VERTEX_EDGE * 0.5f;
+        float x = (float)GRID_SIZE * (float)grid_x - (float)GRID_SIZE * (float)VERTEX_EDGE * 0.5f;
+        float y = (float)GRID_SIZE * (float)grid_y - (float)GRID_SIZE * (float)VERTEX_EDGE * 0.5f;
         
         float f = x*x + y*y - 0.1f;
         float g = (x - 0.5f)*(x - 0.5f) + (y - 0.5f)*(y - 0.5f) - 0.15f;
@@ -98,6 +100,7 @@ int main() {
             g: 1.0f,
             b: 1.0f
         };
+        vertices_set.insert({glm::round(x/GRID_SIZE), glm::round(y/GRID_SIZE)});
         vertex_siz++;
     }
     vertices_history.push_back(vertex_siz);
@@ -111,27 +114,37 @@ int main() {
     // Set the context
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
+    // TODO: Enable this part
+    // glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+    // glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+
 
     GLFWwindow* window = glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "PointCraft", NULL, NULL);
-        // window and monitor are not specified
+        // Window and monitor are not specified
     if (!window) {
         std::cerr << "Failed to create window." << std::endl;
         glfwTerminate();
         return -1;
     }
-    
+
     glfwMakeContextCurrent(window);
     glfwSetKeyCallback(window, key_callback);
     glfwSetErrorCallback(error_callback);
     glfwSetCursorPosCallback(window, cursor_position_callback);
     glfwSetMouseButtonCallback(window, mouse_button_callback);
 
-    // Load the functions of OpenGL
+    // Load the extensions of OpenGL
     if (!gladLoadGLLoader(reinterpret_cast<GLADloadproc>(glfwGetProcAddress))) {
         std::cerr << "Failed to initialize GLAD" << std::endl;
         glfwTerminate();
         return -1;
     }
+
+    const GLubyte* renderer = glGetString(GL_RENDERER);
+    const GLubyte* version = glGetString(GL_VERSION);
+
+    std::cout << "Renderer:\t\t\t" << renderer << std::endl;
+    std::cout << "OpenGL version supported:\t" << version << std::endl;
 
     // Buffer & Shader & Program
     GLuint vertex_shader, fragment_shader, program;
@@ -153,18 +166,39 @@ int main() {
     vertex_shader = glCreateShader(GL_VERTEX_SHADER);
     glShaderSource(vertex_shader, 1, &vertex_shader_text, NULL);
     glCompileShader(vertex_shader);
+    GLint vertex_shader_compiled;
+    glGetShaderiv(vertex_shader, GL_COMPILE_STATUS, &vertex_shader_compiled);
+    if (vertex_shader_compiled == GL_FALSE) {
+        std::cerr << "Failed to compile vertex shader" << std::endl;
+        glfwTerminate();
+        return -1;
+    }
     
     // Register fragment_shader_text to GL_FRAGMENT_SHADER
     fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
     glShaderSource(fragment_shader, 1, &fragment_shader_text, NULL);
     glCompileShader(fragment_shader);
+    GLint fragment_shader_compiled;
+    glGetShaderiv(fragment_shader, GL_COMPILE_STATUS, &fragment_shader_compiled);
+    if (fragment_shader_compiled == GL_FALSE) {
+        std::cerr << "Failed to compile fragment shader" << std::endl;
+        glfwTerminate();
+        return -1;
+    }
  
     // Register program
     program = glCreateProgram();
     glAttachShader(program, vertex_shader);
     glAttachShader(program, fragment_shader);
     glLinkProgram(program);
-    
+    GLint is_linked;
+    glGetProgramiv(program, GL_LINK_STATUS, &is_linked);
+    if (is_linked == GL_FALSE) {
+        std::cerr << "Failed to link shaders" << std::endl;
+        glfwTerminate();
+        return -1;
+    }
+
     // Set the variables in shader_text
     mvp_location = glGetUniformLocation(program, "MVP");    // ModelViewProjection
     vpos_location = glGetAttribLocation(program, "vPos");   // (x, y)
@@ -173,6 +207,7 @@ int main() {
     glEnableVertexAttribArray(vcol_location);
 
     // Display window
+    glPointSize(3.0f);
     while (!glfwWindowShouldClose(window)) {
         float aspect;
         int width, height;
@@ -226,7 +261,14 @@ void key_callback(GLFWwindow *window, int key, int scannode, int action, int mod
             break;
         case GLFW_KEY_Z:
             if (action == GLFW_PRESS) {
-                if (vertices_history.size() != 1) vertices_history.pop_back();
+                if (vertices_history.size() != 1) {
+                    int prev_count = *vertices_history.rbegin();
+                    vertices_history.pop_back();
+                    int cur_count = *vertices_history.rbegin();
+                    for (int i = cur_count; i < prev_count; i++) {
+                        vertices_set.erase({glm::round(vertices[i].x/GRID_SIZE), glm::round(vertices[i].y/GRID_SIZE)});
+                    }
+                }
                 vertex_siz = *vertices_history.rbegin();
             }
             break;
@@ -295,6 +337,9 @@ void mouse_button_callback(GLFWwindow *window, int button, int action, int mods)
         // Add points to vertices
         for (int i = glm::floor(min_x/GRID_SIZE); i < glm::ceil(max_x/GRID_SIZE); i++) {
             for (int j = glm::floor(min_y/GRID_SIZE); j < glm::ceil(max_y/GRID_SIZE); j++) {
+                // Skip if (i, j) is already contained
+                if (vertices_set.count({i, j})) continue;
+
                 float x = GRID_SIZE * i;
                 float y = GRID_SIZE * j;
 
@@ -309,7 +354,9 @@ void mouse_button_callback(GLFWwindow *window, int button, int action, int mods)
                     g: 1.0f,
                     b: 1.0f
                 };
+                vertices_set.insert({i, j});
                 vertex_siz = std::min(VBO_MAX_SIZ, vertex_siz + 1);
+
                 glBindBuffer(GL_ARRAY_BUFFER, vertex_buffer);
                 glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(Vertex)*vertex_siz, vertices.data());
             }
