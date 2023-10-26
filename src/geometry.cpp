@@ -6,10 +6,10 @@
 #include "geometry.hpp"
 
 extern float INF;
-extern float EPS;
+extern double EPS;
 
 /*
-    多角形の内外判定：
+    多角形の内外判定(Crossing Number Algorithm)：
         ある点からx軸に平行な半直線を引き、この半直線と多角形の交点が
         奇数個なら内部、偶数個なら外部と判定する。
 */
@@ -18,6 +18,19 @@ bool inside_polygon(double x, double y, std::vector<Vertex> &vertices, int siz) 
     for (int i = 0; i < siz; i++) {
         glm::dvec2 u = glm::dvec2(vertices[i].x, vertices[i].y);
         glm::dvec2 v = glm::dvec2(vertices[(i + 1)%siz].x, vertices[(i + 1)%siz].y);
+
+        // u, vが点に近すぎる場合はオフセット
+        if (std::abs(u.y - y) < EPS) {
+            if (u.y - y >= 0.0d) u.y += EPS;
+            else u.y -= EPS;
+        }
+        if (std::abs(v.y - y) < EPS) {
+            if (v.y - y >= 0.0d) v.y += EPS;
+            else v.y -= EPS;
+        }
+
+        // u-vが平行の場合はスキップ
+        if (std::abs(u.y - y) < EPS && std::abs(v.y - y) < EPS) continue; 
 
         // 半直線に対して同じサイドなら交わらない
         if ((u.y - y)*(v.y - y) >= 0.0d) continue;

@@ -11,7 +11,7 @@
 #include "geometry.hpp"
 
 float INF = 100000.0f;
-float EPS = 1e-5;
+double EPS = 1e-5;
 
 // Window
 const unsigned int WINDOW_WIDTH = 1280;
@@ -211,9 +211,9 @@ int main() {
     glEnable(GL_LINE_SMOOTH);
     glLineWidth(5.0f);
     glClearColor(
-        53.0f/255.0f,
-        53.0f/255.0f,
-        115.0f/255.0f,
+        33.0f/255.0f,
+        33.0f/255.0f,
+        95.0f/255.0f,
         1.0);
     while (!glfwWindowShouldClose(window)) {
         float aspect;
@@ -357,9 +357,9 @@ void mouse_button_callback(GLFWwindow *window, int button, int action, int mods)
                 vertices[vertex_siz] = Vertex {
                     x: x,
                     y: y,
-                    r: 255.0f/255.0f,
+                    r: 100.0f/255.0f,
                     g: 255.0f/255.0f,
-                    b: 255.0f/255.0f
+                    b: 100.0f/255.0f
                 };
                 vertices_set.insert({i, j});
                 vertex_siz = std::min(VBO_MAX_SIZ, vertex_siz + 1);
