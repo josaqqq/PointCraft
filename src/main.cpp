@@ -96,9 +96,9 @@ int main() {
         vertices[vertex_siz] = Vertex {
             x: x,
             y: y,
-            r: 1.0f,
-            g: 1.0f,
-            b: 1.0f
+            r: 255.0f/255.0f,
+            g: 255.0f/255.0f,
+            b: 255.0f/255.0f
         };
         vertices_set.insert({glm::round(x/GRID_SIZE), glm::round(y/GRID_SIZE)});
         vertex_siz++;
@@ -210,6 +210,11 @@ int main() {
     glPointSize(3.0f);
     glEnable(GL_LINE_SMOOTH);
     glLineWidth(5.0f);
+    glClearColor(
+        53.0f/255.0f,
+        53.0f/255.0f,
+        115.0f/255.0f,
+        1.0);
     while (!glfwWindowShouldClose(window)) {
         float aspect;
         int width, height;
@@ -304,9 +309,9 @@ void cursor_position_callback(GLFWwindow *window, double xpos, double ypos) {
         sketch[sketch_siz] = Vertex {
             x: wolrd_pos.x,
             y: wolrd_pos.y,
-            r: 1.0f,
-            g: 0.0f,
-            b: 0.0f
+            r: 232.0f/255.0f,
+            g: 39.0f/255.0f,
+            b: 39.0f/255.0f
         };
         sketch_siz = std::min(VBO_MAX_SIZ, sketch_siz + 1);
         glBindBuffer(GL_ARRAY_BUFFER, sketch_buffer);
@@ -352,9 +357,9 @@ void mouse_button_callback(GLFWwindow *window, int button, int action, int mods)
                 vertices[vertex_siz] = Vertex {
                     x: x,
                     y: y,
-                    r: 1.0f,
-                    g: 1.0f,
-                    b: 1.0f
+                    r: 255.0f/255.0f,
+                    g: 255.0f/255.0f,
+                    b: 255.0f/255.0f
                 };
                 vertices_set.insert({i, j});
                 vertex_siz = std::min(VBO_MAX_SIZ, vertex_siz + 1);
