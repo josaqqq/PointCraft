@@ -1,3 +1,6 @@
-[submodule "include/glm"]
-	path = include/glm
-	url = git@github.com:g-truc/glm.git
+[submodule "deps/polyscope"]
+	path = deps/polyscope
+	url = git@github.com:nmwsharp/polyscope.git
+[submodule "deps/libigl"]
+	path = deps/libigl
+	url = git@github.com:libigl/libigl.git
