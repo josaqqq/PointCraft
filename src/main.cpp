@@ -33,70 +33,10 @@ Eigen::MatrixXi meshF;    // list of face indices into vertex positions
 Eigen::MatrixXi meshFTC;  // list of face indices into vertex texture coordinates
 Eigen::MatrixXi meshFN;   // list of face indices into vertex normals
 
-// Options for algorithms
-int iVertexSource = 7;
-
 // for Patch Mode
 bool DraggingMode = false;
 int PatchNum = 0;
 std::vector<std::vector<double>> Patch;
-
-void addCurvatureScalar() {
-  using namespace Eigen;
-  using namespace std;
-
-  VectorXd K;
-  igl::gaussian_curvature(meshV, meshF, K);
-  SparseMatrix<double> M, Minv;
-  igl::massmatrix(meshV, meshF, igl::MASSMATRIX_TYPE_DEFAULT, M);
-  igl::invert_diag(M, Minv);
-  K = (Minv * K).eval();
-
-  polyscope::getSurfaceMesh("input mesh")
-      ->addVertexScalarQuantity("gaussian curvature", K,
-                                polyscope::DataType::SYMMETRIC);
-}
-
-void computeDistanceFrom() {
-  Eigen::VectorXi VS, FS, VT, FT;
-  // The selected vertex is the source
-  VS.resize(1);
-  VS << iVertexSource;
-  // All vertices are the targets
-  VT.setLinSpaced(meshV.rows(), 0, meshV.rows() - 1);
-  Eigen::VectorXd d;
-  igl::exact_geodesic(meshV, meshF, VS, FS, VT, FT, d);
-
-  polyscope::getSurfaceMesh("input mesh")
-      ->addVertexDistanceQuantity(
-          "distance from vertex " + std::to_string(iVertexSource), d);
-}
-
-void computeParameterization() {
-  using namespace Eigen;
-  using namespace std;
-
-  // Fix two points on the boundary
-  VectorXi bnd, b(2, 1);
-  igl::boundary_loop(meshF, bnd);
-
-  if (bnd.size() == 0) {
-    polyscope::warning("mesh has no boundary, cannot parameterize");
-    return;
-  }
-
-  b(0) = bnd(0);
-  b(1) = bnd((int)round(bnd.size() / 2));
-  MatrixXd bc(2, 2);
-  bc << 0, 0, 1, 0;
-
-  // LSCM parametrization
-  Eigen::MatrixXd V_uv;
-  igl::lscm(meshV, meshF, b, bc, V_uv);
-
-  polyscope::getSurfaceMesh("input mesh")
-      ->addVertexParameterizationQuantity("LSCM parameterization", V_uv);
-}
 
 void computeNormals() {
   Eigen::MatrixXd N_vertices;
@@ -117,93 +57,52 @@ void addPatchToPointCloud() {
 
 void callback() {
   ImGuiIO &io = ImGui::GetIO();
+  
+  ImGui::PushItemWidth(100);
 
-  static int numPoints = meshV.rows();
-  static float param = 3.14;
-
-  // Tutorial window
-  {
-    ImGui::PushItemWidth(100);
-
-    ImGui::InputInt("num points", &numPoints);
-    ImGui::InputFloat("param value", &param);
-
-    // Curvature
-    if (ImGui::Button("add curvature")) {
-      addCurvatureScalar();
-    }
-    
-    // Normals 
-    if (ImGui::Button("add normals")) {
-      computeNormals();
-    }
-
-    // Param
-    if (ImGui::Button("add parameterization")) {
-      computeParameterization();
-    }
-
-    // Geodesics
-    if (ImGui::Button("compute distance")) {
-      computeDistanceFrom();
-    }
-    ImGui::SameLine();
-    ImGui::InputInt("source vertex", &iVertexSource);
-
-    if (ImGui::Button("hello world!")) {
-      std::cout << "hello world!" << std::endl;
-    }
-
-    bool isHovered = ImGui::IsItemHovered();
-    bool isFocused = ImGui::IsItemFocused();
-    ImVec2 mousePositionAbsolute = ImGui::GetMousePos();
-    ImVec2 screenPositionAbsolute = ImGui::GetItemRectMin();
-    ImVec2 mousePositionRelative = ImVec2(mousePositionAbsolute.x - screenPositionAbsolute.x, mousePositionAbsolute.y - screenPositionAbsolute.y);
-    ImGui::Text("Is mouse over screen? %s", isHovered ? "Yes" : "No");
-    ImGui::Text("Is screen focused? %s", isFocused ? "Yes" : "No");
-    ImGui::Text("Position: %f, %f", mousePositionRelative.x, mousePositionRelative.y);
-    ImGui::Text("Mouse clicked: %s", ImGui::IsMouseDown(ImGuiMouseButton_Left) ? "Yes" : "No");
-
-    if (ImGui::Checkbox("patch mode", &DraggingMode)) {
-      if (DraggingMode) {
-        // 0 -> 1: positive edge
-        polyscope::view::moveScale = 0.0;
-      } else {
-        // 1 -> 0: negative edge
-        polyscope::view::moveScale = 2.0;
-      }
-    }
-
-    // Press or Release
-    if (DraggingMode) {
-      if (ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
-        ImVec2 mousePos = ImGui::GetMousePos();
-        int xPos = io.DisplayFramebufferScale.x * mousePos.x;
-        int yPos = io.DisplayFramebufferScale.y * mousePos.y;
-        std::pair<polyscope::Structure*, size_t> pickResult = polyscope::pick::evaluatePickQuery(xPos, yPos);
-
-        if (pickResult.first != nullptr) {
-          polyscope::PointCloud* pointCloud = polyscope::getPointCloud(pickResult.first->name);
-          if (pointCloud != nullptr) {
-            glm::vec3 pointPos = pointCloud->getPointPosition(pickResult.second);
-            std::cout << pointPos.x << " " << pointPos.y << " " << pointPos.z << std::endl;
-            Patch.push_back({
-              pointPos.x, pointPos.y, pointPos.z
-            });
-          }
-        }
-      } 
-      if (ImGui::IsMouseReleased(ImGuiMouseButton_Left) && Patch.size() > 1) {
-        // TODO: Guard for dragging on windows. checkbox is sufficient?
-        addPatchToPointCloud();
-      }
-    }
-
-    // Point Selection
-
-    ImGui::PopItemWidth();
+  // Normals 
+  if (ImGui::Button("add normals")) {
+    computeNormals();
   }
 
+  if (ImGui::Checkbox("patch mode", &DraggingMode)) {
+    if (DraggingMode) {
+      // 0 -> 1: positive edge
+      polyscope::view::moveScale = 0.0;
+    } else {
+      // 1 -> 0: negative edge
+      polyscope::view::moveScale = 2.0;
+    }
+  }
+
+  // Press or Release
+  if (DraggingMode) {
+    if (ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
+      ImVec2 mousePos = ImGui::GetMousePos();
+      int xPos = io.DisplayFramebufferScale.x * mousePos.x;
+      int yPos = io.DisplayFramebufferScale.y * mousePos.y;
+      std::pair<polyscope::Structure*, size_t> pickResult = polyscope::pick::evaluatePickQuery(xPos, yPos);
+
+      if (pickResult.first != nullptr) {
+        polyscope::PointCloud* pointCloud = polyscope::getPointCloud(pickResult.first->name);
+        if (pointCloud != nullptr) {
+          glm::vec3 pointPos = pointCloud->getPointPosition(pickResult.second);
+          std::cout << pointPos.x << " " << pointPos.y << " " << pointPos.z << std::endl;
+          Patch.push_back({
+            pointPos.x, pointPos.y, pointPos.z
+          });
+        }
+      }
+    } 
+    if (ImGui::IsMouseReleased(ImGuiMouseButton_Left) && Patch.size() > 1) {
+      // TODO: Guard for dragging on windows. checkbox is sufficient?
+      addPatchToPointCloud();
+    }
+  }
+
+  // Point Selection
+
+  ImGui::PopItemWidth();
 }
 
 int main(int argc, char **argv) {
