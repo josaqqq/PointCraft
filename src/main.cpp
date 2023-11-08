@@ -10,29 +10,36 @@
 #include <igl/lscm.h>
 #include <igl/massmatrix.h>
 #include <igl/per_vertex_normals.h>
-// #include <igl/readOBJ.h>
+#include <igl/readOBJ.h>
 #include <igl/readPLY.h>
 
 #include "polyscope/messages.h"
 #include "polyscope/point_cloud.h"
 #include "polyscope/surface_mesh.h"
+#include "polyscope/pick.h"
+#include "polyscope/view.h"
 
 #include <iostream>
-#include <unordered_set>
-#include <utility>
+#include <random>
+#include <string>
 
 #include "args/args.hxx"
 #include "json/json.hpp"
 
-// The mesh, Eigen representation
-Eigen::MatrixXd meshV;
-Eigen::MatrixXi meshF;
-Eigen::MatrixXi meshE;
-Eigen::MatrixXd meshN;
-Eigen::MatrixXd meshUV;
+Eigen::MatrixXd meshV;    // double matrix of vertex positions
+Eigen::MatrixXd meshTC;   // double matrix of texture coordinates
+Eigen::MatrixXd meshN;    // double matrix of corner normals
+Eigen::MatrixXi meshF;    // list of face indices into vertex positions
+Eigen::MatrixXi meshFTC;  // list of face indices into vertex texture coordinates
+Eigen::MatrixXi meshFN;   // list of face indices into vertex normals
 
 // Options for algorithms
 int iVertexSource = 7;
+
+// for Patch Mode
+bool DraggingMode = false;
+int PatchNum = 0;
+std::vector<std::vector<double>> Patch;
 
 void addCurvatureScalar() {
   using namespace Eigen;
@@ -99,36 +106,104 @@ void computeNormals() {
       ->addVertexVectorQuantity("libIGL vertex normals", N_vertices);
 }
 
-void callback() {
+void addPatchToPointCloud() {
+  polyscope::PointCloud* patch = polyscope::registerPointCloud("patch " + std::to_string(PatchNum), Patch);
+  patch->setPointRadius(0.002);
+  patch->setPointColor({ 0.890, 0.110, 0.778 });
 
-  static int numPoints = 2000;
+  PatchNum++;
+  Patch.clear();
+}
+
+void callback() {
+  ImGuiIO &io = ImGui::GetIO();
+
+  static int numPoints = meshV.rows();
   static float param = 3.14;
 
-  ImGui::PushItemWidth(100);
+  // Tutorial window
+  {
+    ImGui::PushItemWidth(100);
 
-  // Curvature
-  if (ImGui::Button("add curvature")) {
-    addCurvatureScalar();
-  }
-  
-  // Normals 
-  if (ImGui::Button("add normals")) {
-    computeNormals();
+    ImGui::InputInt("num points", &numPoints);
+    ImGui::InputFloat("param value", &param);
+
+    // Curvature
+    if (ImGui::Button("add curvature")) {
+      addCurvatureScalar();
+    }
+    
+    // Normals 
+    if (ImGui::Button("add normals")) {
+      computeNormals();
+    }
+
+    // Param
+    if (ImGui::Button("add parameterization")) {
+      computeParameterization();
+    }
+
+    // Geodesics
+    if (ImGui::Button("compute distance")) {
+      computeDistanceFrom();
+    }
+    ImGui::SameLine();
+    ImGui::InputInt("source vertex", &iVertexSource);
+
+    if (ImGui::Button("hello world!")) {
+      std::cout << "hello world!" << std::endl;
+    }
+
+    bool isHovered = ImGui::IsItemHovered();
+    bool isFocused = ImGui::IsItemFocused();
+    ImVec2 mousePositionAbsolute = ImGui::GetMousePos();
+    ImVec2 screenPositionAbsolute = ImGui::GetItemRectMin();
+    ImVec2 mousePositionRelative = ImVec2(mousePositionAbsolute.x - screenPositionAbsolute.x, mousePositionAbsolute.y - screenPositionAbsolute.y);
+    ImGui::Text("Is mouse over screen? %s", isHovered ? "Yes" : "No");
+    ImGui::Text("Is screen focused? %s", isFocused ? "Yes" : "No");
+    ImGui::Text("Position: %f, %f", mousePositionRelative.x, mousePositionRelative.y);
+    ImGui::Text("Mouse clicked: %s", ImGui::IsMouseDown(ImGuiMouseButton_Left) ? "Yes" : "No");
+
+    if (ImGui::Checkbox("patch mode", &DraggingMode)) {
+      if (DraggingMode) {
+        // 0 -> 1: positive edge
+        polyscope::view::moveScale = 0.0;
+      } else {
+        // 1 -> 0: negative edge
+        polyscope::view::moveScale = 2.0;
+      }
+    }
+
+    // Press or Release
+    if (DraggingMode) {
+      if (ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
+        ImVec2 mousePos = ImGui::GetMousePos();
+        int xPos = io.DisplayFramebufferScale.x * mousePos.x;
+        int yPos = io.DisplayFramebufferScale.y * mousePos.y;
+        std::pair<polyscope::Structure*, size_t> pickResult = polyscope::pick::evaluatePickQuery(xPos, yPos);
+
+        if (pickResult.first != nullptr) {
+          polyscope::PointCloud* pointCloud = polyscope::getPointCloud(pickResult.first->name);
+          if (pointCloud != nullptr) {
+            glm::vec3 pointPos = pointCloud->getPointPosition(pickResult.second);
+            std::cout << pointPos.x << " " << pointPos.y << " " << pointPos.z << std::endl;
+            Patch.push_back({
+              pointPos.x, pointPos.y, pointPos.z
+            });
+          }
+        }
+      } 
+      if (ImGui::IsMouseReleased(ImGuiMouseButton_Left) && Patch.size() > 1) {
+        // TODO: Guard for dragging on windows. checkbox is sufficient?
+        addPatchToPointCloud();
+      }
+    }
+
+    // Point Selection
+
+    ImGui::PopItemWidth();
   }
 
-  // Param
-  if (ImGui::Button("add parameterization")) {
-    computeParameterization();
-  }
-
-  // Geodesics
-  if (ImGui::Button("compute distance")) {
-    computeDistanceFrom();
-  }
-  ImGui::SameLine();
-  ImGui::InputInt("source vertex", &iVertexSource);
-
-  ImGui::PopItemWidth();
 }
 
 int main(int argc, char **argv) {
@@ -153,38 +228,34 @@ int main(int argc, char **argv) {
   }
 
   // Options
-  polyscope::options::autocenterStructures = true;
   polyscope::view::windowWidth = 1024;
   polyscope::view::windowHeight = 1024;
 
   // Initialize polyscope
   polyscope::init();
+  polyscope::options::groundPlaneMode = polyscope::GroundPlaneMode::None;
+  polyscope::view::bgColor = { 0.025, 0.025, 0.025, 0.000 };
 
   std::string filename = args::get(inFile);
   std::cout << "loading: " << filename << std::endl;
 
   // Read the mesh
-  igl::readPLY(filename, meshV, meshF, meshE, meshN, meshUV);
-
-  // Register the mesh with Polyscope
-  // polyscope::registerSurfaceMesh("input mesh", meshV, meshF);
+  igl::readOBJ(filename, meshV, meshTC, meshN, meshF, meshFTC, meshFN);
+  std::cout << "Vertex num:\t" << meshV.rows() << std::endl;
+  std::cout << "Texture coordinate num:\t" << meshTC.rows() << std::endl;
+  std::cout << "Normal num:\t" << meshN.rows() << std::endl;
+  std::cout << "Face num:\t" << meshF.rows() << std::endl;
 
   // Visualize point cloud
   polyscope::PointCloud* pointCloud = polyscope::registerPointCloud("point cloud", meshV);
-  pointCloud->setPointRadius(0.001, false);
+  pointCloud->setPointRadius(0.001);
+  pointCloud->setPointColor({ 0.142, 0.448, 1.000 });
 
-  // std::cout << "normal information" << std::endl;
-  // for (int i = 0; i < meshN.rows(); i++) {
-  //   for (int j = 0; j < meshN.cols(); i++) {
-  //     std::cout << meshN(i, j) << " ";
-  //   }
-  //   std::cout << std::endl;
-  // }
-  // pointCloud->addVectorQuantity("normal vector", meshN);
-
-  // Visualize normals of points
-  // polyscope::getSurfaceMesh("point cloud")
-  //   ->addVertexVectorQuantity("vertex normals", meshN);
+  polyscope::PointCloudVectorQuantity *vectorQuantity = pointCloud->addVectorQuantity("normal vector", meshN);
+  vectorQuantity->setVectorLengthScale(0.015);
+  vectorQuantity->setVectorRadius(0.001);
+  vectorQuantity->setVectorColor({ 0.110, 0.388, 0.890 });
+  vectorQuantity->setMaterial("normal");
 
   // Add the callback
   polyscope::state::userCallback = callback;
