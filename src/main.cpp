@@ -1,17 +1,7 @@
 #include "polyscope/polyscope.h"
 
-#include <igl/PI.h>
-#include <igl/avg_edge_length.h>
-#include <igl/barycenter.h>
-#include <igl/boundary_loop.h>
-#include <igl/exact_geodesic.h>
-#include <igl/gaussian_curvature.h>
-#include <igl/invert_diag.h>
-#include <igl/lscm.h>
-#include <igl/massmatrix.h>
 #include <igl/per_vertex_normals.h>
 #include <igl/readOBJ.h>
-#include <igl/readPLY.h>
 
 #include "polyscope/messages.h"
 #include "polyscope/point_cloud.h"
@@ -25,6 +15,8 @@
 
 #include "args/args.hxx"
 #include "json/json.hpp"
+
+#include "surface.hpp"
 
 Eigen::MatrixXd meshV;    // double matrix of vertex positions
 Eigen::MatrixXd meshTC;   // double matrix of texture coordinates
@@ -57,15 +49,20 @@ void addPatchToPointCloud() {
 
 void callback() {
   ImGuiIO &io = ImGui::GetIO();
-  
+
   ImGui::PushItemWidth(100);
 
+  // Surface
+  if (ImGui::Button("Surface Reconstruction")) {
+    surfaceReconstruct(meshV, meshN);
+  }
+
   // Normals 
-  if (ImGui::Button("add normals")) {
+  if (ImGui::Button("Add Normals")) {
     computeNormals();
   }
 
-  if (ImGui::Checkbox("patch mode", &DraggingMode)) {
+  if (ImGui::Checkbox("Patch Mode", &DraggingMode)) {
     if (DraggingMode) {
       // 0 -> 1: positive edge
       polyscope::view::moveScale = 0.0;
@@ -146,15 +143,15 @@ int main(int argc, char **argv) {
   std::cout << "Face num:\t" << meshF.rows() << std::endl;
 
   // Visualize point cloud
-  polyscope::PointCloud* pointCloud = polyscope::registerPointCloud("point cloud", meshV);
-  pointCloud->setPointRadius(0.001);
+  polyscope::PointCloud* pointCloud = polyscope::registerPointCloud("Point Cloud", meshV);
+  pointCloud->setPointRadius(0.002);
   pointCloud->setPointColor({ 0.142, 0.448, 1.000 });
 
   polyscope::PointCloudVectorQuantity *vectorQuantity = pointCloud->addVectorQuantity("normal vector", meshN);
   vectorQuantity->setVectorLengthScale(0.015);
   vectorQuantity->setVectorRadius(0.001);
   vectorQuantity->setVectorColor({ 0.110, 0.388, 0.890 });
-  vectorQuantity->setMaterial("normal");
+  // vectorQuantity->setMaterial("normal");
 
   // Add the callback
   polyscope::state::userCallback = callback;

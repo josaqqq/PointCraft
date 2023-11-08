@@ -75,6 +75,7 @@ add_subdirectory("deps/polyscope")
 add_executable(
     PointCraft
     src/main.cpp
+    src/surface.cpp
 )
 
 # Include settings
