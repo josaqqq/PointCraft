@@ -1,322 +1,267 @@
-#include <glad/glad.h>
-#include <GLFW/glfw3.h>
-#include <glm/glm.hpp>
-#include <glm/ext.hpp>
+#include "polyscope/polyscope.h"
+
+#include <igl/PI.h>
+#include <igl/avg_edge_length.h>
+#include <igl/barycenter.h>
+#include <igl/boundary_loop.h>
+#include <igl/exact_geodesic.h>
+#include <igl/gaussian_curvature.h>
+#include <igl/invert_diag.h>
+#include <igl/lscm.h>
+#include <igl/massmatrix.h>
+#include <igl/per_vertex_normals.h>
+#include <igl/readOBJ.h>
+#include <igl/readPLY.h>
+
+#include "polyscope/messages.h"
+#include "polyscope/point_cloud.h"
+#include "polyscope/surface_mesh.h"
+#include "polyscope/pick.h"
+#include "polyscope/view.h"
 
 #include <iostream>
-#include <vector>
+#include <random>
+#include <string>
 
-#include "model.hpp"
-#include "geometry.hpp"
+#include "args/args.hxx"
+#include "json/json.hpp"
 
-float INF = 100000.0f;
-float EPS = 1e-5;
+Eigen::MatrixXd meshV;    // double matrix of vertex positions
+Eigen::MatrixXd meshTC;   // double matrix of texture coordinates
+Eigen::MatrixXd meshN;    // double matrix of corner normals
+Eigen::MatrixXi meshF;    // list of face indices into vertex positions
+Eigen::MatrixXi meshFTC;  // list of face indices into vertex texture coordinates
+Eigen::MatrixXi meshFN;   // list of face indices into vertex normals
 
-// Window
-const unsigned int WINDOW_WIDTH = 1280;
-const unsigned int WINDOW_HEIGHT = 720;
-const float GRID_SIZE= 0.04f;
-bool Sketching = false;
+// Options for algorithms
+int iVertexSource = 7;
 
-// Modle View Projection values
-glm::mat4 M;    // Model matrix
-float Fovy = 45.0f;                                  // Degree of zoom (deg)
-float Znear = 3.0f;                                  // Near clipping plane
-float Zfar = 100.0f;                                 // Far clipping plane
+// for Patch Mode
+bool DraggingMode = false;
+int PatchNum = 0;
+std::vector<std::vector<double>> Patch;
 
-glm::mat4 V;    // View matrix
-glm::vec3 Camera = glm::vec3(0.0f, 0.0f, 3.0f);    // Camera position
-glm::vec3 View = glm::vec3(0.0f, 0.0f, 0.0f);       // Viewing position
-glm::vec3 Upward = glm::vec3(0.0f, 1.0f, 0.0f);     // Upward direction of Camera
+void addCurvatureScalar() {
+  using namespace Eigen;
+  using namespace std;
 
-glm::mat4 P;    // Projetion matrix
-glm::mat4 mvp;  // Model View Projection matrix
+  VectorXd K;
+  igl::gaussian_curvature(meshV, meshF, K);
+  SparseMatrix<double> M, Minv;
+  igl::massmatrix(meshV, meshF, igl::MASSMATRIX_TYPE_DEFAULT, M);
+  igl::invert_diag(M, Minv);
+  K = (Minv * K).eval();
 
-// Callback
-void key_callback(GLFWwindow*, int, int, int, int);
-void error_callback(int, const char*);
-void cursor_position_callback(GLFWwindow*, double, double);
-void mouse_button_callback(GLFWwindow*, int, int, int);
+  polyscope::getSurfaceMesh("input mesh")
+      ->addVertexScalarQuantity("gaussian curvature", K,
+                                polyscope::DataType::SYMMETRIC);
+}
 
-// Vertices
-const int VBO_MAX_SIZ = 1000000;
-const int VERTEX_SIZ = 2500;
-const int VERTEX_EDGE = 50;
+void computeDistanceFrom() {
+  Eigen::VectorXi VS, FS, VT, FT;
+  // The selected vertex is the source
+  VS.resize(1);
+  VS << iVertexSource;
+  // All vertices are the targets
+  VT.setLinSpaced(meshV.rows(), 0, meshV.rows() - 1);
+  Eigen::VectorXd d;
+  igl::exact_geodesic(meshV, meshF, VS, FS, VT, FT, d);
 
-GLuint vertex_buffer; 
-int vertex_siz = 0;
-std::vector<Vertex> vertices(VBO_MAX_SIZ);
-std::vector<int> vertices_history;
+  polyscope::getSurfaceMesh("input mesh")
+      ->addVertexDistanceQuantity(
+          "distance from vertex " + std::to_string(iVertexSource), d);
+}
 
-GLuint sketch_buffer;
-int sketch_siz = 0;
-std::vector<Vertex> sketch(VBO_MAX_SIZ);
+void computeParameterization() {
+  using namespace Eigen;
+  using namespace std;
 
-// Shader
-static const char* vertex_shader_text =
-"#version 110\n"
-"uniform mat4 MVP;\n"       // ModelViewProjection
-"attribute vec2 vPos;\n"    // Vertex position
-"attribute vec3 vCol;\n"    // Color information
-"varying vec3 color;\n"     // Passed to fragment_shader
-"void main()\n"             // Executed for each vertex
-"{\n"
-"    gl_Position = MVP * vec4(vPos, 0.0, 1.0);\n"
-"    color = vCol;\n"
-"}\n";
- 
-static const char* fragment_shader_text =
-"#version 110\n"
-"varying vec3 color;\n"
-"void main()\n"
-"{\n"
-"    gl_FragColor = vec4(color, 1.0);\n"
-"}\n";
+  // Fix two points on the boundary
+  VectorXi bnd, b(2, 1);
+  igl::boundary_loop(meshF, bnd);
 
-int main() {
-    // Vertex initialization
-    for (int i = 0; i < VERTEX_SIZ; i++) {
-        float grid_x = i%VERTEX_EDGE, grid_y = i/VERTEX_EDGE;
+  if (bnd.size() == 0) {
+    polyscope::warning("mesh has no boundary, cannot parameterize");
+    return;
+  }
 
-        float x = (float)GRID_SIZE * grid_x - (float)GRID_SIZE * (float)VERTEX_EDGE * 0.5f;
-        float y = (float)GRID_SIZE * grid_y - (float)GRID_SIZE * (float)VERTEX_EDGE * 0.5f;
-        
-        float f = x*x + y*y - 0.1f;
-        float g = (x - 0.5f)*(x - 0.5f) + (y - 0.5f)*(y - 0.5f) - 0.15f;
-        float h = (x + 0.5f)*(x + 0.5f) + (y - 0.5f)*(y - 0.5f) - 0.15f;
-        float j = (x - 0.5f)*(x - 0.5f) + (y + 0.5f)*(y + 0.5f) - 0.15f;
-        float k = (x + 0.5f)*(x + 0.5f) + (y + 0.5f)*(y + 0.5f) - 0.15f;
+  b(0) = bnd(0);
+  b(1) = bnd((int)round(bnd.size() / 2));
+  MatrixXd bc(2, 2);
+  bc << 0, 0, 1, 0;
 
-        if (f < 0.0f || g < 0.0f || h < 0.0f || j < 0.0f || k < 0.0f) {
-            continue;
+  // LSCM parametrization
+  Eigen::MatrixXd V_uv;
+  igl::lscm(meshV, meshF, b, bc, V_uv);
+
+  polyscope::getSurfaceMesh("input mesh")
+      ->addVertexParameterizationQuantity("LSCM parameterization", V_uv);
+}
+
+void computeNormals() {
+  Eigen::MatrixXd N_vertices;
+  igl::per_vertex_normals(meshV, meshF, N_vertices);
+
+  polyscope::getSurfaceMesh("input mesh")
+      ->addVertexVectorQuantity("libIGL vertex normals", N_vertices);
+}
+
+void addPatchToPointCloud() {
+  polyscope::PointCloud* patch = polyscope::registerPointCloud("patch " + std::to_string(PatchNum), Patch);
+  patch->setPointRadius(0.002);
+  patch->setPointColor({ 0.890, 0.110, 0.778 });
+
+  PatchNum++;
+  Patch.clear();
+}
+
+void callback() {
+  ImGuiIO &io = ImGui::GetIO();
+
+  static int numPoints = meshV.rows();
+  static float param = 3.14;
+
+  // Tutorial window
+  {
+    ImGui::PushItemWidth(100);
+
+    ImGui::InputInt("num points", &numPoints);
+    ImGui::InputFloat("param value", &param);
+
+    // Curvature
+    if (ImGui::Button("add curvature")) {
+      addCurvatureScalar();
+    }
+    
+    // Normals 
+    if (ImGui::Button("add normals")) {
+      computeNormals();
+    }
+
+    // Param
+    if (ImGui::Button("add parameterization")) {
+      computeParameterization();
+    }
+
+    // Geodesics
+    if (ImGui::Button("compute distance")) {
+      computeDistanceFrom();
+    }
+    ImGui::SameLine();
+    ImGui::InputInt("source vertex", &iVertexSource);
+
+    if (ImGui::Button("hello world!")) {
+      std::cout << "hello world!" << std::endl;
+    }
+
+    bool isHovered = ImGui::IsItemHovered();
+    bool isFocused = ImGui::IsItemFocused();
+    ImVec2 mousePositionAbsolute = ImGui::GetMousePos();
+    ImVec2 screenPositionAbsolute = ImGui::GetItemRectMin();
+    ImVec2 mousePositionRelative = ImVec2(mousePositionAbsolute.x - screenPositionAbsolute.x, mousePositionAbsolute.y - screenPositionAbsolute.y);
+    ImGui::Text("Is mouse over screen? %s", isHovered ? "Yes" : "No");
+    ImGui::Text("Is screen focused? %s", isFocused ? "Yes" : "No");
+    ImGui::Text("Position: %f, %f", mousePositionRelative.x, mousePositionRelative.y);
+    ImGui::Text("Mouse clicked: %s", ImGui::IsMouseDown(ImGuiMouseButton_Left) ? "Yes" : "No");
+
+    if (ImGui::Checkbox("patch mode", &DraggingMode)) {
+      if (DraggingMode) {
+        // 0 -> 1: positive edge
+        polyscope::view::moveScale = 0.0;
+      } else {
+        // 1 -> 0: negative edge
+        polyscope::view::moveScale = 2.0;
+      }
+    }
+
+    // Press or Release
+    if (DraggingMode) {
+      if (ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
+        ImVec2 mousePos = ImGui::GetMousePos();
+        int xPos = io.DisplayFramebufferScale.x * mousePos.x;
+        int yPos = io.DisplayFramebufferScale.y * mousePos.y;
+        std::pair<polyscope::Structure*, size_t> pickResult = polyscope::pick::evaluatePickQuery(xPos, yPos);
+
+        if (pickResult.first != nullptr) {
+          polyscope::PointCloud* pointCloud = polyscope::getPointCloud(pickResult.first->name);
+          if (pointCloud != nullptr) {
+            glm::vec3 pointPos = pointCloud->getPointPosition(pickResult.second);
+            std::cout << pointPos.x << " " << pointPos.y << " " << pointPos.z << std::endl;
+            Patch.push_back({
+              pointPos.x, pointPos.y, pointPos.z
+            });
+          }
         }
-
-        vertices[vertex_siz] = Vertex {
-            x: x,
-            y: y,
-            r: 1.0f,
-            g: 1.0f,
-            b: 1.0f
-        };
-        vertex_siz++;
-    }
-    vertices_history.push_back(vertex_siz);
-
-    // Check the computer environment
-    if (!glfwInit()) {
-        std::cerr << "Failed to initialize glfw." << std::endl;
-        return -1;
+      } 
+      if (ImGui::IsMouseReleased(ImGuiMouseButton_Left) && Patch.size() > 1) {
+        // TODO: Guard for dragging on windows. checkbox is sufficient?
+        addPatchToPointCloud();
+      }
     }
 
-    // Set the context
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
+    // Point Selection
 
-    GLFWwindow* window = glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "PointCraft", NULL, NULL);
-        // window and monitor are not specified
-    if (!window) {
-        std::cerr << "Failed to create window." << std::endl;
-        glfwTerminate();
-        return -1;
-    }
-    
-    glfwMakeContextCurrent(window);
-    glfwSetKeyCallback(window, key_callback);
-    glfwSetErrorCallback(error_callback);
-    glfwSetCursorPosCallback(window, cursor_position_callback);
-    glfwSetMouseButtonCallback(window, mouse_button_callback);
+    ImGui::PopItemWidth();
+  }
 
-    // Load the functions of OpenGL
-    if (!gladLoadGLLoader(reinterpret_cast<GLADloadproc>(glfwGetProcAddress))) {
-        std::cerr << "Failed to initialize GLAD" << std::endl;
-        glfwTerminate();
-        return -1;
-    }
+}
 
-    // Buffer & Shader & Program
-    GLuint vertex_shader, fragment_shader, program;
-    GLint mvp_location, vpos_location, vcol_location;
+int main(int argc, char **argv) {
+  // Configure the argument parser
+  // -h or --help
+  args::ArgumentParser parser("Point cloud editor tool"
+                              "");
+  // args information
+  args::Positional<std::string> inFile(parser, "mesh", "input mesh");
 
-    // Register vertices to GL_ARRAY_BUFFER
-    glGenBuffers(1, &vertex_buffer);
-    glBindBuffer(GL_ARRAY_BUFFER, vertex_buffer);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(Vertex) * VBO_MAX_SIZ, vertices.data(), GL_DYNAMIC_DRAW);
-        // GL_STATIC_DRAW: The data store contents will be modified once and used many times as the source for GL drawing commands.
-        // GL_DYNAMIC_DRAW: The data store contents will be modified repeatedly and used many times as the source for GL drawing commands. 
-
-    // Register sketch to GL_ARRAY_BUFFER
-    glGenBuffers(1, &sketch_buffer);
-    glBindBuffer(GL_ARRAY_BUFFER, sketch_buffer);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(Vertex) * VBO_MAX_SIZ, NULL, GL_DYNAMIC_DRAW);
-
-    // Register vertex_shader_text to GL_VERTEX_SHADER
-    vertex_shader = glCreateShader(GL_VERTEX_SHADER);
-    glShaderSource(vertex_shader, 1, &vertex_shader_text, NULL);
-    glCompileShader(vertex_shader);
-    
-    // Register fragment_shader_text to GL_FRAGMENT_SHADER
-    fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(fragment_shader, 1, &fragment_shader_text, NULL);
-    glCompileShader(fragment_shader);
- 
-    // Register program
-    program = glCreateProgram();
-    glAttachShader(program, vertex_shader);
-    glAttachShader(program, fragment_shader);
-    glLinkProgram(program);
-    
-    // Set the variables in shader_text
-    mvp_location = glGetUniformLocation(program, "MVP");    // ModelViewProjection
-    vpos_location = glGetAttribLocation(program, "vPos");   // (x, y)
-    vcol_location = glGetAttribLocation(program, "vCol");   // (r, g, b)
-    glEnableVertexAttribArray(vpos_location);
-    glEnableVertexAttribArray(vcol_location);
-
-    // Display window
-    while (!glfwWindowShouldClose(window)) {
-        float aspect;
-        int width, height;
- 
-        glfwGetFramebufferSize(window, &width, &height);
-        aspect = width / (float) height;
- 
-        glViewport(0, 0, width, height);
-        glClear(GL_COLOR_BUFFER_BIT);
-
-        P = glm::perspective(Fovy, aspect, Znear, Zfar);    // Projection
-        V = glm::lookAt(Camera, View, Upward);              // View
-        M = glm::mat4(1.0f);                                // Model
-        // M = glm::rotate(M, (float)glfwGetTime(), glm::vec3(0.f, 0.f, 1.f)); // Rotate Model with z-axis
-        mvp = P * V * M;
-
-        // Execute program
-        glUseProgram(program);
-        glUniformMatrix4fv(mvp_location, 1, GL_FALSE, glm::value_ptr(mvp));
-
-        // Draw vertices
-        glBindBuffer(GL_ARRAY_BUFFER, vertex_buffer);
-        glVertexAttribPointer(vpos_location, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*) 0);
-        glVertexAttribPointer(vcol_location, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*) (sizeof(float) * 2));
-        glDrawArrays(GL_POINTS, 0, vertex_siz);
-
-        // Draw sketch
-        if (Sketching) {
-            glBindBuffer(GL_ARRAY_BUFFER, sketch_buffer);
-            glVertexAttribPointer(vpos_location, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*) 0);
-            glVertexAttribPointer(vcol_location, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*) (sizeof(float) * 2));
-            // glDrawArrays(GL_LINE_LOOP, 0, sketch_siz);  // Draw a not closed line
-            glDrawArrays(GL_LINE_STRIP, 0, sketch_siz); // Draw a closed line
-        }
-
-        glfwSwapBuffers(window);
-        // glfwPollEvents()    // Processes only received events and then returns immediately
-        glfwWaitEvents();   // Wait for receiving new input
-    }
-
-    glfwTerminate();
+  // Parse args
+  try {
+    parser.ParseCLI(argc, argv);
+  } catch (args::Help) {
+    std::cout << parser;
     return 0;
-}
+  } catch (args::ParseError e) {
+    std::cerr << e.what() << std::endl;
 
-void key_callback(GLFWwindow *window, int key, int scannode, int action, int mods) {
-    switch (key) {
-        case GLFW_KEY_ESCAPE:
-            if (action == GLFW_PRESS) {
-                glfwSetWindowShouldClose(window, GLFW_TRUE);
-            }
-            break;
-        case GLFW_KEY_Z:
-            if (action == GLFW_PRESS) {
-                if (vertices_history.size() != 1) vertices_history.pop_back();
-                vertex_siz = *vertices_history.rbegin();
-            }
-            break;
-    }
-}
+    std::cerr << parser;
+    return 1;
+  }
 
-void error_callback(int error, const char* description) {
-    fprintf(stderr, "Error: %s\n", description);
-}
+  // Options
+  polyscope::view::windowWidth = 1024;
+  polyscope::view::windowHeight = 1024;
 
-void cursor_position_callback(GLFWwindow *window, double xpos, double ypos) {
-    if (Sketching) {
-        // Window coordinates into world coordinates
-        int width, height;
-        glfwGetFramebufferSize(window, &width, &height);
-        glm::vec3 wolrd_pos = glm::unProject(
-            glm::vec3((float)xpos, (float)height - (float)ypos, 0.0f),  // 0.0(Znear) - 1.0(Zfar)
-            M,
-            P,
-            glm::vec4(0.0f, 0.0f, (float)width, (float)height)
-        );
+  // Initialize polyscope
+  polyscope::init();
+  polyscope::options::groundPlaneMode = polyscope::GroundPlaneMode::None;
+  polyscope::view::bgColor = { 0.025, 0.025, 0.025, 0.000 };
 
-        // Skip if distance from previous point is not sufficient
-        if (sketch.size() != 0) {
-            glm::vec2 prev_vertex = glm::vec2(sketch[sketch_siz - 1].x, sketch[sketch_siz - 1].y);
-            glm::vec2 cur_vertex = glm::vec2(wolrd_pos.x, wolrd_pos.y);
-            if (glm::distance(prev_vertex, cur_vertex) < GRID_SIZE) return;
-        }
+  std::string filename = args::get(inFile);
+  std::cout << "loading: " << filename << std::endl;
 
-        // Add vertex to sketch
-        sketch[sketch_siz] = Vertex {
-            x: wolrd_pos.x,
-            y: wolrd_pos.y,
-            r: 1.0f,
-            g: 0.0f,
-            b: 0.0f
-        };
-        sketch_siz = std::min(VBO_MAX_SIZ, sketch_siz + 1);
-        glBindBuffer(GL_ARRAY_BUFFER, sketch_buffer);
-        glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(Vertex)*sketch_siz, sketch.data());
-    }
-}
+  // Read the mesh
+  igl::readOBJ(filename, meshV, meshTC, meshN, meshF, meshFTC, meshFN);
+  std::cout << "Vertex num:\t" << meshV.rows() << std::endl;
+  std::cout << "Texture coordinate num:\t" << meshTC.rows() << std::endl;
+  std::cout << "Normal num:\t" << meshN.rows() << std::endl;
+  std::cout << "Face num:\t" << meshF.rows() << std::endl;
 
-void mouse_button_callback(GLFWwindow *window, int button, int action, int mods) {
-        // button:  GLFW_MOUSE_BUTTON_1-8
-        // action:  GLFW_PRESS, GLFW_RELEASE
-        // mods:    GLFW_MOD_SHIFT, GLFW_MOD_CONTROL, GLFW_MOD_ALT ...
+  // Visualize point cloud
+  polyscope::PointCloud* pointCloud = polyscope::registerPointCloud("point cloud", meshV);
+  pointCloud->setPointRadius(0.001);
+  pointCloud->setPointColor({ 0.142, 0.448, 1.000 });
 
-    if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
-        std::cout << "Sketching" << std::endl;
+  polyscope::PointCloudVectorQuantity *vectorQuantity = pointCloud->addVectorQuantity("normal vector", meshN);
+  vectorQuantity->setVectorLengthScale(0.015);
+  vectorQuantity->setVectorRadius(0.001);
+  vectorQuantity->setVectorColor({ 0.110, 0.388, 0.890 });
+  vectorQuantity->setMaterial("normal");
 
-        Sketching = true;
-    } else if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE) {
-        std::cout << "Released" << std::endl;
+  // Add the callback
+  polyscope::state::userCallback = callback;
 
-        // Calculate the bound box of sketch
-        float min_x = INF, max_x = -INF;
-        float min_y = INF, max_y = -INF;
-        for (int i = 0; i < sketch_siz; i++) {
-            min_x = std::min(min_x, sketch[i].x);
-            max_x = std::max(max_x, sketch[i].x);
-            min_y = std::min(min_y, sketch[i].y);
-            max_y = std::max(max_y, sketch[i].y);
-        }
+  // Show the gui
+  polyscope::show();
 
-        // Add points to vertices
-        for (int i = glm::floor(min_x/GRID_SIZE); i < glm::ceil(max_x/GRID_SIZE); i++) {
-            for (int j = glm::floor(min_y/GRID_SIZE); j < glm::ceil(max_y/GRID_SIZE); j++) {
-                float x = GRID_SIZE * i;
-                float y = GRID_SIZE * j;
-
-                // Internal/External judgements
-                if (!inside_polygon(x, y, sketch, sketch_siz)) continue;
-
-                // Add vertex to vertices
-                vertices[vertex_siz] = Vertex {
-                    x: x,
-                    y: y,
-                    r: 1.0f,
-                    g: 1.0f,
-                    b: 1.0f
-                };
-                vertex_siz = std::min(VBO_MAX_SIZ, vertex_siz + 1);
-                glBindBuffer(GL_ARRAY_BUFFER, vertex_buffer);
-                glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(Vertex)*vertex_siz, vertices.data());
-            }
-        }
-        if (*vertices_history.rbegin() != vertex_siz) vertices_history.push_back(vertex_siz);
-
-        Sketching = false;
-        sketch_siz = 0;
-    }
+  return 0;
 }
