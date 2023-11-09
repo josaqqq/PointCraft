@@ -21,7 +21,7 @@ void surfaceReconstruct(Eigen::MatrixXd &vertices, Eigen::MatrixXd &normals) {
 
   // Initialize poisson surface reconstruction
   pcl::Poisson<pcl::PointNormal> poisson;
-  poisson.setDepth(9);
+  poisson.setDepth(7);
   poisson.setInputCloud(cloud);
 
   // Reconstruct surfacd

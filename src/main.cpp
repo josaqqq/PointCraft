@@ -17,7 +17,15 @@
 #include "json/json.hpp"
 
 #include "surface.hpp"
+#include "patch.hpp"
 
+// Scene information
+const std::array<float, 4> BackgroundColor = { 0.025, 0.025, 0.025, 0.000 };
+const int WindowWidth = 1024;
+const int WindowHeight = 1024;
+
+// Point cloud info
+glm::vec3 centerPoint;
 Eigen::MatrixXd meshV;    // double matrix of vertex positions
 Eigen::MatrixXd meshTC;   // double matrix of texture coordinates
 Eigen::MatrixXd meshN;    // double matrix of corner normals
@@ -25,10 +33,18 @@ Eigen::MatrixXi meshF;    // list of face indices into vertex positions
 Eigen::MatrixXi meshFTC;  // list of face indices into vertex texture coordinates
 Eigen::MatrixXi meshFN;   // list of face indices into vertex normals
 
-// for Patch Mode
+const std::string PointName = "Point Cloud";
+const glm::vec3 PointColor = { 1.000, 1.000, 1.000 };
+const double PointRadius = 0.002;
+
+const std::string NormalName = "normal vector";
+const glm::vec3 NormalColor =  {1.000, 0.000, 0.000 };
+const double NormalLength = 0.015;
+const double NormalRadius = 0.001;
+const bool NormalEnabled = true;
+
+// Mode flags
 bool DraggingMode = false;
-int PatchNum = 0;
-std::vector<std::vector<double>> Patch;
 
 void computeNormals() {
   Eigen::MatrixXd N_vertices;
@@ -36,15 +52,6 @@ void computeNormals() {
 
   polyscope::getSurfaceMesh("input mesh")
       ->addVertexVectorQuantity("libIGL vertex normals", N_vertices);
-}
-
-void addPatchToPointCloud() {
-  polyscope::PointCloud* patch = polyscope::registerPointCloud("patch " + std::to_string(PatchNum), Patch);
-  patch->setPointRadius(0.002);
-  patch->setPointColor({ 0.890, 0.110, 0.778 });
-
-  PatchNum++;
-  Patch.clear();
 }
 
 void callback() {
@@ -74,32 +81,28 @@ void callback() {
 
   // Press or Release
   if (DraggingMode) {
-    if (ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
-      ImVec2 mousePos = ImGui::GetMousePos();
-      int xPos = io.DisplayFramebufferScale.x * mousePos.x;
-      int yPos = io.DisplayFramebufferScale.y * mousePos.y;
-      std::pair<polyscope::Structure*, size_t> pickResult = polyscope::pick::evaluatePickQuery(xPos, yPos);
-
-      if (pickResult.first != nullptr) {
-        polyscope::PointCloud* pointCloud = polyscope::getPointCloud(pickResult.first->name);
-        if (pointCloud != nullptr) {
-          glm::vec3 pointPos = pointCloud->getPointPosition(pickResult.second);
-          std::cout << pointPos.x << " " << pointPos.y << " " << pointPos.z << std::endl;
-          Patch.push_back({
-            pointPos.x, pointPos.y, pointPos.z
-          });
-        }
-      }
-    } 
-    if (ImGui::IsMouseReleased(ImGuiMouseButton_Left) && Patch.size() > 1) {
-      // TODO: Guard for dragging on windows. checkbox is sufficient?
-      addPatchToPointCloud();
-    }
+    // tracePoints(io);
+    castPointToSphere(io, centerPoint, 1.0);
   }
 
-  // Point Selection
-
   ImGui::PopItemWidth();
+}
+
+void setCenterPoint(Eigen::MatrixXd meshV) {
+  double x = 0.0;
+  double y = 0.0;
+  double z = 0.0;
+
+  for (size_t i = 0; i < meshV.rows(); i++) {
+    x += meshV(i, 0);
+    y += meshV(i, 1);
+    z += meshV(i, 2);
+  }
+  x /= static_cast<double>(meshV.rows());
+  y /= static_cast<double>(meshV.rows());
+  z /= static_cast<double>(meshV.rows());
+
+  centerPoint = glm::vec3(x, y, z);
 }
 
 int main(int argc, char **argv) {
@@ -124,13 +127,13 @@ int main(int argc, char **argv) {
   }
 
   // Options
-  polyscope::view::windowWidth = 1024;
-  polyscope::view::windowHeight = 1024;
+  polyscope::view::windowWidth = WindowWidth;
+  polyscope::view::windowHeight = WindowHeight;
 
   // Initialize polyscope
   polyscope::init();
   polyscope::options::groundPlaneMode = polyscope::GroundPlaneMode::None;
-  polyscope::view::bgColor = { 0.025, 0.025, 0.025, 0.000 };
+  polyscope::view::bgColor = BackgroundColor;
 
   std::string filename = args::get(inFile);
   std::cout << "loading: " << filename << std::endl;
@@ -142,15 +145,18 @@ int main(int argc, char **argv) {
   std::cout << "Normal num:\t" << meshN.rows() << std::endl;
   std::cout << "Face num:\t" << meshF.rows() << std::endl;
 
-  // Visualize point cloud
-  polyscope::PointCloud* pointCloud = polyscope::registerPointCloud("Point Cloud", meshV);
-  pointCloud->setPointRadius(0.002);
-  pointCloud->setPointColor({ 0.142, 0.448, 1.000 });
+  setCenterPoint(meshV);
 
-  polyscope::PointCloudVectorQuantity *vectorQuantity = pointCloud->addVectorQuantity("normal vector", meshN);
-  vectorQuantity->setVectorLengthScale(0.015);
-  vectorQuantity->setVectorRadius(0.001);
-  vectorQuantity->setVectorColor({ 0.110, 0.388, 0.890 });
+  // Visualize point cloud
+  polyscope::PointCloud* pointCloud = polyscope::registerPointCloud(PointName, meshV);
+  pointCloud->setPointColor(PointColor);
+  pointCloud->setPointRadius(PointRadius);
+
+  polyscope::PointCloudVectorQuantity *vectorQuantity = pointCloud->addVectorQuantity(NormalName, meshN);
+  vectorQuantity->setVectorColor(NormalColor);
+  vectorQuantity->setVectorLengthScale(NormalLength);
+  vectorQuantity->setVectorRadius(NormalRadius);
+  vectorQuantity->setEnabled(NormalEnabled);
   // vectorQuantity->setMaterial("normal");
 
   // Add the callback

@@ -76,6 +76,8 @@ add_executable(
     PointCraft
     src/main.cpp
     src/surface.cpp
+    src/patch.cpp
+    src/ray.cpp
 )
 
 # Include settings
