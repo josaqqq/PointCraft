@@ -78,6 +78,7 @@ add_executable(
     src/surface.cpp
     src/patch.cpp
     src/ray.cpp
+    src/modes.cpp
 )
 
 # Include settings

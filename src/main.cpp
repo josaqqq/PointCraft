@@ -17,7 +17,7 @@
 #include "json/json.hpp"
 
 #include "surface.hpp"
-#include "patch.hpp"
+#include "modes.hpp"
 
 // Scene information
 const std::array<float, 4> BackgroundColor = { 0.025, 0.025, 0.025, 0.000 };
@@ -25,7 +25,6 @@ const int WindowWidth = 1024;
 const int WindowHeight = 1024;
 
 // Point cloud info
-glm::vec3 centerPoint;
 Eigen::MatrixXd meshV;    // double matrix of vertex positions
 Eigen::MatrixXd meshTC;   // double matrix of texture coordinates
 Eigen::MatrixXd meshN;    // double matrix of corner normals
@@ -43,8 +42,8 @@ const double NormalLength = 0.015;
 const double NormalRadius = 0.001;
 const bool NormalEnabled = true;
 
-// Mode flags
-bool DraggingMode = false;
+// Mode Selection
+ModeSelector modeSelector;
 
 void computeNormals() {
   Eigen::MatrixXd N_vertices;
@@ -69,26 +68,13 @@ void callback() {
     computeNormals();
   }
 
-  if (ImGui::Checkbox("Patch Mode", &DraggingMode)) {
-    if (DraggingMode) {
-      // 0 -> 1: positive edge
-      polyscope::view::moveScale = 0.0;
-    } else {
-      // 1 -> 0: negative edge
-      polyscope::view::moveScale = 2.0;
-    }
-  }
-
-  // Press or Release
-  if (DraggingMode) {
-    // tracePoints(io);
-    castPointToSphere(io, centerPoint, 1.0);
-  }
+  // Enable mode selection
+  modeSelector.enableModeSelection(io);
 
   ImGui::PopItemWidth();
 }
 
-void setCenterPoint(Eigen::MatrixXd meshV) {
+void movePointsToOrigin(Eigen::MatrixXd &meshV) {
   double x = 0.0;
   double y = 0.0;
   double z = 0.0;
@@ -102,7 +88,11 @@ void setCenterPoint(Eigen::MatrixXd meshV) {
   y /= static_cast<double>(meshV.rows());
   z /= static_cast<double>(meshV.rows());
 
-  centerPoint = glm::vec3(x, y, z);
+  for (size_t i = 0; i < meshV.rows(); i++) {
+    meshV(i, 0) -= x;
+    meshV(i, 1) -= y;
+    meshV(i, 2) -= z;
+  }
 }
 
 int main(int argc, char **argv) {
@@ -145,7 +135,7 @@ int main(int argc, char **argv) {
   std::cout << "Normal num:\t" << meshN.rows() << std::endl;
   std::cout << "Face num:\t" << meshF.rows() << std::endl;
 
-  setCenterPoint(meshV);
+  movePointsToOrigin(meshV);
 
   // Visualize point cloud
   polyscope::PointCloud* pointCloud = polyscope::registerPointCloud(PointName, meshV);

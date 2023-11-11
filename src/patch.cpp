@@ -7,6 +7,7 @@
 #include <string>
 
 #include "ray.hpp"
+#include "modes.hpp"
 
 // Patch info
 int PatchNum = 0;
@@ -26,12 +27,12 @@ const bool PatchNormalEnabled = true;
 // Be aware that the point cloud with 
 // the same name is overwritten.
 void registerPatch(std::string patchName) {
-  for (size_t i = 0; i < Patch.size(); i++) {
-    for (size_t j = 0; j < Patch[i].size(); j++) {
-      std::cout << Patch[i][j] << " ";
-    }
-    std::cout << std::endl;
-  }
+  // for (size_t i = 0; i < Patch.size(); i++) {
+  //   for (size_t j = 0; j < Patch[i].size(); j++) {
+  //     std::cout << Patch[i][j] << " ";
+  //   }
+  //   std::cout << std::endl;
+  // }
 
   polyscope::PointCloud* patch = polyscope::registerPointCloud(patchName + std::to_string(PatchNum), Patch);
   patch->setPointColor(PatchColor);
@@ -44,9 +45,17 @@ void registerPatch(std::string patchName) {
   vectorQuantity->setEnabled(PatchNormalEnabled);
 }
 
+void resetMode(Mode &currentMode) {
+  // TODO: Guard for dragging on windows. checkbox is sufficient?
+  PatchNum++;
+  Patch.clear();
+  PatchNormal.clear();
+  currentMode = MODE_NONE;
+}
+
 // Pick a point by the mouse position, 
 // then add the point to Patch.
-void tracePoints(ImGuiIO &io) {
+void tracePoints(ImGuiIO &io, Mode &currentMode) {
   if (ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
     ImVec2 mousePos = ImGui::GetMousePos();
     int xPos = io.DisplayFramebufferScale.x * mousePos.x;
@@ -65,33 +74,31 @@ void tracePoints(ImGuiIO &io) {
 
     // Get point position and push it to Patch
     glm::vec3 pointPos = pointCloud->getPointPosition(pickResult.second);
-    std::cout 
-      << pointPos.x << " "
-      << pointPos.y << " " 
-      << pointPos.z << std::endl;
     // TODO: Guard for duplicated points.
     Patch.push_back({
       pointPos.x, 
       pointPos.y, 
       pointPos.z
     });
-    // TODO: PatchNormal updates
+    PatchNormal.push_back({
+      0.0,
+      0.0,
+      0.0,
+    });
 
     // Register Patch as point cloud.
     registerPatch("trace: ");
   }
 
   if (ImGui::IsMouseReleased(ImGuiMouseButton_Left) && Patch.size() > 0) {
-    // TODO: Guard for dragging on windows. checkbox is sufficient?
-    PatchNum++;
-    Patch.clear();
+    resetMode(currentMode);
   }
 }
 
 // Cast a ray from the mouse position,
 // then add the intersection point with sphere
 // to Patch.
-void castPointToSphere(ImGuiIO &io, glm::vec3 center, double radius) {
+void castPointToSphere(ImGuiIO &io, Mode &currentMode, glm::vec3 center, double radius) {
   if (ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
     ImVec2 mousePos = ImGui::GetMousePos();
     int xPos = io.DisplayFramebufferScale.x * mousePos.x;
@@ -102,10 +109,6 @@ void castPointToSphere(ImGuiIO &io, glm::vec3 center, double radius) {
     Hit hitInfo = ray.checkSphere(center, radius);
     if (!hitInfo.hit) return;
 
-    std::cout
-      << hitInfo.pos.x << " " 
-      << hitInfo.pos.y << " " 
-      << hitInfo.pos.z << std::endl;
     // TODO: Guard for duplicated points.
     Patch.push_back({
       hitInfo.pos.x, 
@@ -123,8 +126,6 @@ void castPointToSphere(ImGuiIO &io, glm::vec3 center, double radius) {
   }
 
   if (ImGui::IsMouseReleased(ImGuiMouseButton_Left) && Patch.size() > 0) {
-    PatchNum++;
-    Patch.clear();
-    PatchNormal.clear();
+    resetMode(currentMode);
   }
 }
