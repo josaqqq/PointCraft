@@ -58,9 +58,13 @@ void callback() {
 
   ImGui::PushItemWidth(100);
 
-  // Surface
-  if (ImGui::Button("Surface Reconstruction")) {
-    surfaceReconstruct(meshV, meshN);
+  // Poisson Surface Reconstruction
+  if (ImGui::Button("Poisson Surface Reconstruction")) {
+    poissonReconstruct(meshV, meshN);
+  }
+
+  if (ImGui::Button("Moving Least Squares")) {
+    mlsReconstruct(meshV);
   }
 
   // Normals 
@@ -130,10 +134,11 @@ int main(int argc, char **argv) {
 
   // Read the mesh
   igl::readOBJ(filename, meshV, meshTC, meshN, meshF, meshFTC, meshFN);
-  std::cout << "Vertex num:\t" << meshV.rows() << std::endl;
-  std::cout << "Texture coordinate num:\t" << meshTC.rows() << std::endl;
-  std::cout << "Normal num:\t" << meshN.rows() << std::endl;
-  std::cout << "Face num:\t" << meshF.rows() << std::endl;
+  std::cout << "Vertex num:\t"              << meshV.rows()   << std::endl;
+  std::cout << "Texture coordinate num:\t"  << meshTC.rows()  << std::endl;
+  std::cout << "Normal num:\t"              << meshN.rows()   << std::endl;
+  std::cout << "Face num:\t"                << meshF.rows()   << std::endl;
+  if (meshN.rows() == 0) std::cout << "ERROR: Please include normal information." << std::endl;
 
   movePointsToOrigin(meshV);
 

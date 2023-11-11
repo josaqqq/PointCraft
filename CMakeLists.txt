@@ -91,7 +91,6 @@ target_include_directories(PointCraft PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/deps/p
 # Link settings
 # Specify the libraries to be linked to your target (executable or library)
 target_link_libraries(PointCraft polyscope ${EIGEN_LIBRAIRES} ${PCL_LIBRARIES})
-# target_link_libraries(PointCraft polyscope Eigen3::Eigen PCL)
 
 message(STATUS "--------------------------------------------")
 message(STATUS "Info :")

@@ -20,6 +20,12 @@ class Ray {
     // center and radius.
     Hit checkSphere(glm::vec3 center, double radius);
 
+    // Search for the nearest neighbor point
+    // along the specified line.
+    // The search range is within the range
+    // of the searchRadius.
+    Hit searchNeighborPoints(double searchRadius);
+
   private:
     // Coordinates of the origin of this ray
     glm::vec3 orig;

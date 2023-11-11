@@ -1,23 +1,15 @@
+#include <Eigen/Dense>
+
 #include <iostream>
 
 #include "ray.hpp"
 
+extern Eigen::MatrixXd meshV;
+extern Eigen::MatrixXd meshN;
+
 Ray::Ray(double xScreen, double yScreen) {
   orig = polyscope::view::getCameraWorldPosition();
   dir = polyscope::view::screenCoordsToWorldRay(glm::vec2(xScreen, yScreen));
-
-  // std::cout << "Ray Origin:\t" << orig.x << " " << orig.y << " " << orig.z << std::endl;
-  // std::cout << "Ray Direction:\t" << dir.x << " " << dir.y << " " << dir.z << std::endl;
-  // std::cout << std::endl;
-
-  // polyscope::CameraParameters cameraParameters = polyscope::view::getCameraParametersForCurrentView();
-  // glm::vec3 pos = cameraParameters.getPosition();
-  // glm::vec3 lookDir = cameraParameters.getLookDir();
-  // glm::vec3 upDir = cameraParameters.getUpDir();
-
-  // std::cout << "Camera Position\t" << pos.x << " " << pos.y << " " << pos.z << std::endl;
-  // std::cout << "Camera LookDir\t" << lookDir.x << " " << lookDir.y << " " << lookDir.z << std::endl;
-  // std::cout << "Camera UpDir\t" << upDir.x << " " << upDir.y << " " << upDir.z << std::endl;
 }
 
 // Check whether this ray intersect
@@ -47,5 +39,44 @@ Hit Ray::checkSphere(glm::vec3 center, double radius) {
     if (hitInfo.t < 0.0) hitInfo.hit = false;
   }
   
+  return hitInfo;
+}
+
+// Search for the nearest neighbor point
+// along the specified line.
+// The search range is within the range
+// of the searchRadius.
+Hit Ray::searchNeighborPoints(double searchRadius) {
+  Hit hitInfo;
+
+  double maxDist = searchRadius;
+  for (int i = 0; i < meshV.rows(); i++) {
+    // point position
+    glm::vec3 p = glm::vec3(
+      meshV(i, 0),
+      meshV(i, 1),
+      meshV(i, 2)
+    );
+    // point normal
+    glm::vec3 n = glm::vec3(
+      meshN(i, 0),
+      meshN(i, 1),
+      meshN(i, 2)
+    );
+
+    if (glm::dot(dir, n) >= 0.0)        continue; // p is looked from the back side of the surface.
+    // TODO: This does not completely filter the points behind the scene.
+    if (glm::dot(dir, p - orig) <= 0.0) continue; // p is behind the scene.
+    
+    // TODO: Use the previous selected points to determine the depth.
+    double currDist = glm::length(glm::cross(p - orig, dir)); // Be aware that dir is needed to be normalized.
+    if (currDist < maxDist) {
+      maxDist = currDist;
+      hitInfo.hit = true;
+      hitInfo.pos = p;
+      hitInfo.normal = n;
+    }
+  }
+
   return hitInfo;
 }

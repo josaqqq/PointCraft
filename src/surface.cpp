@@ -1,12 +1,26 @@
 #include "polyscope/polyscope.h"
 #include "polyscope/surface_mesh.h"
+#include "polyscope/point_cloud.h"
 
 #include <pcl/io/obj_io.h>
 #include <pcl/point_types.h>
 #include <pcl/surface/poisson.h>
+#include <pcl/surface/mls.h>
+
+#include <string>
+
+// Parameters
+// Poisson Surface Reconstruction
+const int PoissonDepth = 7;
+const glm::vec3 PoissonColor = { 0.155, 0.186, 0.790 };
+const std::string PoissonMaterial = "normal";
+
+// Moving Least Squares
+const bool MLSPolynogmialFitFlag = true;
+const double MLSSearchRadius = 0.3;
 
 // Reconstruct surface with vertex and normal infromation
-void surfaceReconstruct(Eigen::MatrixXd &vertices, Eigen::MatrixXd &normals) {
+void poissonReconstruct(Eigen::MatrixXd &vertices, Eigen::MatrixXd &normals) {
   // Init point cloud
   pcl::PointCloud<pcl::PointNormal>::Ptr cloud(new pcl::PointCloud<pcl::PointNormal>);
   cloud->points.resize(vertices.rows());
@@ -21,7 +35,7 @@ void surfaceReconstruct(Eigen::MatrixXd &vertices, Eigen::MatrixXd &normals) {
 
   // Initialize poisson surface reconstruction
   pcl::Poisson<pcl::PointNormal> poisson;
-  poisson.setDepth(7);
+  poisson.setDepth(PoissonDepth);
   poisson.setInputCloud(cloud);
 
   // Reconstruct surfacd
@@ -70,6 +84,38 @@ void surfaceReconstruct(Eigen::MatrixXd &vertices, Eigen::MatrixXd &normals) {
 
   // Register mesh
   polyscope::SurfaceMesh *surfaceMesh = polyscope::registerSurfaceMesh("Surface Mesh", meshV, meshF);
-  surfaceMesh->setSurfaceColor({ 0.155, 0.186, 0.790 });
-  surfaceMesh->setMaterial("normal");
+  surfaceMesh->setSurfaceColor(PoissonColor);
+  surfaceMesh->setMaterial(PoissonMaterial);
+}
+
+void mlsReconstruct(Eigen::MatrixXd vertices) {
+  // Init point cloud
+  pcl::PointCloud<pcl::PointXYZ>::Ptr inputCloud(new pcl::PointCloud<pcl::PointXYZ>);
+  inputCloud->points.resize(vertices.rows());
+  for (int i = 0; i < vertices.rows(); i++) {
+    inputCloud->points[i].x = vertices(i, 0);
+    inputCloud->points[i].y = vertices(i, 1);
+    inputCloud->points[i].z = vertices(i, 2);
+  } 
+
+  // Initialize Moving Least Squares
+  pcl::MovingLeastSquares<pcl::PointXYZ, pcl::PointXYZ> mls;
+  // TODO: We can use Kdtree here.
+  mls.setInputCloud(inputCloud);
+  mls.setPolynomialFit(MLSPolynogmialFitFlag);
+  mls.setSearchRadius(MLSSearchRadius);
+
+  // Execute MLS
+  pcl::PointCloud<pcl::PointXYZ>::Ptr outputCloud(new pcl::PointCloud<pcl::PointXYZ>());
+  mls.process(*outputCloud);
+
+  Eigen::MatrixXd meshV(outputCloud->size(), 3);
+  for (size_t i = 0; i < outputCloud->size(); i++) {
+    meshV.row(i) << 
+      outputCloud->points[i].x,
+      outputCloud->points[i].y,
+      outputCloud->points[i].z;
+  }
+
+  polyscope::PointCloud *mlsPoints = polyscope::registerPointCloud("MLS Points", meshV);
 }
