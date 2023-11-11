@@ -75,6 +75,10 @@ add_subdirectory("deps/polyscope")
 add_executable(
     PointCraft
     src/main.cpp
+    src/surface.cpp
+    src/patch.cpp
+    src/ray.cpp
+    src/modes.cpp
 )
 
 # Include settings
@@ -87,7 +91,6 @@ target_include_directories(PointCraft PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/deps/p
 # Link settings
 # Specify the libraries to be linked to your target (executable or library)
 target_link_libraries(PointCraft polyscope ${EIGEN_LIBRAIRES} ${PCL_LIBRARIES})
-# target_link_libraries(PointCraft polyscope Eigen3::Eigen PCL)
 
 message(STATUS "--------------------------------------------")
 message(STATUS "Info :")
