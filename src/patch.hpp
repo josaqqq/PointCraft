@@ -14,4 +14,4 @@ void tracePoints(ImGuiIO &io, Mode &currentMode);
 void castPointToSphere(ImGuiIO &io, Mode &currentMode, glm::vec3 center, double radius);
 
 // Create curve network on the specified sphere.
-void createCurveNetwork(ImGuiIO &io, Mode &currentMode, glm::vec3 center, double radius);
+void createPatchToPointCloud(ImGuiIO &io, Mode &currentMode, glm::vec3 center, double radius);

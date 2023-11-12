@@ -8,6 +8,8 @@ extern Eigen::MatrixXd meshV;
 extern Eigen::MatrixXd meshN;
 
 Ray::Ray(double xScreen, double yScreen) {
+  screenCoord = glm::vec2(xScreen, yScreen);
+
   orig = polyscope::view::getCameraWorldPosition();
   dir = polyscope::view::screenCoordsToWorldRay(glm::vec2(xScreen, yScreen));
 }
@@ -16,7 +18,7 @@ Ray::Ray(double xScreen, double yScreen) {
 // with the sphere specified with 
 // center and radius.
 Hit Ray::checkSphere(glm::vec3 center, double radius) {
-  Hit hitInfo;
+  Hit hitInfo(screenCoord);
 
   // Solve hit problem with quadratic equation.
   glm::vec3 oc = orig - center;
@@ -47,7 +49,7 @@ Hit Ray::checkSphere(glm::vec3 center, double radius) {
 // The search range is within the range
 // of the searchRadius.
 Hit Ray::searchNeighborPoints(double searchRadius) {
-  Hit hitInfo;
+  Hit hitInfo(screenCoord);
 
   double maxDist = searchRadius;
   for (int i = 0; i < meshV.rows(); i++) {
@@ -72,6 +74,7 @@ Hit Ray::searchNeighborPoints(double searchRadius) {
     double currDist = glm::length(glm::cross(p - orig, dir)); // Be aware that dir is needed to be normalized.
     if (currDist < maxDist) {
       maxDist = currDist;
+
       hitInfo.hit = true;
       hitInfo.pos = p;
       hitInfo.normal = n;

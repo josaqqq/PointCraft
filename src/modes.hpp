@@ -6,7 +6,7 @@ enum Mode {
   MODE_NONE,
   MODE_TRACE,
   MODE_SPHERE_CAST,
-  MODE_CURVE_NETWORK,
+  MODE_PATCH,
 };
 
 struct ModeSelector {

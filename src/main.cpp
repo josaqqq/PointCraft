@@ -32,7 +32,7 @@ Eigen::MatrixXi meshF;    // list of face indices into vertex positions
 Eigen::MatrixXi meshFTC;  // list of face indices into vertex texture coordinates
 Eigen::MatrixXi meshFN;   // list of face indices into vertex normals
 
-const std::string PointName = "Point Cloud";
+std::string PointName = "Point Cloud";
 const glm::vec3 PointColor = { 1.000, 1.000, 1.000 };
 const double PointRadius = 0.002;
 
@@ -58,19 +58,15 @@ void callback() {
 
   ImGui::PushItemWidth(100);
 
-  // Poisson Surface Reconstruction
-  if (ImGui::Button("Poisson Surface Reconstruction")) {
-    poissonReconstruct(meshV, meshN);
-  }
-
-  if (ImGui::Button("Moving Least Squares")) {
-    mlsReconstruct(meshV);
-  }
-
-  // Normals 
-  if (ImGui::Button("Add Normals")) {
-    computeNormals();
-  }
+  ImGui::Text("Surface Reconstruction:");
+  ImGui::Text("   "); ImGui::SameLine();
+  if (ImGui::Button("Poisson Surface Reconstruction"))  poissonReconstruct(meshV, meshN);
+  ImGui::Text("   "); ImGui::SameLine();
+  if (ImGui::Button("Moving Least Squares"))            mlsSmoothing(meshV);
+  ImGui::Text("   "); ImGui::SameLine();
+  if (ImGui::Button("Greedy Projection Triangulation")) greedyProjection(meshV, meshN);
+  ImGui::Text("   "); ImGui::SameLine();
+  if (ImGui::Button("Add Normals"))                     computeNormals();
 
   // Enable mode selection
   modeSelector.enableModeSelection(io);
@@ -83,7 +79,7 @@ void movePointsToOrigin(Eigen::MatrixXd &meshV) {
   double y = 0.0;
   double z = 0.0;
 
-  for (size_t i = 0; i < meshV.rows(); i++) {
+  for (int i = 0; i < meshV.rows(); i++) {
     x += meshV(i, 0);
     y += meshV(i, 1);
     z += meshV(i, 2);
@@ -92,7 +88,7 @@ void movePointsToOrigin(Eigen::MatrixXd &meshV) {
   y /= static_cast<double>(meshV.rows());
   z /= static_cast<double>(meshV.rows());
 
-  for (size_t i = 0; i < meshV.rows(); i++) {
+  for (int i = 0; i < meshV.rows(); i++) {
     meshV(i, 0) -= x;
     meshV(i, 1) -= y;
     meshV(i, 2) -= z;
@@ -142,17 +138,22 @@ int main(int argc, char **argv) {
 
   movePointsToOrigin(meshV);
 
-  // Visualize point cloud
+  // Register Points
   polyscope::PointCloud* pointCloud = polyscope::registerPointCloud(PointName, meshV);
   pointCloud->setPointColor(PointColor);
   pointCloud->setPointRadius(PointRadius);
 
+  // Register Normals
   polyscope::PointCloudVectorQuantity *vectorQuantity = pointCloud->addVectorQuantity(NormalName, meshN);
   vectorQuantity->setVectorColor(NormalColor);
   vectorQuantity->setVectorLengthScale(NormalLength);
   vectorQuantity->setVectorRadius(NormalRadius);
   vectorQuantity->setEnabled(NormalEnabled);
   // vectorQuantity->setMaterial("normal");
+
+  // Reconstruct surface
+  poissonReconstruct(meshV, meshN);
+  greedyProjection(meshV, meshN);
 
   // Add the callback
   polyscope::state::userCallback = callback;

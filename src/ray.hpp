@@ -5,10 +5,15 @@
 
 class Hit {
   public:
+    Hit(glm::vec2 screenCoord) : screenCoord(screenCoord) {}
+
     bool hit;
     double t;
+    
     glm::vec3 pos;
     glm::vec3 normal;
+
+    glm::vec2 screenCoord;
 };
 
 class Ray {
@@ -27,6 +32,8 @@ class Ray {
     Hit searchNeighborPoints(double searchRadius);
 
   private:
+    // Coordinates on the screen
+    glm::vec2 screenCoord;
     // Coordinates of the origin of this ray
     glm::vec3 orig;
     // Vector of the direction of this ray
