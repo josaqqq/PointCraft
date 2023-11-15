@@ -79,6 +79,7 @@ add_executable(
     src/patch.cpp
     src/ray.cpp
     src/modes.cpp
+    src/octree.cpp
 )
 
 # Include settings

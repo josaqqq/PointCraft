@@ -9,10 +9,22 @@ enum Mode {
   MODE_PATCH,
 };
 
+enum SurfaceMode {
+  SURFACE_MODE_NONE,
+  SURFACE_MODE_POISSON,
+  SURFACE_MODE_GREEDY,
+};
+
 struct ModeSelector {
   public:
+    ModeSelector() {
+      // Initialize current modes.
+      currentMode = MODE_NONE;
+      currentSurfaceMode = SURFACE_MODE_GREEDY;
+    }
     void enableModeSelection(ImGuiIO &io);
   
   private:
-    Mode currentMode;
+    int currentMode;
+    int currentSurfaceMode;
 };

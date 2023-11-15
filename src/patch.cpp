@@ -15,40 +15,21 @@
 #include "ray.hpp"
 #include "modes.hpp"
 #include "surface.hpp"
+#include "constants.hpp"
 
 // Patch info
 int PatchNum = 0;
+double averageDepth = 0.0;
 std::unordered_set<glm::vec3>     PatchSet;
 std::vector<glm::vec2>            ScreenCoords;
 std::vector<std::vector<double>>  Patch;
 std::vector<std::vector<double>>  PatchNormal;
 
-const int ScreenGrid = 15;
-
-const glm::vec3 PatchColor = { 1.000, 1.000, 1.000 };
-const double PatchRadius = 0.002;
-
-const std::string PatchNormalName = "normal vector";
-const glm::vec3 PatchNormalColor =  {1.000, 0.000, 0.000 };
-const double PatchNormalLength = 0.015;
-const double PatchNormalRadius = 0.001;
-const bool PatchNormalEnabled = true;
-
-// TODO: Change color and size for added points.
-
-// const glm::vec3 PatchColor  = { 0.000, 1.000, 0.000 };
-// const double PatchRadius    = 0.003;
-
-// const std::string PatchNormalName = "normal vector";
-// const glm::vec3 PatchNormalColor  = { 1.000, 0.000, 0.000 };
-// const double PatchNormalLength    = 0.015;
-// const double PatchNormalRadius    = 0.001;
-// const bool PatchNormalEnabled     = true;
-
 // When left click is released, reset the status and mode.
-void resetMode(Mode &currentMode) {
+void resetMode(int &currentMode) {
   // TODO: Guard for dragging on windows. checkbox is sufficient?
   PatchNum++;
+  averageDepth = 0.0;
   PatchSet.clear();
   ScreenCoords.clear();
   Patch.clear();
@@ -61,8 +42,6 @@ void resetMode(Mode &currentMode) {
 // the same name is overwritten.
 extern Eigen::MatrixXd meshV;
 extern Eigen::MatrixXd meshN;
-extern std::string PointName;
-
 void registerPatchAsPointCloud(std::string patchName, bool replaceMeshV = false) {
   patchName = patchName + std::to_string(PatchNum);
 
@@ -94,14 +73,14 @@ void registerPatchAsPointCloud(std::string patchName, bool replaceMeshV = false)
   }
 
   polyscope::PointCloud* patch = polyscope::registerPointCloud(patchName, meshNewV);
-  patch->setPointColor(PatchColor);
-  patch->setPointRadius(PatchRadius);
+  patch->setPointColor(PointColor);
+  patch->setPointRadius(PointRadius);
 
-  polyscope::PointCloudVectorQuantity *vectorQuantity = patch->addVectorQuantity(PatchNormalName, meshNewN);
-  vectorQuantity->setVectorColor(PatchNormalColor);
-  vectorQuantity->setVectorLengthScale(PatchNormalLength);
-  vectorQuantity->setVectorRadius(PatchNormalRadius);
-  vectorQuantity->setEnabled(PatchNormalEnabled);
+  polyscope::PointCloudVectorQuantity *vectorQuantity = patch->addVectorQuantity(NormalName, meshNewN);
+  vectorQuantity->setVectorColor(NormalColor);
+  vectorQuantity->setVectorLengthScale(NormalLength);
+  vectorQuantity->setVectorRadius(NormalRadius);
+  vectorQuantity->setEnabled(NormalEnabled);
 }
 void removePatchAsPointCloud(std::string patchName) {
   patchName = patchName + std::to_string(PatchNum);
@@ -112,13 +91,14 @@ void removePatchAsPointCloud(std::string patchName) {
 // Be aware that the curve network with 
 // the same name is overwritten
 void registerPatchAsCurveNetworkLine(std::string patchName) {
-  if (Patch.size() == 1) return;
+  std::vector<std::vector<double>>  PatchDummy = Patch;
+  if (PatchDummy.size() == 1) PatchDummy.push_back(PatchDummy[0]);
 
   patchName = patchName + std::to_string(PatchNum);
 
-  polyscope::CurveNetwork* sketch = polyscope::registerCurveNetworkLine(patchName, Patch);
-  sketch->setColor(PatchColor);
-  sketch->setRadius(PatchRadius);
+  polyscope::CurveNetwork* sketch = polyscope::registerCurveNetworkLine(patchName, PatchDummy);
+  sketch->setColor(CurveNetworkColor);
+  sketch->setRadius(CurveNetworkRadius);
 }
 void removePatchAsCurveNetworkLine(std::string patchName) {
   patchName = patchName + std::to_string(PatchNum);
@@ -132,24 +112,33 @@ void registerPatchAsCurveNetworkLoop(std::string patchName) {
   patchName = patchName + std::to_string(PatchNum);
 
   polyscope::CurveNetwork* sketch = polyscope::registerCurveNetworkLoop(patchName, Patch);
-  sketch->setColor(PatchColor);
-  sketch->setRadius(PatchRadius);
+  sketch->setColor(CurveNetworkColor);
+  sketch->setRadius(CurveNetworkRadius);
 }
 void removePatchAsCurveNetworkLoop(std::string patchName) {
   patchName = patchName + std::to_string(PatchNum);
   polyscope::removeCurveNetwork(patchName, false);
 }
 
-// If the point is not added yet, add the information of the point.
-bool addPointToPatch(glm::vec3 pointPos, glm::vec3 normalVec) {
+// If the point is already added, then skip it.
+// If the depth of the added points is out of the range, then skip it.
+extern double averageDistance;
+bool addPointToPatch(double depth, glm::vec3 pointPos, glm::vec3 normalVec) {
   if (PatchSet.count(pointPos)) return false;
+  if (Patch.size() > 0) {
+    if (std::abs(depth - averageDepth) >= averageDistance * depthInterval) return false;
+  }
 
   PatchSet.insert(pointPos);
+  
+  averageDepth = (averageDepth*Patch.size() + depth)/(Patch.size() + 1);
+
   Patch.push_back({
     pointPos.x,
     pointPos.y,
     pointPos.z,
   });
+
   PatchNormal.push_back({
     normalVec.x,
     normalVec.y,
@@ -161,7 +150,7 @@ bool addPointToPatch(glm::vec3 pointPos, glm::vec3 normalVec) {
 
 // Pick a point by the mouse position, 
 // then add the point to Patch.
-void tracePoints(ImGuiIO &io, Mode &currentMode) {
+void tracePoints(ImGuiIO &io, int &currentMode) {
   if (ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
     ImVec2 mousePos = ImGui::GetMousePos();
     int xPos = io.DisplayFramebufferScale.x * mousePos.x;
@@ -169,9 +158,9 @@ void tracePoints(ImGuiIO &io, Mode &currentMode) {
 
     // Cast a ray
     Ray ray(xPos, yPos);
-    Hit hitInfo = ray.searchNeighborPoints(1.0);
+    Hit hitInfo = ray.searchNeighborPoints(CurveNetworkRadius);
     if (!hitInfo.hit) return;
-    addPointToPatch(hitInfo.pos, hitInfo.normal);
+    addPointToPatch(hitInfo.t, hitInfo.pos, hitInfo.normal);
 
     // Register Patch as point cloud.
     registerPatchAsCurveNetworkLine("trace: ");
@@ -185,7 +174,7 @@ void tracePoints(ImGuiIO &io, Mode &currentMode) {
 // Cast a ray from the mouse position,
 // then add the intersection point with sphere
 // to Patch.
-void castPointToSphere(ImGuiIO &io, Mode &currentMode, glm::vec3 center, double radius) {
+void castPointToSphere(ImGuiIO &io, int &currentMode, glm::vec3 center, double radius) {
   if (ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
     ImVec2 mousePos = ImGui::GetMousePos();
     int xPos = io.DisplayFramebufferScale.x * mousePos.x;
@@ -195,7 +184,7 @@ void castPointToSphere(ImGuiIO &io, Mode &currentMode, glm::vec3 center, double 
     Ray ray(xPos, yPos);
     Hit hitInfo = ray.checkSphere(center, radius);
     if (!hitInfo.hit) return;
-    addPointToPatch(hitInfo.pos, hitInfo.normal);
+    addPointToPatch(hitInfo.t, hitInfo.pos, hitInfo.normal);
 
     // Register Patch as point cloud.
     registerPatchAsPointCloud("cast: ");
@@ -206,7 +195,7 @@ void castPointToSphere(ImGuiIO &io, Mode &currentMode, glm::vec3 center, double 
   }
 }
 
-// Checck the inside/outside of the polygon.
+// Check the inside/outside of the polygon.
 //  1.  Draw a half-line parallel to the x-axis from a point.
 //  2.  Determine that if there are an odd number of intersections
 //      between this half-line and the polygon, it is inside, and if 
@@ -261,23 +250,28 @@ void fillSketchedArea(glm::vec3 center, double radius) {
     max_y = std::max(max_y, ScreenCoords[i].y);
   }
 
+  // Adjust grid size to keep the number
+  // of points to be added constant.
+  float gridNum = (glm::ceil(max_x) - glm::floor(min_x)) * (glm::ceil(max_y) - glm::floor(min_y));
+  int gridSize = glm::sqrt(gridNum / PatchSize);
+
   // Inside/Outside Check for each filled piont.
-  for (int i = glm::floor(min_x); i < glm::ceil(max_x); i += ScreenGrid) {
-    for (int j = glm::floor(min_y); j < glm::ceil(max_y); j += ScreenGrid) {
+  for (int i = glm::floor(min_x); i < glm::ceil(max_x); i += gridSize) {
+    for (int j = glm::floor(min_y); j < glm::ceil(max_y); j += gridSize) {
       if (!inside_polygon(i, j)) continue;
 
       // Cast a ray
       Ray ray(i, j);
       Hit hitInfo = ray.checkSphere(center, radius);
       if (!hitInfo.hit) continue;
-      addPointToPatch(hitInfo.pos, hitInfo.normal);
+    addPointToPatch(hitInfo.t, hitInfo.pos, hitInfo.normal);
     } 
   }
 }
 
 // While dragging the mouse, display the CurveNetwork.
 // When the mouse released, fill the sketched area and display them as PointCloud.
-void createPatchToPointCloud(ImGuiIO &io, Mode &currentMode, glm::vec3 center, double radius) {
+void createPatchToPointCloud(ImGuiIO &io, int &currentMode, glm::vec3 center, double radius) {
   if (ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
     ImVec2 mousePos = ImGui::GetMousePos();
     int xPos = io.DisplayFramebufferScale.x * mousePos.x;
@@ -287,7 +281,7 @@ void createPatchToPointCloud(ImGuiIO &io, Mode &currentMode, glm::vec3 center, d
     Ray ray(xPos, yPos);
     Hit hitInfo = ray.checkSphere(center, radius);
     if (!hitInfo.hit) return;
-    if (addPointToPatch(hitInfo.pos, hitInfo.normal)) {
+    if (addPointToPatch(hitInfo.t, hitInfo.pos, hitInfo.normal)) {
       ScreenCoords.push_back(hitInfo.screenCoord);
     }
 

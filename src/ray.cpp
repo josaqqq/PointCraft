@@ -47,11 +47,15 @@ Hit Ray::checkSphere(glm::vec3 center, double radius) {
 // Search for the nearest neighbor point
 // along the specified line.
 // The search range is within the range
-// of the searchRadius.
+// of the searchRadius and the nearest
+// point to the scene is chosen.
 Hit Ray::searchNeighborPoints(double searchRadius) {
+  searchRadius *= 2.0;
+    // TODO: Somehow the scale is different...
+
   Hit hitInfo(screenCoord);
 
-  double maxDist = searchRadius;
+  double maxDepth = 100000.0;
   for (int i = 0; i < meshV.rows(); i++) {
     // point position
     glm::vec3 p = glm::vec3(
@@ -66,16 +70,20 @@ Hit Ray::searchNeighborPoints(double searchRadius) {
       meshN(i, 2)
     );
 
-    if (glm::dot(dir, n) >= 0.0)        continue; // p is looked from the back side of the surface.
-    // TODO: This does not completely filter the points behind the scene.
-    if (glm::dot(dir, p - orig) <= 0.0) continue; // p is behind the scene.
+    // p is looked from the back side of the surface.
+    if (glm::dot(dir, n) >= 0.0) continue;
+
+    // p is outside of the scene.
+    // TODO: Utilize nearClip, farClip
+    double currDepth = glm::dot(p - orig, dir) / glm::length(dir);
+    if (currDepth <= 0) continue;
     
-    // TODO: Use the previous selected points to determine the depth.
-    double currDist = glm::length(glm::cross(p - orig, dir)); // Be aware that dir is needed to be normalized.
-    if (currDist < maxDist) {
-      maxDist = currDist;
+    double currDist = glm::length(glm::cross(p - orig, dir)) / glm::length(dir); 
+    if (currDist < searchRadius && currDepth < maxDepth) {
+      maxDepth = currDepth;
 
       hitInfo.hit = true;
+      hitInfo.t = currDepth;
       hitInfo.pos = p;
       hitInfo.normal = n;
     }

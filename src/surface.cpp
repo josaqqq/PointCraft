@@ -11,27 +11,8 @@
 
 #include <string>
 
-// Parameters
-// Poisson Surface Reconstruction
-const int PoissonDepth = 5;
-const glm::vec3 PoissonColor = { 0.155, 0.186, 0.790 };
-const std::string PoissonMaterial = "normal";
-
-// Moving Least Squares
-const bool MLSPolynogmialFitFlag = true;
-const double MLSSearchRadius = 0.3;
-
-// Delaunay Triangulation
-const double GreedyProjSearchRadius = 0.5;
-const double GreedyProjMu = 2.5;
-const int GreedyProjMaxNN = 100;
-const double GreedyProjMaxSurfaceAngle = M_PI/4.0; // 45 degrees
-const double GreedyProjMinAngle = M_PI/18.0;       // 10 degrees
-const double GreedyProjMaxAngle = 2.0*M_PI/3.0;    // 120 degrees
-const bool GreedyProjNormalConsistency = false;
-
-const glm::vec3 GreedyProjColor = { 0.155, 0.186, 0.790 };
-const std::string GreedyProjMaterial = "normal";
+#include "surface.hpp"
+#include "constants.hpp"
 
 // Reconstruct surface with vertex and normal infromation
 void poissonReconstruct(Eigen::MatrixXd vertices, Eigen::MatrixXd normals) {
@@ -86,7 +67,7 @@ void poissonReconstruct(Eigen::MatrixXd vertices, Eigen::MatrixXd normals) {
   std::cout << "Face num:\t" << mesh.polygons.size() << std::endl;
 
   // Register mesh
-  polyscope::SurfaceMesh *surfaceMesh = polyscope::registerSurfaceMesh("Poisson Surface Reconstruction", meshV, meshF);
+  polyscope::SurfaceMesh *surfaceMesh = polyscope::registerSurfaceMesh(PoissonName, meshV, meshF);
   surfaceMesh->setSurfaceColor(PoissonColor);
   surfaceMesh->setMaterial(PoissonMaterial);
 }
@@ -121,7 +102,7 @@ void mlsSmoothing(Eigen::MatrixXd vertices) {
       outputCloud->points[i].z;
   }
 
-  polyscope::PointCloud *mlsPoints = polyscope::registerPointCloud("MLS Points", meshV);
+  polyscope::PointCloud *mlsPoints = polyscope::registerPointCloud(MLSName, meshV);
 }
 
 void greedyProjection(Eigen::MatrixXd vertices, Eigen::MatrixXd normals) {
@@ -189,7 +170,7 @@ void greedyProjection(Eigen::MatrixXd vertices, Eigen::MatrixXd normals) {
   std::cout << "Face num:\t" << mesh.polygons.size() << std::endl;
 
   // Register mesh
-  polyscope::SurfaceMesh *surfaceMesh = polyscope::registerSurfaceMesh("Greedy Projection Triangulation", meshV, meshF);
+  polyscope::SurfaceMesh *surfaceMesh = polyscope::registerSurfaceMesh(GreedyProjName, meshV, meshF);
   surfaceMesh->setSurfaceColor(GreedyProjColor);
   surfaceMesh->setMaterial(GreedyProjMaterial);
 }

@@ -18,13 +18,12 @@
 
 #include "surface.hpp"
 #include "modes.hpp"
+#include "octree.hpp"
+#include "constants.hpp"
 
-// Scene information
-const std::array<float, 4> BackgroundColor = { 0.025, 0.025, 0.025, 0.000 };
-const int WindowWidth = 1024;
-const int WindowHeight = 1024;
-
+//
 // Point cloud info
+//
 Eigen::MatrixXd meshV;    // double matrix of vertex positions
 Eigen::MatrixXd meshTC;   // double matrix of texture coordinates
 Eigen::MatrixXd meshN;    // double matrix of corner normals
@@ -32,32 +31,19 @@ Eigen::MatrixXi meshF;    // list of face indices into vertex positions
 Eigen::MatrixXi meshFTC;  // list of face indices into vertex texture coordinates
 Eigen::MatrixXi meshFN;   // list of face indices into vertex normals
 
-std::string PointName = "Point Cloud";
-const glm::vec3 PointColor = { 1.000, 1.000, 1.000 };
-const double PointRadius = 0.002;
+double averageDistance;
 
-const std::string NormalName = "normal vector";
-const glm::vec3 NormalColor =  {1.000, 0.000, 0.000 };
-const double NormalLength = 0.015;
-const double NormalRadius = 0.001;
-const bool NormalEnabled = true;
-
+//
 // Mode Selection
+//
 ModeSelector modeSelector;
-
-void computeNormals() {
-  Eigen::MatrixXd N_vertices;
-  igl::per_vertex_normals(meshV, meshF, N_vertices);
-
-  polyscope::getSurfaceMesh("input mesh")
-      ->addVertexVectorQuantity("libIGL vertex normals", N_vertices);
-}
 
 void callback() {
   ImGuiIO &io = ImGui::GetIO();
 
   ImGui::PushItemWidth(100);
 
+  // Surface Reconstruction
   ImGui::Text("Surface Reconstruction:");
   ImGui::Text("   "); ImGui::SameLine();
   if (ImGui::Button("Poisson Surface Reconstruction"))  poissonReconstruct(meshV, meshN);
@@ -65,8 +51,6 @@ void callback() {
   if (ImGui::Button("Moving Least Squares"))            mlsSmoothing(meshV);
   ImGui::Text("   "); ImGui::SameLine();
   if (ImGui::Button("Greedy Projection Triangulation")) greedyProjection(meshV, meshN);
-  ImGui::Text("   "); ImGui::SameLine();
-  if (ImGui::Button("Add Normals"))                     computeNormals();
 
   // Enable mode selection
   modeSelector.enableModeSelection(io);
@@ -117,6 +101,8 @@ int main(int argc, char **argv) {
   }
 
   // Options
+  polyscope::options::autocenterStructures = false;
+  polyscope::options::autoscaleStructures = false;
   polyscope::view::windowWidth = WindowWidth;
   polyscope::view::windowHeight = WindowHeight;
 
@@ -136,7 +122,13 @@ int main(int argc, char **argv) {
   std::cout << "Face num:\t"                << meshF.rows()   << std::endl;
   if (meshN.rows() == 0) std::cout << "ERROR: Please include normal information." << std::endl;
 
+  // Move points to set the gravity point to (0.0, 0.0, 0.0).
   movePointsToOrigin(meshV);
+
+  // Calculate the average distance using octree.
+  Octree octree(meshV, OctreeResolution);
+  averageDistance = octree.calcAverageDistance();
+  std::cout << "Average Distance:\t" << averageDistance << std::endl;
 
   // Register Points
   polyscope::PointCloud* pointCloud = polyscope::registerPointCloud(PointName, meshV);
@@ -149,7 +141,7 @@ int main(int argc, char **argv) {
   vectorQuantity->setVectorLengthScale(NormalLength);
   vectorQuantity->setVectorRadius(NormalRadius);
   vectorQuantity->setEnabled(NormalEnabled);
-  // vectorQuantity->setMaterial("normal");
+  vectorQuantity->setMaterial(NormalMaterial);
 
   // Reconstruct surface
   poissonReconstruct(meshV, meshN);
