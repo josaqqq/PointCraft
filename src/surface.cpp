@@ -113,6 +113,7 @@ void greedyProjection(Eigen::MatrixXd vertices, Eigen::MatrixXd normals) {
     inputCloud->points[i].x = vertices(i, 0);
     inputCloud->points[i].y = vertices(i, 1);
     inputCloud->points[i].z = vertices(i, 2);
+    
     inputCloud->points[i].normal_x = normals(i, 0);
     inputCloud->points[i].normal_y = normals(i, 1);
     inputCloud->points[i].normal_z = normals(i, 2);

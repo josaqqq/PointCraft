@@ -14,6 +14,13 @@ class SketchTool {
     // Draw sketch according to the selected mode.
     virtual void drawSketch() {};
 
+    // Register/Remove Patch as point cloud with patchName.
+    // Be aware that the point cloud with 
+    // the same name is overwritten.
+    void registerPatchAsPointCloud(std::string patchName);
+    void registerPatchAsPointCloud(Eigen::MatrixXd vertices, Eigen::MatrixXd normals);
+    void removePatchAsPointCloud(std::string patchName);
+
     // Register/Remove sketch as curve network line with sketchName.
     // Be aware that the curve network with 
     // the same name is overwritten
@@ -43,19 +50,32 @@ class SketchTool {
     // Reset all member variables.
     void resetSketch();
 
-    // Return the size of boundaryPoints.
-    int getBoundarySize();
-
-    // Return the pointer to pointCloud.
-    PointCloud* getPointCloud();
+    // Return the pointer to member variables.
+    double                    getAverageDepth();
+    PointCloud*               getPointCloud();
+    std::vector<Hit>*         getBoundaryPoints();
+    std::vector<glm::dvec2>*  getBoundaryOnPlane();
+    std::vector<glm::dvec2>*  getDiscretizedPoints();
+    std::pair<glm::dvec3, glm::dvec3> getOrthogonalBasis();
 
   private:
     PointCloud *pointCloud;
 
     int *currentMode;     // Current selected Mode
     double averageDepth;  // Average depth of selected points
-    // std::unordered_set<glm::vec3>   boundarySet;       // Used for the guard for duplicated points
+    // std::unordered_set<glm::dvec3>   boundarySet;       // Used for the guard for duplicated points
     std::vector<Hit>                boundaryPoints;    // Selected boundary information
-    std::vector<glm::vec2>          boundaryOnPlane;   // Boundary points casted onto plane
-    std::vector<glm::vec2>          discretizedPoints; // Discretized points in the boundary
+    std::vector<glm::dvec2>         boundaryOnPlane;   // Boundary points casted onto plane
+    std::vector<glm::dvec2>         discretizedPoints; // Discretized points in the boundary
+
+    // Calculate orthogonal basis with Gram-Schmidt orthonormalization.
+    glm::dvec3 orthoU, orthoV;  // orthogonal basis for "camera plane"
+    void calcOrthogonalBasis(glm::dvec3 normal);
+
+    // Check the inside/outside of the polygon.
+    //  1.  Draw a half-line parallel to the x-axis from a point.
+    //  2.  Determine that if there are an odd number of intersections
+    //      between this half-line and the polygon, it is inside, and if 
+    //      there are an even number, it is outside.
+    bool insidePolygon(double x, double y, const int polygonSiz);
 };

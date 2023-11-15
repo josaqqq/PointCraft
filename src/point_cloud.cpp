@@ -7,6 +7,7 @@
 
 #include "point_cloud.hpp"
 #include "constants.hpp"
+#include "surface.hpp"
 
 PointCloud::PointCloud(std::string filename) {
   std::cout << "loading: " << filename << std::endl;
@@ -77,6 +78,10 @@ void PointCloud::updatePointCloud() {
   vectorQuantity->setVectorRadius(NormalRadius);
   vectorQuantity->setEnabled(NormalEnabled);
   vectorQuantity->setMaterial(NormalMaterial);
+
+  // Reconstruct Surfaces
+  poissonReconstruct(meshV, meshN);
+  greedyProjection(meshV, meshN);
 }
 
 // Add points with information of the position and the normal.

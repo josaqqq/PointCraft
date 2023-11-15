@@ -8,9 +8,6 @@
 
 enum Mode {
   MODE_NONE,
-  MODE_TRACE,
-  MODE_SPHERE_CAST,
-  MODE_PATCH,
   MODE_INTERPOLATION,
 };
 
@@ -28,11 +25,12 @@ struct ModeSelector {
       int *currentSurfaceMode,
       PointCloud *pointCloud,
       InterpolationTool *interpolationTool
-    ) : 
-    currentMode(currentMode),
-    currentSurfaceMode(currentSurfaceMode),
-    pointCloud(pointCloud), 
-    interpolationTool(interpolationTool) {
+    ) 
+    : currentMode(currentMode),
+      currentSurfaceMode(currentSurfaceMode),
+      pointCloud(pointCloud), 
+      interpolationTool(interpolationTool) 
+    { 
       // Initialize current modes.
       *currentMode = MODE_NONE;
       *currentSurfaceMode = SURFACE_MODE_GREEDY;

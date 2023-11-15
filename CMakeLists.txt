@@ -76,13 +76,13 @@ add_executable(
     PointCraft
     src/main.cpp
     src/surface.cpp
-    src/patch.cpp
     src/ray.cpp
     src/modes.cpp
     src/octree.cpp
     src/point_cloud.cpp
     src/sketch_tool.cpp
     src/interpolation_tool.cpp
+    src/rbf.cpp
 )
 
 # Include settings
