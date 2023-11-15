@@ -73,7 +73,7 @@ void poissonReconstruct(Eigen::MatrixXd vertices, Eigen::MatrixXd normals) {
 }
 
 // Smoothing vertices with MLS
-void mlsSmoothing(Eigen::MatrixXd vertices) {
+std::pair<Eigen::MatrixXd, Eigen::MatrixXd> mlsSmoothing(Eigen::MatrixXd vertices) {
   // Init point cloud
   pcl::PointCloud<pcl::PointXYZ>::Ptr inputCloud(new pcl::PointCloud<pcl::PointXYZ>);
   inputCloud->points.resize(vertices.rows());
@@ -83,26 +83,48 @@ void mlsSmoothing(Eigen::MatrixXd vertices) {
     inputCloud->points[i].z = vertices(i, 2);
   } 
 
+  // Create a KD-Tree 
+  // TODO: Not KD-Tree but Octree
+  pcl::search::KdTree<pcl::PointXYZ>::Ptr tree(new pcl::search::KdTree<pcl::PointXYZ>);
+
   // Initialize Moving Least Squares
-  pcl::MovingLeastSquares<pcl::PointXYZ, pcl::PointXYZ> mls;
-  // TODO: We can use Kdtree here.
+  pcl::MovingLeastSquares<pcl::PointXYZ, pcl::PointNormal> mls;
+  mls.setComputeNormals(true);
   mls.setInputCloud(inputCloud);
-  mls.setPolynomialFit(MLSPolynogmialFitFlag);
+  mls.setPolynomialOrder(MLSPolynomialOrder);
+  mls.setPolynomialFit(MLSPolynomialFitFlag);
+  mls.setSearchMethod(tree);
   mls.setSearchRadius(MLSSearchRadius);
 
   // Execute MLS
-  pcl::PointCloud<pcl::PointXYZ>::Ptr outputCloud(new pcl::PointCloud<pcl::PointXYZ>());
+  pcl::PointCloud<pcl::PointNormal>::Ptr outputCloud(new pcl::PointCloud<pcl::PointNormal>);
   mls.process(*outputCloud);
 
   Eigen::MatrixXd meshV(outputCloud->size(), 3);
+  Eigen::MatrixXd meshN(outputCloud->size(), 3);
   for (int i = 0; i < outputCloud->size(); i++) {
     meshV.row(i) << 
       outputCloud->points[i].x,
       outputCloud->points[i].y,
       outputCloud->points[i].z;
+    
+    meshN.row(i) <<
+      outputCloud->points[i].normal_x,
+      outputCloud->points[i].normal_y,
+      outputCloud->points[i].normal_z;
   }
 
   polyscope::PointCloud *mlsPoints = polyscope::registerPointCloud(MLSName, meshV);
+  mlsPoints->setPointColor(PointColor);
+  mlsPoints->setPointRadius(PointRadius);
+
+  polyscope::PointCloudVectorQuantity *mlsVectorQuantity = mlsPoints->addVectorQuantity(NormalName, meshN);
+  mlsVectorQuantity->setVectorColor(NormalColor);
+  mlsVectorQuantity->setVectorLengthScale(NormalLength);
+  mlsVectorQuantity->setVectorRadius(NormalRadius);
+  mlsVectorQuantity->setEnabled(NormalEnabled);
+
+  return { meshV, meshN };
 }
 
 void greedyProjection(Eigen::MatrixXd vertices, Eigen::MatrixXd normals) {

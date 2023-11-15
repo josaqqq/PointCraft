@@ -3,6 +3,7 @@
 #include "constants.hpp"
 #include "interpolation_tool.hpp"
 #include "rbf.hpp"
+#include "surface.hpp"
 
 void InterpolationTool::drawSketch() {
   ImGuiIO &io = ImGui::GetIO();
@@ -40,18 +41,10 @@ void InterpolationTool::drawSketch() {
     );
     rbf.calcInterpolateSurface();
     Eigen::MatrixXd newV = rbf.castPointsToSurface();
+    Eigen::MatrixXd newN;
 
-    // TODO: We need to calculate normals
-    Eigen::MatrixXd newN(newV.rows(), 3);
-    for (int i = 0; i < newV.rows(); i++) {
-      double length = glm::length(glm::dvec3(newV(i, 0), newV(i, 1), newV(i, 2)));
-      newN(i, 0) = newV(i, 0) / length;
-      newN(i, 1) = newV(i, 1) / length;
-      newN(i, 2) = newV(i, 2) / length;
-    }
-
-    // Register calculated point cloud
-    registerPatchAsPointCloud(newV, newN);
+    // Smooth the points with MLS
+    std::tie(newV, newN) = mlsSmoothing(newV);
 
     getPointCloud()->addPoints(newV, newN);
 

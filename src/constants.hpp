@@ -55,7 +55,8 @@ const std::string PoissonMaterial = "normal";
 // Moving Least Squares
 //
 const std::string MLSName = "MLS Points";
-const bool MLSPolynogmialFitFlag = true;
+const int MLSPolynomialOrder = 2;
+const bool MLSPolynomialFitFlag = true;
 const double MLSSearchRadius = 0.3;
 
 //
