@@ -29,8 +29,12 @@ const double OctreeResolution = 64.0;
 //
 // Patch parameters
 //
-const int PatchSize = 300;
+const int PatchSize = 100;
 const double depthInterval = 5.0; // Multiple with averageDistance of input point cloud.
+
+const std::string TracePrefix = "trace: ";
+const std::string CastPrefix = "cast: ";
+const std::string SketchPrefix = "sketch: ";
 
 //
 //  Curve Network

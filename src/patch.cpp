@@ -20,20 +20,16 @@
 // Patch info
 int PatchNum = 0;
 double averageDepth = 0.0;
-std::unordered_set<glm::vec3>     PatchSet;
-std::vector<glm::vec2>            ScreenCoords;
-std::vector<std::vector<double>>  Patch;
-std::vector<std::vector<double>>  PatchNormal;
+std::unordered_set<glm::vec3>     PointSet;
+std::vector<Hit>                  HitPoints;
 
 // When left click is released, reset the status and mode.
 void resetMode(int &currentMode) {
   // TODO: Guard for dragging on windows. checkbox is sufficient?
   PatchNum++;
   averageDepth = 0.0;
-  PatchSet.clear();
-  ScreenCoords.clear();
-  Patch.clear();
-  PatchNormal.clear();
+  PointSet.clear();
+  HitPoints.clear();
   currentMode = MODE_NONE;
 }
 
@@ -45,16 +41,16 @@ extern Eigen::MatrixXd meshN;
 void registerPatchAsPointCloud(std::string patchName, bool replaceMeshV = false) {
   patchName = patchName + std::to_string(PatchNum);
 
-  Eigen::MatrixXd meshNewV(Patch.size(), 3);
-  Eigen::MatrixXd meshNewN(Patch.size(), 3);
-  for (int i = 0; i < Patch.size(); i++) {
-    meshNewV(i, 0) = Patch[i][0];
-    meshNewV(i, 1) = Patch[i][1];
-    meshNewV(i, 2) = Patch[i][2];
+  Eigen::MatrixXd meshNewV(HitPoints.size(), 3);
+  Eigen::MatrixXd meshNewN(HitPoints.size(), 3);
+  for (int i = 0; i < HitPoints.size(); i++) {
+    meshNewV(i, 0) = HitPoints[i].pos.x;
+    meshNewV(i, 1) = HitPoints[i].pos.y;
+    meshNewV(i, 2) = HitPoints[i].pos.z;
 
-    meshNewN(i, 0) = PatchNormal[i][0];
-    meshNewN(i, 1) = PatchNormal[i][1];
-    meshNewN(i, 2) = PatchNormal[i][2];
+    meshNewN(i, 0) = HitPoints[i].normal.x;
+    meshNewN(i, 1) = HitPoints[i].normal.y;
+    meshNewN(i, 2) = HitPoints[i].normal.z;
   }
 
   if (replaceMeshV) {
@@ -64,8 +60,8 @@ void registerPatchAsPointCloud(std::string patchName, bool replaceMeshV = false)
     meshNewN.conservativeResize(meshNewN.rows() + meshN.rows(), Eigen::NoChange);
 
     for (int i = 0; i < meshV.rows(); i++) {
-      meshNewV.row(Patch.size() + i) = meshV.row(i);
-      meshNewN.row(Patch.size() + i) = meshN.row(i);
+      meshNewV.row(HitPoints.size() + i) = meshV.row(i);
+      meshNewN.row(HitPoints.size() + i) = meshN.row(i);
     }
 
     meshV = meshNewV;
@@ -91,12 +87,25 @@ void removePatchAsPointCloud(std::string patchName) {
 // Be aware that the curve network with 
 // the same name is overwritten
 void registerPatchAsCurveNetworkLine(std::string patchName) {
-  std::vector<std::vector<double>>  PatchDummy = Patch;
-  if (PatchDummy.size() == 1) PatchDummy.push_back(PatchDummy[0]);
+  std::vector<std::vector<double>> Patch;
+  for (int i = 0; i < HitPoints.size(); i++) {
+    Patch.push_back({
+      HitPoints[i].pos.x,
+      HitPoints[i].pos.y,
+      HitPoints[i].pos.z
+    });
+  }
+  if (HitPoints.size() == 1) {
+    Patch.push_back({
+      HitPoints[0].pos.x,
+      HitPoints[0].pos.y,
+      HitPoints[0].pos.z
+    });
+  }
 
   patchName = patchName + std::to_string(PatchNum);
 
-  polyscope::CurveNetwork* sketch = polyscope::registerCurveNetworkLine(patchName, PatchDummy);
+  polyscope::CurveNetwork* sketch = polyscope::registerCurveNetworkLine(patchName, Patch);
   sketch->setColor(CurveNetworkColor);
   sketch->setRadius(CurveNetworkRadius);
 }
@@ -109,6 +118,15 @@ void removePatchAsCurveNetworkLine(std::string patchName) {
 // Be aware that the curve network with 
 // the same name is overwritten
 void registerPatchAsCurveNetworkLoop(std::string patchName) {
+  std::vector<std::vector<double>> Patch;
+  for (int i = 0; i < HitPoints.size(); i++) {
+    Patch.push_back({
+      HitPoints[i].pos.x,
+      HitPoints[i].pos.y,
+      HitPoints[i].pos.z
+    });
+  }
+
   patchName = patchName + std::to_string(PatchNum);
 
   polyscope::CurveNetwork* sketch = polyscope::registerCurveNetworkLoop(patchName, Patch);
@@ -123,76 +141,16 @@ void removePatchAsCurveNetworkLoop(std::string patchName) {
 // If the point is already added, then skip it.
 // If the depth of the added points is out of the range, then skip it.
 extern double averageDistance;
-bool addPointToPatch(double depth, glm::vec3 pointPos, glm::vec3 normalVec) {
-  if (PatchSet.count(pointPos)) return false;
-  if (Patch.size() > 0) {
-    if (std::abs(depth - averageDepth) >= averageDistance * depthInterval) return false;
+bool addPointToPatch(Hit hitInfo) {
+  if (PointSet.count(hitInfo.pos)) return false;
+  if (HitPoints.size() > 0) {
+    if (std::abs(hitInfo.depth - averageDepth) >= averageDistance * depthInterval) return false;
   }
-
-  PatchSet.insert(pointPos);
-  
-  averageDepth = (averageDepth*Patch.size() + depth)/(Patch.size() + 1);
-
-  Patch.push_back({
-    pointPos.x,
-    pointPos.y,
-    pointPos.z,
-  });
-
-  PatchNormal.push_back({
-    normalVec.x,
-    normalVec.y,
-    normalVec.z
-  });
+  averageDepth = (averageDepth*HitPoints.size() + hitInfo.depth)/(HitPoints.size() + 1);
+  PointSet.insert(hitInfo.pos);
+  HitPoints.push_back(hitInfo);
 
   return true;
-}
-
-// Pick a point by the mouse position, 
-// then add the point to Patch.
-void tracePoints(ImGuiIO &io, int &currentMode) {
-  if (ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
-    ImVec2 mousePos = ImGui::GetMousePos();
-    int xPos = io.DisplayFramebufferScale.x * mousePos.x;
-    int yPos = io.DisplayFramebufferScale.y * mousePos.y;
-
-    // Cast a ray
-    Ray ray(xPos, yPos);
-    Hit hitInfo = ray.searchNeighborPoints(CurveNetworkRadius);
-    if (!hitInfo.hit) return;
-    addPointToPatch(hitInfo.t, hitInfo.pos, hitInfo.normal);
-
-    // Register Patch as point cloud.
-    registerPatchAsCurveNetworkLine("trace: ");
-  }
-
-  if (ImGui::IsMouseReleased(ImGuiMouseButton_Left) && Patch.size() > 0) {
-    resetMode(currentMode);
-  }
-}
-
-// Cast a ray from the mouse position,
-// then add the intersection point with sphere
-// to Patch.
-void castPointToSphere(ImGuiIO &io, int &currentMode, glm::vec3 center, double radius) {
-  if (ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
-    ImVec2 mousePos = ImGui::GetMousePos();
-    int xPos = io.DisplayFramebufferScale.x * mousePos.x;
-    int yPos = io.DisplayFramebufferScale.y * mousePos.y;
-
-    // Cast a ray
-    Ray ray(xPos, yPos);
-    Hit hitInfo = ray.checkSphere(center, radius);
-    if (!hitInfo.hit) return;
-    addPointToPatch(hitInfo.t, hitInfo.pos, hitInfo.normal);
-
-    // Register Patch as point cloud.
-    registerPatchAsPointCloud("cast: ");
-  }
-
-  if (ImGui::IsMouseReleased(ImGuiMouseButton_Left) && Patch.size() > 0) {
-    resetMode(currentMode);
-  }
 }
 
 // Check the inside/outside of the polygon.
@@ -200,14 +158,13 @@ void castPointToSphere(ImGuiIO &io, int &currentMode, glm::vec3 center, double r
 //  2.  Determine that if there are an odd number of intersections
 //      between this half-line and the polygon, it is inside, and if 
 //      there are an even number, it is outside.
-bool inside_polygon(double x, double y) {
+bool inside_polygon(double x, double y, const int polygonSiz) {
   const double EPS = 1e-5; 
-  const int polygonSiz = ScreenCoords.size();
 
   int crossCount = 0;
   for (int i = 0; i < polygonSiz; i++) {
-    glm::dvec2 u = glm::dvec2(ScreenCoords[i][0], ScreenCoords[i][1]);
-    glm::dvec2 v = glm::dvec2(ScreenCoords[(i + 1) % polygonSiz][0], ScreenCoords[(i + 1) % polygonSiz][1]);
+    glm::dvec2 u = glm::dvec2(HitPoints[i].screenCoord.x, HitPoints[i].screenCoord.y);
+    glm::dvec2 v = glm::dvec2(HitPoints[(i + 1) % polygonSiz].screenCoord.x, HitPoints[(i + 1) % polygonSiz].screenCoord.y);
 
     // If u, v are too close to (x, y), then offset. 
     if (std::abs(u.y - y) < EPS) {
@@ -238,16 +195,19 @@ bool inside_polygon(double x, double y) {
 
 // Compute the search boundary, and then fill
 // the inside are of the polygon with points.
+// -> this function cast points to the specified sphere.
 void fillSketchedArea(glm::vec3 center, double radius) {
+  const int polygonSiz = HitPoints.size();
+
   // Compute the search boundary.
   const float INF = 100000.0;
   float min_x = INF, max_x = -INF;
   float min_y = INF, max_y = -INF;
-  for (int i = 0; i < ScreenCoords.size(); i++) {
-    min_x = std::min(min_x, ScreenCoords[i].x);
-    max_x = std::max(max_x, ScreenCoords[i].x);
-    min_y = std::min(min_y, ScreenCoords[i].y);
-    max_y = std::max(max_y, ScreenCoords[i].y);
+  for (int i = 0; i < polygonSiz; i++) {
+    min_x = std::min(min_x, HitPoints[i].screenCoord.x);
+    max_x = std::max(max_x, HitPoints[i].screenCoord.x);
+    min_y = std::min(min_y, HitPoints[i].screenCoord.y);
+    max_y = std::max(max_y, HitPoints[i].screenCoord.y);
   }
 
   // Adjust grid size to keep the number
@@ -258,14 +218,108 @@ void fillSketchedArea(glm::vec3 center, double radius) {
   // Inside/Outside Check for each filled piont.
   for (int i = glm::floor(min_x); i < glm::ceil(max_x); i += gridSize) {
     for (int j = glm::floor(min_y); j < glm::ceil(max_y); j += gridSize) {
-      if (!inside_polygon(i, j)) continue;
+      if (!inside_polygon(i, j, polygonSiz)) continue;
 
       // Cast a ray
       Ray ray(i, j);
       Hit hitInfo = ray.checkSphere(center, radius);
       if (!hitInfo.hit) continue;
-    addPointToPatch(hitInfo.t, hitInfo.pos, hitInfo.normal);
+      addPointToPatch(hitInfo);
     } 
+  }
+}
+
+// Compute the search boundary, and then fill
+// the inside are of the polygon with points.
+// -> this function cast points to the approximate surface.
+void fillSketchedArea(double depth) {
+  const int polygonSiz = HitPoints.size();
+
+  // Compute the search boundary.
+  const float INF = 100000.0;
+  float min_x = INF, max_x = -INF;
+  float min_y = INF, max_y = -INF;
+  for (int i = 0; i < polygonSiz; i++) {
+    min_x = std::min(min_x, HitPoints[i].screenCoord.x);
+    max_x = std::max(max_x, HitPoints[i].screenCoord.x);
+    min_y = std::min(min_y, HitPoints[i].screenCoord.y);
+    max_y = std::max(max_y, HitPoints[i].screenCoord.y);
+  }
+
+  // Adjust grid size to keep the number
+  // of points to be added constant.
+  float gridNum = (glm::ceil(max_x) - glm::floor(min_x)) * (glm::ceil(max_y) - glm::floor(min_y));
+  int gridSize = glm::sqrt(gridNum / PatchSize);
+
+  // Inside/Outside Check for each filled piont.
+  for (int i = glm::floor(min_x); i < glm::ceil(max_x); i += gridSize) {
+    for (int j = glm::floor(min_y); j < glm::ceil(max_y); j += gridSize) {
+      if (!inside_polygon(i, j, polygonSiz)) continue;
+
+      // Cast a ray
+      Ray ray(i, j);
+      Hit hitInfo = ray.castPointToPlane(depth);
+      if (!hitInfo.hit) continue;
+      addPointToPatch(hitInfo);
+    } 
+  }
+}
+
+// Pick a point by the mouse position, 
+// then add the point to Patch.
+void tracePoints(ImGuiIO &io, int &currentMode) {
+  if (ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
+    ImVec2 mousePos = ImGui::GetMousePos();
+    int xPos = io.DisplayFramebufferScale.x * mousePos.x;
+    int yPos = io.DisplayFramebufferScale.y * mousePos.y;
+
+    // Cast a ray
+    Ray ray(xPos, yPos);
+    Hit hitInfo = ray.searchNeighborPoints(CurveNetworkRadius);
+    if (!hitInfo.hit) return;
+    addPointToPatch(hitInfo);
+
+    // Register Patch as curve network (LINE)
+    registerPatchAsCurveNetworkLine(TracePrefix);
+  }
+
+  if (ImGui::IsMouseReleased(ImGuiMouseButton_Left) && HitPoints.size() > 0) {
+    // Fill the sketched area.
+    fillSketchedArea(averageDepth);
+
+    // Register patch as point cloud.
+    registerPatchAsPointCloud(CastPrefix, true);
+    removePatchAsCurveNetworkLine(TracePrefix);
+
+    // Reconstruct Surface
+    poissonReconstruct(meshV, meshN);
+    greedyProjection(meshV, meshN);
+
+    resetMode(currentMode);
+  }
+}
+
+// Cast a ray from the mouse position,
+// then add the intersection point with sphere
+// to Patch.
+void castPointToSphere(ImGuiIO &io, int &currentMode, glm::vec3 center, double radius) {
+  if (ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
+    ImVec2 mousePos = ImGui::GetMousePos();
+    int xPos = io.DisplayFramebufferScale.x * mousePos.x;
+    int yPos = io.DisplayFramebufferScale.y * mousePos.y;
+
+    // Cast a ray
+    Ray ray(xPos, yPos);
+    Hit hitInfo = ray.checkSphere(center, radius);
+    if (!hitInfo.hit) return;
+    addPointToPatch(hitInfo);
+
+    // Register Patch as point cloud.
+    registerPatchAsPointCloud(CastPrefix);
+  }
+
+  if (ImGui::IsMouseReleased(ImGuiMouseButton_Left) && HitPoints.size() > 0) {
+    resetMode(currentMode);
   }
 }
 
@@ -281,21 +335,20 @@ void createPatchToPointCloud(ImGuiIO &io, int &currentMode, glm::vec3 center, do
     Ray ray(xPos, yPos);
     Hit hitInfo = ray.checkSphere(center, radius);
     if (!hitInfo.hit) return;
-    if (addPointToPatch(hitInfo.t, hitInfo.pos, hitInfo.normal)) {
-      ScreenCoords.push_back(hitInfo.screenCoord);
-    }
+    addPointToPatch(hitInfo);
 
-    // Register Patch as point cloud.
-    registerPatchAsCurveNetworkLine("sketch ");
+    // Register Patch as curve network (LINE)
+    registerPatchAsCurveNetworkLine(SketchPrefix);
   }
 
-  if (ImGui::IsMouseReleased(ImGuiMouseButton_Left) && Patch.size() > 0) {
+  if (ImGui::IsMouseReleased(ImGuiMouseButton_Left) && HitPoints.size() > 0) {
+
     // Fill the sketched area.
     fillSketchedArea(center, radius);
 
-    // Register the point cloud, and then remove curve network 
-    registerPatchAsPointCloud("cast: ", true);
-    removePatchAsCurveNetworkLine("sketch ");
+    // Register the point cloud. 
+    registerPatchAsPointCloud(CastPrefix, true);
+    removePatchAsCurveNetworkLine(SketchPrefix);
 
     // Reconstruct Surface
     poissonReconstruct(meshV, meshN);

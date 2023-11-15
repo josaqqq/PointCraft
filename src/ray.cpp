@@ -9,9 +9,15 @@ extern Eigen::MatrixXd meshN;
 
 Ray::Ray(double xScreen, double yScreen) {
   screenCoord = glm::vec2(xScreen, yScreen);
+  orig        = polyscope::view::getCameraWorldPosition();
+  rayDir      = polyscope::view::screenCoordsToWorldRay(glm::vec2(xScreen, yScreen));
+  cameraDir   = polyscope::view::screenCoordsToWorldRay(glm::vec2(polyscope::view::windowWidth/2, polyscope::view::windowHeight/2));
+}
 
-  orig = polyscope::view::getCameraWorldPosition();
-  dir = polyscope::view::screenCoordsToWorldRay(glm::vec2(xScreen, yScreen));
+double Ray::calcDepthFromCamera(glm::vec3 point) {
+  double d = -glm::dot(cameraDir, orig);
+  double depth = std::abs(glm::dot(cameraDir, point) + d) / glm::length(cameraDir);
+  return depth;
 }
 
 // Check whether this ray intersect
@@ -22,8 +28,8 @@ Hit Ray::checkSphere(glm::vec3 center, double radius) {
 
   // Solve hit problem with quadratic equation.
   glm::vec3 oc = orig - center;
-  double a = glm::dot(dir, dir);
-  double b = 2.0*glm::dot(oc, dir);
+  double a = glm::dot(rayDir, rayDir);
+  double b = 2.0*glm::dot(oc, rayDir);
   double c = glm::dot(oc, oc) - radius*radius;
   double D = b*b - 4.0*a*c;
 
@@ -31,10 +37,11 @@ Hit Ray::checkSphere(glm::vec3 center, double radius) {
     // Ray does not hit the sphere.
     hitInfo.hit = false;
   } else {
-    hitInfo.hit = true;
     // Ray hits the sphere.
+    hitInfo.hit = true;
     hitInfo.t = (-b - glm::sqrt(D)) / (2.0*a);
-    hitInfo.pos = orig + static_cast<float>(hitInfo.t)*dir;
+    hitInfo.pos = orig + static_cast<float>(hitInfo.t)*rayDir;
+    hitInfo.depth = calcDepthFromCamera(hitInfo.pos);
     hitInfo.normal = glm::normalize(hitInfo.pos - center);
 
     // Hit point is behind the scene.
@@ -51,7 +58,7 @@ Hit Ray::checkSphere(glm::vec3 center, double radius) {
 // point to the scene is chosen.
 Hit Ray::searchNeighborPoints(double searchRadius) {
   searchRadius *= 2.0;
-    // TODO: Somehow the scale is different...
+    // TODO: Somehow the scale is different... We need to check out the lengthScale.
 
   Hit hitInfo(screenCoord);
 
@@ -71,23 +78,41 @@ Hit Ray::searchNeighborPoints(double searchRadius) {
     );
 
     // p is looked from the back side of the surface.
-    if (glm::dot(dir, n) >= 0.0) continue;
+    if (glm::dot(rayDir, n) >= 0.0) continue;
 
     // p is outside of the scene.
     // TODO: Utilize nearClip, farClip
-    double currDepth = glm::dot(p - orig, dir) / glm::length(dir);
+    double currDepth = glm::dot(p - orig, rayDir) / glm::length(rayDir);
     if (currDepth <= 0) continue;
     
-    double currDist = glm::length(glm::cross(p - orig, dir)) / glm::length(dir); 
+    double currDist = glm::length(glm::cross(p - orig, rayDir)) / glm::length(rayDir); 
     if (currDist < searchRadius && currDepth < maxDepth) {
       maxDepth = currDepth;
 
       hitInfo.hit = true;
       hitInfo.t = currDepth;
+      hitInfo.depth = calcDepthFromCamera(p);
       hitInfo.pos = p;
       hitInfo.normal = n;
     }
   }
+
+  return hitInfo;
+}
+
+// Cast the point to the specified plane
+// that is parallel to "camera plane".
+// -> just approximation now.
+Hit Ray::castPointToPlane(double depth) {
+  Hit hitInfo(screenCoord);
+
+  hitInfo.hit = true;
+  hitInfo.t = depth;
+  hitInfo.depth = depth;
+
+  // TODO: we need to consider the true orig.
+  hitInfo.pos = orig + (float)depth*rayDir;
+  hitInfo.normal = -rayDir;
 
   return hitInfo;
 }

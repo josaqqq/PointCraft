@@ -7,18 +7,24 @@ class Hit {
   public:
     Hit(glm::vec2 screenCoord) : screenCoord(screenCoord) {}
 
-    bool hit;
-    double t;
+    bool hit;         // hit or not
+    double t;         // ray parameter
+    double depth;     // distance from "camera plane" to the point
     
-    glm::vec3 pos;
-    glm::vec3 normal;
+    glm::vec3 pos;    // hit point
+    glm::vec3 normal; // hit point normal
 
-    glm::vec2 screenCoord;
+    glm::vec2 screenCoord;  // Coordinates of the origin of this ray
 };
 
 class Ray {
   public:
     Ray(double xScreen, double yScreen);
+
+    // Calculate the depth from the point 
+    // to the plane that is orthogonal to the 
+    // frontVec of the camera.
+    double calcDepthFromCamera(glm::vec3 point);
 
     // Check whether this ray intersect
     // with the sphere specified with 
@@ -31,11 +37,13 @@ class Ray {
     // of the searchRadius.
     Hit searchNeighborPoints(double searchRadius);
 
+    // Cast the point to the specified plane
+    // that is parallel to "camera plane".
+    Hit castPointToPlane(double depth);
+
   private:
-    // Coordinates on the screen
-    glm::vec2 screenCoord;
-    // Coordinates of the origin of this ray
-    glm::vec3 orig;
-    // Vector of the direction of this ray
-    glm::vec3 dir;
+    glm::vec2 screenCoord;  // Coordinates on the screen
+    glm::vec3 orig;         // Coordinates of the origin of this ray
+    glm::vec3 rayDir;       // Vector of the direction of this ray
+    glm::vec3 cameraDir;    // Vector of the direction of the camera
 };
