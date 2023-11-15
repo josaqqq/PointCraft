@@ -36,9 +36,10 @@ void resetMode(int &currentMode) {
 // Register/Remove Patch as point cloud with patchName.
 // Be aware that the point cloud with 
 // the same name is overwritten.
-extern Eigen::MatrixXd meshV;
-extern Eigen::MatrixXd meshN;
 void registerPatchAsPointCloud(std::string patchName, bool replaceMeshV = false) {
+  Eigen::MatrixXd meshV;  // extern
+  Eigen::MatrixXd meshN;  // extern
+
   patchName = patchName + std::to_string(PatchNum);
 
   Eigen::MatrixXd meshNewV(HitPoints.size(), 3);
@@ -140,8 +141,8 @@ void removePatchAsCurveNetworkLoop(std::string patchName) {
 
 // If the point is already added, then skip it.
 // If the depth of the added points is out of the range, then skip it.
-extern double averageDistance;
 bool addPointToPatch(Hit hitInfo) {
+  double averageDistance; // extern
   if (PointSet.count(hitInfo.pos)) return false;
   if (HitPoints.size() > 0) {
     if (std::abs(hitInfo.depth - averageDepth) >= averageDistance * depthInterval) return false;
@@ -268,6 +269,9 @@ void fillSketchedArea(double depth) {
 // Pick a point by the mouse position, 
 // then add the point to Patch.
 void tracePoints(ImGuiIO &io, int &currentMode) {
+  Eigen::MatrixXd meshV;  // extern
+  Eigen::MatrixXd meshN;  // extern
+
   if (ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
     ImVec2 mousePos = ImGui::GetMousePos();
     int xPos = io.DisplayFramebufferScale.x * mousePos.x;
@@ -326,6 +330,8 @@ void castPointToSphere(ImGuiIO &io, int &currentMode, glm::vec3 center, double r
 // While dragging the mouse, display the CurveNetwork.
 // When the mouse released, fill the sketched area and display them as PointCloud.
 void createPatchToPointCloud(ImGuiIO &io, int &currentMode, glm::vec3 center, double radius) {
+  Eigen::MatrixXd meshV;  // extern
+  Eigen::MatrixXd meshN;  // extern
   if (ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
     ImVec2 mousePos = ImGui::GetMousePos();
     int xPos = io.DisplayFramebufferScale.x * mousePos.x;

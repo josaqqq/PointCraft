@@ -2,6 +2,8 @@
 
 #include <vector>
 
+Octree::Octree() : octree(128.0f) {}
+
 Octree::Octree(Eigen::MatrixXd vertices, double resolution) : meshV(vertices), octree(resolution) {
   pcl::PointCloud<pcl::PointXYZ>::Ptr inputCloud(new pcl::PointCloud<pcl::PointXYZ>);
   inputCloud->points.resize(vertices.rows());

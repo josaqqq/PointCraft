@@ -3,6 +3,8 @@
 #include "polyscope/polyscope.h"
 #include "polyscope/view.h"
 
+#include "point_cloud.hpp"
+
 class Hit {
   public:
     Hit(glm::vec2 screenCoord) : screenCoord(screenCoord) {}
@@ -20,6 +22,7 @@ class Hit {
 class Ray {
   public:
     Ray(double xScreen, double yScreen);
+    Ray(double xScreen, double yScreen, PointCloud *pointCloud);
 
     // Calculate the depth from the point 
     // to the plane that is orthogonal to the 
@@ -42,6 +45,8 @@ class Ray {
     Hit castPointToPlane(double depth);
 
   private:
+    PointCloud *pointCloud;
+
     glm::vec2 screenCoord;  // Coordinates on the screen
     glm::vec3 orig;         // Coordinates of the origin of this ray
     glm::vec3 rayDir;       // Vector of the direction of this ray

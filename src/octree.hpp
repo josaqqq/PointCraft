@@ -7,7 +7,9 @@
 
 class Octree {
   public:
+    Octree();
     Octree(Eigen::MatrixXd meshV, double resolution);
+    ~Octree() {}
 
     // Search nearest neighbor for each point, 
     // and then calculate average distance for

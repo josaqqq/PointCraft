@@ -4,10 +4,14 @@
 
 #include "ray.hpp"
 
-extern Eigen::MatrixXd meshV;
-extern Eigen::MatrixXd meshN;
-
 Ray::Ray(double xScreen, double yScreen) {
+  screenCoord = glm::vec2(xScreen, yScreen);
+  orig        = polyscope::view::getCameraWorldPosition();
+  rayDir      = polyscope::view::screenCoordsToWorldRay(glm::vec2(xScreen, yScreen));
+  cameraDir   = polyscope::view::screenCoordsToWorldRay(glm::vec2(polyscope::view::windowWidth/2, polyscope::view::windowHeight/2));
+}
+
+Ray::Ray(double xScreen, double yScreen, PointCloud *pointCloud) : pointCloud(pointCloud) {
   screenCoord = glm::vec2(xScreen, yScreen);
   orig        = polyscope::view::getCameraWorldPosition();
   rayDir      = polyscope::view::screenCoordsToWorldRay(glm::vec2(xScreen, yScreen));
@@ -63,18 +67,18 @@ Hit Ray::searchNeighborPoints(double searchRadius) {
   Hit hitInfo(screenCoord);
 
   double maxDepth = 100000.0;
-  for (int i = 0; i < meshV.rows(); i++) {
+  for (int i = 0; i < pointCloud->meshV.rows(); i++) {
     // point position
     glm::vec3 p = glm::vec3(
-      meshV(i, 0),
-      meshV(i, 1),
-      meshV(i, 2)
+      pointCloud->meshV(i, 0),
+      pointCloud->meshV(i, 1),
+      pointCloud->meshV(i, 2)
     );
     // point normal
     glm::vec3 n = glm::vec3(
-      meshN(i, 0),
-      meshN(i, 1),
-      meshN(i, 2)
+      pointCloud->meshN(i, 0),
+      pointCloud->meshN(i, 1),
+      pointCloud->meshN(i, 2)
     );
 
     // p is looked from the back side of the surface.
