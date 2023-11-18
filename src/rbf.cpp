@@ -3,22 +3,22 @@
 #include "rbf.hpp"
 
 void RBF::calcInterpolateSurface() {
-  sampleSize = boundaryOnPlane->size();
+  sampleSize = basisOnPlane->size();
 
   H = Eigen::MatrixXd::Zero(sampleSize, sampleSize);
   for (int i = 0; i < sampleSize; i++) {
     for (int j = 0; j < sampleSize; j++) {
       if (i == j) continue;
 
-      glm::dvec2 x_i = (*boundaryOnPlane)[i];
-      glm::dvec2 x_j = (*boundaryOnPlane)[j];
+      glm::dvec2 x_i = (*basisOnPlane)[i];
+      glm::dvec2 x_j = (*basisOnPlane)[j];
       H(i, j) = greenFunction(x_i, x_j);
     }
   }
 
   y = Eigen::VectorXd(sampleSize);
   for (int i = 0; i < sampleSize; i++) {
-    y(i) = (*boundaryPoints)[i].depth - averageDepth;
+    y(i) = (*basisPoints)[i].depth - averageDepth;
   }
 
   w = H.colPivHouseholderQr().solve(y);
@@ -36,7 +36,7 @@ Eigen::MatrixXd RBF::castPointsToSurface() {
     // for each green function
     double height = 0.0;
     for (int j = 0; j < sampleSize; j++) {
-      height += w(j)*greenFunction((*discretizedPoints)[i], (*boundaryOnPlane)[j]);
+      height += w(j)*greenFunction((*discretizedPoints)[i], (*basisOnPlane)[j]);
     }
 
     glm::dvec3 castedPoint = 

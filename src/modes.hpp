@@ -11,6 +11,11 @@ enum Mode {
   MODE_INTERPOLATION,
 };
 
+enum VisualizationMode {
+  MODE_HIDE,
+  MODE_SHOW
+};
+
 enum SurfaceMode {
   SURFACE_MODE_NONE,
   SURFACE_MODE_POISSON,
@@ -22,17 +27,23 @@ struct ModeSelector {
     ModeSelector() {}
     ModeSelector(
       int *currentMode,
+      int *currentPointCloud,
+      int *currentPointCloudNormal,
       int *currentSurfaceMode,
       PointCloud *pointCloud,
       InterpolationTool *interpolationTool
     ) 
     : currentMode(currentMode),
+      currentPointCloud(currentPointCloud),
+      currentPointCloudNormal(currentPointCloudNormal),
       currentSurfaceMode(currentSurfaceMode),
       pointCloud(pointCloud), 
       interpolationTool(interpolationTool) 
     { 
       // Initialize current modes.
       *currentMode = MODE_NONE;
+      *currentPointCloud = MODE_SHOW;
+      *currentPointCloudNormal = MODE_SHOW;
       *currentSurfaceMode = SURFACE_MODE_GREEDY;
     }
 
@@ -42,6 +53,8 @@ struct ModeSelector {
   
   private:
     int *currentMode;
+    int *currentPointCloud;
+    int *currentPointCloudNormal;
     int *currentSurfaceMode;
 
     PointCloud *pointCloud;

@@ -14,10 +14,10 @@
 void SketchTool::registerPatchAsPointCloud(std::string patchName) {
   // TODO: Implemented for debug
   std::vector<std::vector<double>> patch;
-  for (int i = 0; i < boundaryOnPlane.size(); i++) {
+  for (int i = 0; i < basisOnPlane.size(); i++) {
     patch.push_back({
-      boundaryOnPlane[i].x,
-      boundaryOnPlane[i].y,
+      basisOnPlane[i].x,
+      basisOnPlane[i].y,
       0.0d
     });
   }
@@ -33,9 +33,9 @@ void SketchTool::registerPatchAsPointCloud(std::string patchName) {
   patchCloud->setPointColor(PointColor);
   patchCloud->setPointRadius(PointRadius);
 }
-void SketchTool::registerPatchAsPointCloud(Eigen::MatrixXd vertices, Eigen::MatrixXd normals) {
+void SketchTool::registerPatchAsPointCloud(std::string patchName, Eigen::MatrixXd vertices, Eigen::MatrixXd normals) {
   // TODO: Implemented for debug
-  polyscope::PointCloud* points = polyscope::registerPointCloud(patchPrefix, vertices);
+  polyscope::PointCloud* points = polyscope::registerPointCloud(patchName, vertices);
   points->setPointColor(PointColor);
   points->setPointRadius(PointRadius);
 
@@ -54,18 +54,18 @@ void SketchTool::removePatchAsPointCloud(std::string patchName) {
 // the same name is overwritten
 void SketchTool::registerSketchAsCurveNetworkLine(std::string sketchName) {
   std::vector<std::vector<double>> sketch;
-  for (int i = 0; i < boundaryPoints.size(); i++) {
+  for (int i = 0; i < basisPoints.size(); i++) {
     sketch.push_back({
-      boundaryPoints[i].pos.x,
-      boundaryPoints[i].pos.y,
-      boundaryPoints[i].pos.z
+      basisPoints[i].pos.x,
+      basisPoints[i].pos.y,
+      basisPoints[i].pos.z
     });
   }
-  if (boundaryPoints.size() == 1) {
+  if (basisPoints.size() == 1) {
     sketch.push_back({
-      boundaryPoints[0].pos.x,
-      boundaryPoints[0].pos.y,
-      boundaryPoints[0].pos.z
+      basisPoints[0].pos.x,
+      basisPoints[0].pos.y,
+      basisPoints[0].pos.z
     });
   };
 
@@ -82,11 +82,11 @@ void SketchTool::removeSketchAsCurveNetworkLine(std::string sketchName) {
 // the same name is overwritten
 void SketchTool::registerSketchAsCurveNetworkLoop(std::string sketchName) {
   std::vector<std::vector<double>> sketch;
-  for (int i = 0; i < boundaryPoints.size(); i++) {
+  for (int i = 0; i < basisPoints.size(); i++) {
     sketch.push_back({
-      boundaryPoints[i].pos.x,
-      boundaryPoints[i].pos.y,
-      boundaryPoints[i].pos.z
+      basisPoints[i].pos.x,
+      basisPoints[i].pos.y,
+      basisPoints[i].pos.z
     });
   }
 
@@ -94,28 +94,33 @@ void SketchTool::registerSketchAsCurveNetworkLoop(std::string sketchName) {
   curveNetwork->setColor(CurveNetworkColor);
   curveNetwork->setRadius(CurveNetworkRadius);
 }
+void SketchTool::registerSketchAsCurveNetworkLoop(std::string sketchName, Eigen::MatrixXd vertices) {
+  polyscope::CurveNetwork* curveNetwork = polyscope::registerCurveNetworkLoop(sketchName, vertices);
+  curveNetwork->setColor(CurveNetworkColor);
+  curveNetwork->setRadius(CurveNetworkRadius);
+}
 void SketchTool::removeSketchAsCurveNetworkLoop(std::string sketchName) {
   polyscope::removeCurveNetwork(sketchName, false);
 }
 
-// Select the boundary points the user selected
-// and update boundaryPoints.
-bool SketchTool::addBoundaryPoints(Hit hitInfo) {
-  // if (boundarySet.count(hitInfo.pos)) return false;
-  if (boundaryPoints.size() > 0) {
+// Select the basis points the user selected
+// and update basisPoints.
+bool SketchTool::addBasisPoints(Hit hitInfo) {
+  // if (basisSet.count(hitInfo.pos)) return false;
+  if (basisPoints.size() > 0) {
     if (std::abs(hitInfo.depth - averageDepth) >= pointCloud->averageDistance * depthInterval) return false;
   }
 
-  averageDepth = (averageDepth*boundaryPoints.size() + hitInfo.depth) / (boundaryPoints.size() + 1);
-  // boundarySet.insert(hitInfo.pos);
-  boundaryPoints.push_back(hitInfo);
+  averageDepth = (averageDepth*basisPoints.size() + hitInfo.depth) / (basisPoints.size() + 1);
+  // basisSet.insert(hitInfo.pos);
+  basisPoints.push_back(hitInfo);
 
   return true;
 }
 
-// Cast the boundary points to the plane orthogonal to camera direction
-// and update boundaryOnPlane.
-void SketchTool::castBoundaryToCameraPlane() {
+// Cast the basis points to the plane orthogonal to camera direction
+// and update basisOnPlane.
+void SketchTool::castBasisToCameraPlane() {
   const glm::dvec3 orig       = polyscope::view::getCameraWorldPosition();
   const glm::dvec3 cameraDir  = polyscope::view::screenCoordsToWorldRay(glm::vec2(polyscope::view::windowWidth/2, polyscope::view::windowHeight/2));
 
@@ -123,44 +128,39 @@ void SketchTool::castBoundaryToCameraPlane() {
   calcOrthogonalBasis(cameraDir);
 
   const double h = glm::dot(orig, cameraDir);
-  for (int i = 0; i < boundaryPoints.size(); i++) {
-    glm::dvec3 point = boundaryPoints[i].pos;
+  for (int i = 0; i < basisPoints.size(); i++) {
+    glm::dvec3 point = basisPoints[i].pos;
     glm::dvec3 castedPoint = point - (glm::dot(point, cameraDir) - h)*cameraDir;
 
-    boundaryOnPlane.push_back(glm::vec2(
+    basisOnPlane.push_back(glm::vec2(
       glm::dot(orthoU, castedPoint - orig),
       glm::dot(orthoV, castedPoint - orig)
     ));
   }
 }
 
-// Cast the boundary points to the screen and update boundaryOnPlane.
-void SketchTool::castBoundaryToScreen() {
+// Cast the basis points to the screen and update basisOnPlane.
+void SketchTool::castBasisToScreen() {
 
 }
 
-// Discretize the boundary and update discretiedPoints.
-void SketchTool::discretizeCastedBoundary() {
-  const int polygonSize = boundaryOnPlane.size();
+// Discretize the basis and update discretiedPoints.
+void SketchTool::discretizeCastedBasis() {
+  const int polygonSize = basisOnPlane.size();
 
-  // Comput the search boundary.
+  // Comput the search basis.
   const double INF = 100000.0;
   double min_x = INF, max_x = -INF;
   double min_y = INF, max_y = -INF;
   for (int i = 0; i < polygonSize; i++) {
-    min_x = std::min(min_x, boundaryOnPlane[i].x);
-    max_x = std::max(max_x, boundaryOnPlane[i].x);
-    min_y = std::min(min_y, boundaryOnPlane[i].y);
-    max_y = std::max(max_y, boundaryOnPlane[i].y);
+    min_x = std::min(min_x, basisOnPlane[i].x);
+    max_x = std::max(max_x, basisOnPlane[i].x);
+    min_y = std::min(min_y, basisOnPlane[i].y);
+    max_y = std::max(max_y, basisOnPlane[i].y);
   }
 
-  // Adjust grid size to keep the number
-  // of points to be added constant.
-  double gridNum = (max_x - min_x) * (max_y - min_y);
-  double gridSize = glm::sqrt(gridNum / PatchSize);
-
-  for (double i = min_x; i < max_x; i += gridSize) {
-    for (double j = min_y; j < max_y; j += gridSize) {
+  for (double i = min_x; i < max_x; i += pointCloud->averageDistance) {
+    for (double j = min_y; j < max_y; j += pointCloud->averageDistance) {
       if (!insidePolygon(i, j, polygonSize)) continue;
       discretizedPoints.push_back(glm::vec2(i, j));
     }
@@ -171,9 +171,9 @@ void SketchTool::discretizeCastedBoundary() {
 void SketchTool::resetSketch() {
   *currentMode = 0;
   averageDepth = 0.0;
-  // boundarySet.clear();
-  boundaryPoints.clear();
-  boundaryOnPlane.clear();
+  // basisSet.clear();
+  basisPoints.clear();
+  basisOnPlane.clear();
   discretizedPoints.clear();
 }
 
@@ -184,11 +184,11 @@ double SketchTool::getAverageDepth() {
 PointCloud* SketchTool::getPointCloud() {
   return pointCloud;
 }
-std::vector<Hit>* SketchTool::getBoundaryPoints() {
-  return &boundaryPoints;
+std::vector<Hit>* SketchTool::getBasisPoints() {
+  return &basisPoints;
 }
-std::vector<glm::dvec2>* SketchTool::getBoundaryOnPlane() {
-  return &boundaryOnPlane;
+std::vector<glm::dvec2>* SketchTool::getBasisOnPlane() {
+  return &basisOnPlane;
 }
 std::vector<glm::dvec2>* SketchTool::getDiscretizedPoints() {
   return &discretizedPoints;
@@ -221,8 +221,8 @@ bool SketchTool::insidePolygon(double x, double y, const int polygonSiz) {
 
   int crossCount = 0;
   for (int i = 0; i < polygonSiz; i++) {
-    glm::dvec2 u = glm::dvec2(boundaryOnPlane[i].x, boundaryOnPlane[i].y);
-    glm::dvec2 v = glm::dvec2(boundaryOnPlane[(i + 1) % polygonSiz].x, boundaryOnPlane[(i + 1) % polygonSiz].y);
+    glm::dvec2 u = glm::dvec2(basisOnPlane[i].x, basisOnPlane[i].y);
+    glm::dvec2 v = glm::dvec2(basisOnPlane[(i + 1) % polygonSiz].x, basisOnPlane[(i + 1) % polygonSiz].y);
 
     // If u, v are too close to (x, y), then offset. 
     if (std::abs(u.y - y) < EPS) {

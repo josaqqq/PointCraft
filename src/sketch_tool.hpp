@@ -18,7 +18,7 @@ class SketchTool {
     // Be aware that the point cloud with 
     // the same name is overwritten.
     void registerPatchAsPointCloud(std::string patchName);
-    void registerPatchAsPointCloud(Eigen::MatrixXd vertices, Eigen::MatrixXd normals);
+    void registerPatchAsPointCloud(std::string patchName, Eigen::MatrixXd vertices, Eigen::MatrixXd normals);
     void removePatchAsPointCloud(std::string patchName);
 
     // Register/Remove sketch as curve network line with sketchName.
@@ -31,21 +31,22 @@ class SketchTool {
     // Be aware that the curve network with 
     // the same name is overwritten
     void registerSketchAsCurveNetworkLoop(std::string sketchName);
+    void registerSketchAsCurveNetworkLoop(std::string sketchName, Eigen::MatrixXd vertices);
     void removeSketchAsCurveNetworkLoop(std::string sketchName);
 
-    // Select the boundary points the user selected
-    // and update boundaryPoints.
-    bool addBoundaryPoints(Hit hitInfo);
+    // Select the base points the user selected
+    // and update basePoints.
+    bool addBasisPoints(Hit hitInfo);
 
-    // Cast the boundary points to the plane orthogonal to camera direction
-    // and update boundaryOnPlane.
-    void castBoundaryToCameraPlane();
+    // Cast the base points to the plane orthogonal to camera direction
+    // and update basisOnPlane.
+    void castBasisToCameraPlane();
 
-    // Cast the boundary points to the screen and update boundaryOnPlane.
-    void castBoundaryToScreen();
+    // Cast the basis points to the screen and update basisOnPlane.
+    void castBasisToScreen();
 
-    // Discretize the boundary and update discretiedPoints.
-    void discretizeCastedBoundary();
+    // Discretize the basis and update discretiedPoints.
+    void discretizeCastedBasis();
 
     // Reset all member variables.
     void resetSketch();
@@ -53,8 +54,8 @@ class SketchTool {
     // Return the pointer to member variables.
     double                    getAverageDepth();
     PointCloud*               getPointCloud();
-    std::vector<Hit>*         getBoundaryPoints();
-    std::vector<glm::dvec2>*  getBoundaryOnPlane();
+    std::vector<Hit>*         getBasisPoints();
+    std::vector<glm::dvec2>*  getBasisOnPlane();
     std::vector<glm::dvec2>*  getDiscretizedPoints();
     std::pair<glm::dvec3, glm::dvec3> getOrthogonalBasis();
 
@@ -63,10 +64,11 @@ class SketchTool {
 
     int *currentMode;     // Current selected Mode
     double averageDepth;  // Average depth of selected points
-    // std::unordered_set<glm::dvec3>   boundarySet;       // Used for the guard for duplicated points
-    std::vector<Hit>                boundaryPoints;    // Selected boundary information
-    std::vector<glm::dvec2>         boundaryOnPlane;   // Boundary points casted onto plane
-    std::vector<glm::dvec2>         discretizedPoints; // Discretized points in the boundary
+    // std::unordered_set<glm::dvec3>   basisSet;       // Used for the guard for duplicated points
+    std::vector<glm::dvec3>         sketchPoints;      // Sketched points on the camera screen
+    std::vector<Hit>                basisPoints;    // Selected basis information
+    std::vector<glm::dvec2>         basisOnPlane;   // basis points casted onto plane
+    std::vector<glm::dvec2>         discretizedPoints; // Discretized points in the basis
 
     // Calculate orthogonal basis with Gram-Schmidt orthonormalization.
     glm::dvec3 orthoU, orthoV;  // orthogonal basis for "camera plane"

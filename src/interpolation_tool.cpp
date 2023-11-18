@@ -16,18 +16,18 @@ void InterpolationTool::drawSketch() {
     Ray ray(xPos, yPos, getPointCloud());
     Hit hitInfo = ray.searchNeighborPoints(CurveNetworkRadius);
     if (!hitInfo.hit) return;
-    addBoundaryPoints(hitInfo);
+    addBasisPoints(hitInfo);
 
     // Register sketch as curve network (LINE)
     registerSketchAsCurveNetworkLine(TracePrefix);
   }
 
-  if (ImGui::IsMouseReleased(ImGuiMouseButton_Left) && getBoundaryPoints()->size() > 0) {
-    // Cast boundary points to the plane orthogonal to camera direction.
-    castBoundaryToCameraPlane();
+  if (ImGui::IsMouseReleased(ImGuiMouseButton_Left) && getBasisPoints()->size() > 0) {
+    // Cast basis points to the plane orthogonal to camera direction.
+    castBasisToCameraPlane();
 
     // Discretize the bounded area.
-    discretizeCastedBoundary();
+    discretizeCastedBasis();
 
     // Remove sketch as curve network (LINE)
     removeSketchAsCurveNetworkLine(TracePrefix);
@@ -35,8 +35,8 @@ void InterpolationTool::drawSketch() {
     RBF rbf(
       getAverageDepth(),
       getOrthogonalBasis(),
-      getBoundaryPoints(),
-      getBoundaryOnPlane(),
+      getBasisPoints(),
+      getBasisOnPlane(),
       getDiscretizedPoints()
     );
     rbf.calcInterpolateSurface();

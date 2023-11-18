@@ -1,7 +1,8 @@
 #pragma once
 
-#include <Eigen/Dense>
+#include "polyscope/point_cloud.h"
 
+#include <Eigen/Dense>
 #include <string>
 
 #include "octree.hpp"
@@ -18,8 +19,9 @@ class PointCloud {
 
     double averageDistance;
 
-    // Move points to set the gravity point to (0.0, 0.0, 0.0).
-    void movePointsToOrigin();
+    // Enable or Disable the point cloud and normals
+    void setPointCloudEnabled(bool flag);
+    void setPointCloudNormalEnabled(bool flag);
 
     // Update point cloud
     //   - update octree
@@ -30,5 +32,10 @@ class PointCloud {
     void addPoints(Eigen::MatrixXd newV, Eigen::MatrixXd newN);
 
   private:
+    // Move points to set the gravity point to (0.0, 0.0, 0.0).
+    void movePointsToOrigin();
+
     Octree octree;
+    polyscope::PointCloud *pointCloud;
+    polyscope::PointCloudVectorQuantity *vectorQuantity;
 };

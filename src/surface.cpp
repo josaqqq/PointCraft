@@ -1,6 +1,8 @@
 #include "polyscope/polyscope.h"
+
 #include "polyscope/surface_mesh.h"
 #include "polyscope/point_cloud.h"
+#include "polyscope/view.h"
 
 #include <pcl/io/obj_io.h>
 #include <pcl/point_types.h>
@@ -102,6 +104,7 @@ std::pair<Eigen::MatrixXd, Eigen::MatrixXd> mlsSmoothing(Eigen::MatrixXd vertice
 
   Eigen::MatrixXd meshV(outputCloud->size(), 3);
   Eigen::MatrixXd meshN(outputCloud->size(), 3);
+  glm::dvec3 averageNormal = glm::dvec3(0.0, 0.0, 0.0);
   for (int i = 0; i < outputCloud->size(); i++) {
     meshV.row(i) << 
       outputCloud->points[i].x,
@@ -112,7 +115,14 @@ std::pair<Eigen::MatrixXd, Eigen::MatrixXd> mlsSmoothing(Eigen::MatrixXd vertice
       outputCloud->points[i].normal_x,
       outputCloud->points[i].normal_y,
       outputCloud->points[i].normal_z;
+    
+    averageNormal += glm::dvec3(meshN(i, 0), meshN(i, 1), meshN(i, 2));
   }
+  averageNormal /= (double)outputCloud->size();
+  
+  // If the averageNormal is the same direction with cameraDir, flip the normals
+  const glm::dvec3 cameraDir  = polyscope::view::screenCoordsToWorldRay(glm::vec2(polyscope::view::windowWidth/2, polyscope::view::windowHeight/2));
+  if (glm::dot(averageNormal, cameraDir) > 0) meshN *= -1;
 
   polyscope::PointCloud *mlsPoints = polyscope::registerPointCloud(MLSName, meshV);
   mlsPoints->setPointColor(PointColor);

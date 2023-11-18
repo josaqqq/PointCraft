@@ -18,6 +18,8 @@
 #include "constants.hpp"
 
 int currentMode;
+int currentPointCloud;
+int currentPointCloudNormal;
 int currentSurfaceMode;
 PointCloud pointCloud;
 ModeSelector modeSelector;
@@ -25,16 +27,7 @@ ModeSelector modeSelector;
 void callback() {
   ImGuiIO &io = ImGui::GetIO();
 
-  ImGui::PushItemWidth(100);
-
-  // Surface Reconstruction
-  ImGui::Text("Surface Reconstruction:");
-  ImGui::Text("   "); ImGui::SameLine();
-  if (ImGui::Button("Poisson Surface Reconstruction"))  poissonReconstruct(pointCloud.meshV, pointCloud.meshN);
-  ImGui::Text("   "); ImGui::SameLine();
-  if (ImGui::Button("Moving Least Squares"))            mlsSmoothing(pointCloud.meshV);
-  ImGui::Text("   "); ImGui::SameLine();
-  if (ImGui::Button("Greedy Projection Triangulation")) greedyProjection(pointCloud.meshV, pointCloud.meshN);
+  ImGui::PushItemWidth(50);
 
   // Enable mode selection
   modeSelector.enableModeSelection(io);
@@ -72,12 +65,20 @@ int main(int argc, char **argv) {
   // Initialize polyscope
   polyscope::init();
   polyscope::options::groundPlaneMode = polyscope::GroundPlaneMode::None;
+  // polyscope::options::buildDefaultGuiPanels = false;
   polyscope::view::bgColor = BackgroundColor;
 
   // Initialize classes
   pointCloud = PointCloud(args::get(inFile));
   InterpolationTool interpolationTool(&pointCloud, &currentMode);
-  modeSelector = ModeSelector(&currentMode, &currentSurfaceMode, &pointCloud, &interpolationTool);
+  modeSelector = ModeSelector(
+    &currentMode, 
+    &currentPointCloud,
+    &currentPointCloudNormal,
+    &currentSurfaceMode, 
+    &pointCloud, 
+    &interpolationTool
+  );
 
   // Reconstruct surface
   poissonReconstruct(pointCloud.meshV, pointCloud.meshN);

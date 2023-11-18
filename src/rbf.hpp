@@ -10,19 +10,19 @@ class RBF {
     RBF(
       double averageDepth,
       std::pair<glm::dvec3, glm::dvec3> orthoBasis,
-      std::vector<Hit>        *boundaryPoints,
-      std::vector<glm::dvec2> *boundaryOnPlane,
+      std::vector<Hit>        *basisPoints,
+      std::vector<glm::dvec2> *basisOnPlane,
       std::vector<glm::dvec2> *discretizedPoints
     ) 
     : averageDepth(averageDepth),
       orthoU(orthoBasis.first), 
       orthoV(orthoBasis.second), 
-      boundaryPoints(boundaryPoints),
-      boundaryOnPlane(boundaryOnPlane), 
+      basisPoints(basisPoints),
+      basisOnPlane(basisOnPlane), 
       discretizedPoints(discretizedPoints) {}
 
     // Calculate the interpolate surface with RBF network
-    // using boundary information
+    // using basis information
     void calcInterpolateSurface();
 
     // Cast the discretied points to the interpolate surface
@@ -38,8 +38,8 @@ class RBF {
     double averageDepth;
     glm::dvec3 orthoU, orthoV;
     
-    std::vector<Hit>        *boundaryPoints;
-    std::vector<glm::dvec2> *boundaryOnPlane;
+    std::vector<Hit>        *basisPoints;
+    std::vector<glm::dvec2> *basisOnPlane;
     std::vector<glm::dvec2> *discretizedPoints;
 
     int sampleSize;

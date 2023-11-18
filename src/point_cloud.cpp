@@ -37,26 +37,12 @@ PointCloud::PointCloud(std::string filename) {
   updatePointCloud();
 } 
 
-// Move points to set the gravity point to (0.0, 0.0, 0.0).
-void PointCloud::movePointsToOrigin() {
-  double x = 0.0;
-  double y = 0.0;
-  double z = 0.0;
-
-  for (int i = 0; i < meshV.rows(); i++) {
-    x += meshV(i, 0);
-    y += meshV(i, 1);
-    z += meshV(i, 2);
-  }
-  x /= static_cast<double>(meshV.rows());
-  y /= static_cast<double>(meshV.rows());
-  z /= static_cast<double>(meshV.rows());
-
-  for (int i = 0; i < meshV.rows(); i++) {
-    meshV(i, 0) -= x;
-    meshV(i, 1) -= y;
-    meshV(i, 2) -= z;
-  }
+// Enable or Disable the point cloud and normals
+void PointCloud::setPointCloudEnabled(bool flag) {
+  pointCloud->setEnabled(flag);
+}
+void PointCloud::setPointCloudNormalEnabled(bool flag) {
+  vectorQuantity->setEnabled(flag);
 }
 
 // Update point cloud
@@ -67,12 +53,12 @@ void PointCloud::updatePointCloud() {
   octree = Octree(meshV, OctreeResolution);
 
   // Register Points
-  polyscope::PointCloud* pointCloud = polyscope::registerPointCloud(PointName, meshV);
+  pointCloud = polyscope::registerPointCloud(PointName, meshV);
   pointCloud->setPointColor(PointColor);
   pointCloud->setPointRadius(PointRadius);
 
   // Register Normals
-  polyscope::PointCloudVectorQuantity *vectorQuantity = pointCloud->addVectorQuantity(NormalName, meshN);
+  vectorQuantity = pointCloud->addVectorQuantity(NormalName, meshN);
   vectorQuantity->setVectorColor(NormalColor);
   vectorQuantity->setVectorLengthScale(NormalLength);
   vectorQuantity->setVectorRadius(NormalRadius);
@@ -98,4 +84,26 @@ void PointCloud::addPoints(Eigen::MatrixXd newV, Eigen::MatrixXd newN) {
   //   - update octree
   //   - render points and normals
   updatePointCloud();
+}
+
+// Move points to set the gravity point to (0.0, 0.0, 0.0).
+void PointCloud::movePointsToOrigin() {
+  double x = 0.0;
+  double y = 0.0;
+  double z = 0.0;
+
+  for (int i = 0; i < meshV.rows(); i++) {
+    x += meshV(i, 0);
+    y += meshV(i, 1);
+    z += meshV(i, 2);
+  }
+  x /= static_cast<double>(meshV.rows());
+  y /= static_cast<double>(meshV.rows());
+  z /= static_cast<double>(meshV.rows());
+
+  for (int i = 0; i < meshV.rows(); i++) {
+    meshV(i, 0) -= x;
+    meshV(i, 1) -= y;
+    meshV(i, 2) -= z;
+  }
 }
