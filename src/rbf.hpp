@@ -4,22 +4,15 @@
 #include <Eigen/Dense>
 
 #include "ray.hpp"
+#include "plane.hpp"
 
 class RBF {
   public:
     RBF(
-      double averageDepth,
-      std::pair<glm::dvec3, glm::dvec3> orthoBasis,
-      std::vector<Hit>        *basisPoints,
-      std::vector<glm::dvec2> *basisOnPlane,
-      std::vector<glm::dvec2> *discretizedPoints
-    ) 
-    : averageDepth(averageDepth),
-      orthoU(orthoBasis.first), 
-      orthoV(orthoBasis.second), 
-      basisPoints(basisPoints),
-      basisOnPlane(basisOnPlane), 
-      discretizedPoints(discretizedPoints) {}
+      Plane *screen,
+      std::vector<glm::dvec3> *basisPoints,
+      std::vector<glm::dvec3> *discretizedPoints
+    );
 
     // Calculate the interpolate surface with RBF network
     // using basis information
@@ -31,19 +24,18 @@ class RBF {
   private:
     // Green function: |x_i - x_j|^2 * (log(|x_i - x_j|) - 1.0)
     // ref: https://www.fon.hum.uva.nl/praat/manual/biharmonic_spline_interpolation.html
-    double greenFunction(glm::dvec2 x_i, glm::dvec2 x_j);
+    double greenFunction(glm::dvec3 x_i, glm::dvec3 x_j);
 
     void printDebug();
 
-    double averageDepth;
-    glm::dvec3 orthoU, orthoV;
-    
-    std::vector<Hit>        *basisPoints;
-    std::vector<glm::dvec2> *basisOnPlane;
-    std::vector<glm::dvec2> *discretizedPoints;
-
     int sampleSize;
     int castedSize;
+
+    Plane screen;
+    Plane averagePlane;
+
+    std::vector<glm::dvec3> *basisPoints;
+    std::vector<glm::dvec3> *discretizedPoints;
 
     Eigen::MatrixXd H;       // Matrix H(i, j) = g(x_i, x_j)
     Eigen::VectorXd w;       // Vector w(i) = w_i: weight vector

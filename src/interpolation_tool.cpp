@@ -1,9 +1,27 @@
 #include "polyscope/polyscope.h"
 
+#include "polyscope/point_cloud.h"
+#include "polyscope/view.h"
+
 #include "constants.hpp"
 #include "interpolation_tool.hpp"
 #include "rbf.hpp"
 #include "surface.hpp"
+
+void visualizeInterpolation(Eigen::MatrixXd &rbfPoints, Eigen::MatrixXd &mlsPoints) {
+  // RBF points
+  std::vector<std::vector<double>> points(rbfPoints.size());
+  for (int i = 0; i < rbfPoints.rows(); i++) {
+    points[i] = {
+      rbfPoints(i, 0),
+      rbfPoints(i, 1),
+      rbfPoints(i, 2)
+    };
+  }
+  polyscope::PointCloud* rbfCloud = polyscope::registerPointCloud(RBFName, rbfPoints);
+  rbfCloud->setPointColor(RBFColor);
+  rbfCloud->setPointRadius(PointRadius);
+}
 
 void InterpolationTool::drawSketch() {
   ImGuiIO &io = ImGui::GetIO();
@@ -13,40 +31,54 @@ void InterpolationTool::drawSketch() {
     double yPos = io.DisplayFramebufferScale.y * mousePos.y;
 
     // Cast a ray
-    Ray ray(xPos, yPos, getPointCloud());
-    Hit hitInfo = ray.searchNeighborPoints(CurveNetworkRadius);
+    Ray ray(xPos, yPos);
+    Hit hitInfo = ray.castPointToPlane(getScreen());
     if (!hitInfo.hit) return;
-    addBasisPoints(hitInfo);
+    addSketchPoint(hitInfo.pos);
 
-    // Register sketch as curve network (LINE)
-    registerSketchAsCurveNetworkLine(TracePrefix);
+    // Register sketchPoints as curve network (LINE)
+    registerSketchPointsAsCurveNetworkLine(SketchPrefix);
   }
 
-  if (ImGui::IsMouseReleased(ImGuiMouseButton_Left) && getBasisPoints()->size() > 0) {
-    // Cast basis points to the plane orthogonal to camera direction.
-    castBasisToCameraPlane();
-
+  if (ImGui::IsMouseReleased(ImGuiMouseButton_Left) && getSketchPoints()->size() > 0) {
     // Discretize the bounded area.
-    discretizeCastedBasis();
+    discretizeSketchPoints();
 
-    // Remove sketch as curve network (LINE)
-    removeSketchAsCurveNetworkLine(TracePrefix);
+    // Find basis points
+    findBasisPoints();
+    if (getBasisPoints()->size() == 0) {
+      removePointCloud("Basis Points");
+      removeCurveNetworkLine(SketchPrefix);
+      resetSketch();
+      return;
+    }
 
+    // Register calculated points.
+    // registerDiscretizedPointsAsPontCloud("Discretized Points");
+    registerBasisPointsAsPointCloud("Basis Points");
+
+    // Calculate approximate surface with RBF
     RBF rbf(
-      getAverageDepth(),
-      getOrthogonalBasis(),
+      getScreen(),
       getBasisPoints(),
-      getBasisOnPlane(),
       getDiscretizedPoints()
     );
     rbf.calcInterpolateSurface();
-    Eigen::MatrixXd newV = rbf.castPointsToSurface();
-    Eigen::MatrixXd newN;
+    Eigen::MatrixXd rbfPoints = rbf.castPointsToSurface();
 
     // Smooth the points with MLS
-    std::tie(newV, newN) = mlsSmoothing(newV);
+    Eigen::MatrixXd mlsPoints;
+    Eigen::MatrixXd mlsNormals;
+    std::tie(mlsPoints, mlsNormals) = mlsSmoothing(rbfPoints);
 
-    getPointCloud()->addPoints(newV, newN);
+    // // Visualize interpolation
+    // visualizeInterpolation(rbfPoints, mlsPoints);
+
+    // Add the interpolated points
+    getPointCloud()->addPoints(mlsPoints, mlsNormals);
+
+    // Remove sketch as curve network (LINE)
+    removeCurveNetworkLine(SketchPrefix);
 
     resetSketch();
   }

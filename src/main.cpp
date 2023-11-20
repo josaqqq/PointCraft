@@ -80,10 +80,6 @@ int main(int argc, char **argv) {
     &interpolationTool
   );
 
-  // Reconstruct surface
-  poissonReconstruct(pointCloud.meshV, pointCloud.meshN);
-  greedyProjection(pointCloud.meshV, pointCloud.meshN);
-
   // Add the callback
   polyscope::state::userCallback = callback;
 

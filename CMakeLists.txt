@@ -77,6 +77,8 @@ add_executable(
     src/main.cpp
     src/surface.cpp
     src/ray.cpp
+    src/plane.cpp
+    src/cluster.cpp
     src/modes.cpp
     src/octree.cpp
     src/point_cloud.cpp

@@ -69,9 +69,14 @@ void ModeSelector::enableModeSelection(ImGuiIO &io) {
   // Tool Selection
   ImGui::Text("Tool Selection:");
   ImGui::Text("   "); ImGui::SameLine();
-  if (ImGui::Button("Reset Tool"))          *currentMode = MODE_NONE;
+  if (ImGui::Button("Reset Tool")) {
+    *currentMode = MODE_NONE;
+  }
   ImGui::Text("   "); ImGui::SameLine();
-  if (ImGui::Button("Interpolation Tool"))  *currentMode = MODE_INTERPOLATION;
+  if (ImGui::Button("Interpolation Tool")) {
+    *currentMode = MODE_INTERPOLATION;
+    interpolationTool->initSketch();
+  }
 
   switch (*currentMode) {
     case MODE_NONE:
