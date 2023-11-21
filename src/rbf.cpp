@@ -3,17 +3,30 @@
 #include "rbf.hpp"
 
 RBF::RBF(
-  Plane *screen,
-  std::vector<glm::dvec3> *basisPoints,
+  PointCloud              *pointCloud,
+  Plane                   *screen,
+  std::vector<int>        *basisPointsIndex,
   std::vector<glm::dvec3> *discretizedPoints
-) : screen(*screen), basisPoints(basisPoints), discretizedPoints(discretizedPoints) {
-  sampleSize = basisPoints->size();
+) : pointCloud(pointCloud), screen(*screen), discretizedPoints(discretizedPoints) {
+  sampleSize = basisPointsIndex->size();
   castedSize = discretizedPoints->size();
+
+  // initialize basisPoints
+  basisPoints.resize(sampleSize);
+  for (int i = 0; i < sampleSize; i++) {
+    int idx = (*basisPointsIndex)[i];
+
+    basisPoints[i] = glm::dvec3(
+      pointCloud->meshV(idx, 0),
+      pointCloud->meshV(idx, 1),
+      pointCloud->meshV(idx, 2)
+    );
+  }
 
   // Calculate average depth from screen to basisPoints
   double averageDepth = 0.0;
   for (int i = 0; i < sampleSize; i++) {
-    averageDepth += screen->mapCoordinates((*basisPoints)[i]).z;
+    averageDepth += screen->mapCoordinates(basisPoints[i]).z;
   }
   averageDepth /= sampleSize;
 
@@ -37,15 +50,15 @@ void RBF::calcInterpolateSurface() {
     for (int j = 0; j < sampleSize; j++) {
       if (i == j) continue;
 
-      glm::dvec3 castedBasis_i = averagePlane.mapCoordinates((*basisPoints)[i]);
-      glm::dvec3 castedBasis_j = averagePlane.mapCoordinates((*basisPoints)[j]);
+      glm::dvec3 castedBasis_i = averagePlane.mapCoordinates(basisPoints[i]);
+      glm::dvec3 castedBasis_j = averagePlane.mapCoordinates(basisPoints[j]);
       H(i, j) = greenFunction(castedBasis_i, castedBasis_j);
     }
   }
 
   y = Eigen::VectorXd(sampleSize);
   for (int i = 0; i < sampleSize; i++) {
-    y(i) = averagePlane.mapCoordinates((*basisPoints)[i]).z;
+    y(i) = averagePlane.mapCoordinates(basisPoints[i]).z;
   }
 
   w = H.colPivHouseholderQr().solve(y);
@@ -59,7 +72,7 @@ Eigen::MatrixXd RBF::castPointsToSurface() {
     // for each green function
     double height = 0.0;
     for (int j = 0; j < sampleSize; j++) {
-      glm::dvec3 castedBasis = averagePlane.mapCoordinates((*basisPoints)[j]);
+      glm::dvec3 castedBasis = averagePlane.mapCoordinates(basisPoints[j]);
       height += w(j)*greenFunction((*discretizedPoints)[i], castedBasis);
     }
 

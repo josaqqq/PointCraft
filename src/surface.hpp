@@ -1,12 +1,25 @@
 #pragma once
 
+#include <string>
 #include <Eigen/Dense>
 
 // Reconstruct surface with vertex and normal infromation.
-void poissonReconstruct(Eigen::MatrixXd vertices, Eigen::MatrixXd normals);
+void poissonReconstruct(
+  std::string name,
+  double averageDistance,
+  Eigen::MatrixXd vertices,
+  Eigen::MatrixXd normals
+);
 
 // Smooth vertices with MLS.
-std::pair<Eigen::MatrixXd, Eigen::MatrixXd> mlsSmoothing(Eigen::MatrixXd vertices);
+std::pair<Eigen::MatrixXd, Eigen::MatrixXd> mlsSmoothing(
+  std::string name,
+  Eigen::MatrixXd vertices
+);
 
 // Triangulate point cloud greedily.
-void greedyProjection(Eigen::MatrixXd vertices, Eigen::MatrixXd normals);
+void greedyProjection(
+  std::string name,
+  Eigen::MatrixXd vertices,
+  Eigen::MatrixXd normals
+);

@@ -11,8 +11,8 @@
 #include "constants.hpp"
 
 void visualizeCluster(
-  std::vector<glm::dvec3> &points,
-  std::vector<double> &depths,
+  PointCloud *pointCloud,
+  std::vector<int> &pointsIndex,
   std::vector<int> &labels,
   double eps
 ) {
@@ -22,7 +22,7 @@ void visualizeCluster(
     polyscope::removePointCloud(name + std::to_string(i));
   }
 
-  int pointSize = points.size();
+  int pointSize = pointsIndex.size();
 
   std::map<int, std::vector<int>> labelMap;
   for (int i = 0; i < pointSize; i++) {
@@ -30,13 +30,18 @@ void visualizeCluster(
   }
 
   const glm::dvec3 cameraOrig = polyscope::view::getCameraWorldPosition();
-  const glm::dvec3 cameraDir   = polyscope::view::screenCoordsToWorldRay(glm::vec2(polyscope::view::windowWidth/2, polyscope::view::windowHeight/2));
+  const glm::dvec3 cameraDir  = polyscope::view::screenCoordsToWorldRay(glm::vec2(polyscope::view::windowWidth/2, polyscope::view::windowHeight/2));
 
   for (auto i: labelMap) {
     std::vector<std::vector<double>> labelPoints;
     for (int j: i.second) {
       // point and point casted on camera line.
-      glm::dvec3 p = points[j];
+      int idx = pointsIndex[j];
+      glm::dvec3 p = glm::dvec3(
+        pointCloud->meshV(idx, 0),
+        pointCloud->meshV(idx, 1),
+        pointCloud->meshV(idx, 2)
+      );
       glm::dvec3 castedP = cameraOrig + glm::dot(cameraDir, p - cameraOrig)*cameraDir;
 
       labelPoints.push_back({ p.x, p.y, p.z });
@@ -55,17 +60,20 @@ void visualizeCluster(
 
 // Execute DBSCAN and return selected basis points
 // implemented referencing https://en.wikipedia.org/wiki/DBSCAN
-std::vector<glm::dvec3> Clustering::executeDBSCAN(double eps, int minPoints) {
+std::vector<int> Clustering::executeDBSCAN(double eps, int minPoints) {
   // Initialize points information
-  int pointSize = pointsSet->size();
-  std::vector<glm::dvec3> points(pointSize);
+  int pointSize = pointsIndex->size();
   std::vector<double> depths(pointSize);
 
-  int curidx = 0;
-  for (glm::dvec3 p: *pointsSet) {
-    points[curidx] = p;
-    depths[curidx] = plane->mapCoordinates(p).z;
-    curidx++;
+  for (int i = 0; i < pointSize; i++) {
+    int idx = (*pointsIndex)[i];
+
+    glm::dvec3 p = glm::dvec3(
+      pointCloud->meshV(idx, 0),
+      pointCloud->meshV(idx, 1),
+      pointCloud->meshV(idx, 2)
+    );
+    depths[i] = plane->mapCoordinates(p).z;
   }
 
   std::vector<int> labels(pointSize, -1);
@@ -119,33 +127,35 @@ std::vector<glm::dvec3> Clustering::executeDBSCAN(double eps, int minPoints) {
     }
   }
 
-  std::map<int, int> labelCount;
+  std::map<int, int> labelToCount;
+  std::map<int, double> labelToDepth;
   for (int i = 0; i < pointSize; i++) {
-    labelCount[labels[i]]++;
+    labelToCount[labels[i]] += 1;
+    labelToDepth[labels[i]] += depths[i];
   }
 
-  int maxSize = 0;
-  int maxSizeLabel = -1;
-  for (std::pair<int, int> i: labelCount) {
-    if (i.first == -1 || i.first == 0) continue;
-    if (i.second > maxSize) {
-      maxSizeLabel = i.first;
-      maxSize = i.second;
+  int minDepthLabel = -1;
+  double minDepth = 1e5;
+  for (std::pair<int, double> i: labelToDepth) {
+    double averageDepth = i.second / labelToCount[i.first];
+    if (averageDepth < minDepth) {
+      minDepthLabel = i.first;
+      minDepth = averageDepth;
     }
   }
 
-  std::vector<glm::dvec3> basisPoints;
+  std::vector<int> basisPointsIndex;
   for (int i = 0; i < pointSize; i++) {
-    if (labels[i] == maxSizeLabel) basisPoints.push_back(points[i]);
+    if (labels[i] == minDepthLabel) basisPointsIndex.push_back((*pointsIndex)[i]);
   }
 
   // Visualize the depth of points with labels.
   visualizeCluster(
-    points, 
-    depths, 
+    pointCloud,
+    *pointsIndex,
     labels, 
     eps
   );
 
-  return basisPoints;
+  return basisPointsIndex;
 }

@@ -11,9 +11,11 @@ class Hit {
     Hit() {}
 
     bool hit;           // hit or not
+    
     double t;           // ray parameter
     double depth;       // distance from "camera plane" to the point
     
+    int index;          // point index
     glm::dvec3 pos;     // hit point
     glm::dvec3 normal;  // hit point normal
 };
@@ -37,7 +39,7 @@ class Ray {
     // along the specified line.
     // The search range is within the range
     // of the searchRadius.
-    Hit searchNeighborPoints(double searchRadius, PointCloud *pointCloud);
+    std::vector<Hit> searchNeighborPoints(double searchRadius, PointCloud *pointCloud);
 
     // Cast the point to the specified plane
     // that is parallel to "camera plane".

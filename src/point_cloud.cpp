@@ -66,8 +66,8 @@ void PointCloud::updatePointCloud() {
   vectorQuantity->setMaterial(NormalMaterial);
 
   // Reconstruct Surfaces
-  poissonReconstruct(meshV, meshN);
-  greedyProjection(meshV, meshN);
+  poissonReconstruct(PoissonName, averageDistance, meshV, meshN);
+  greedyProjection(GreedyProjName, meshV, meshN);
 }
 
 // Add points with information of the position and the normal.

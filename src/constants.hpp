@@ -52,7 +52,7 @@ const double CurveNetworkRadius   = 0.00025;
 // Poisson Surface Reconstruction
 //
 const std::string PoissonName = "Poisson Surface Reconstruction";
-const int PoissonDepth = 5;
+const int PoissonMaxDepth = 5;
 const glm::dvec3 PoissonColor = { 0.155, 0.186, 0.790 };
 const std::string PoissonMaterial = "normal";
 
@@ -90,4 +90,5 @@ const std::string GreedyProjMaterial = "normal";
 //
 // Clustering
 //
-const int DBSCAN_MinPoints = 5;
+const double DBSCAN_SearchRange = 1.0;
+const int DBSCAN_MinPoints = 1;

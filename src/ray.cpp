@@ -61,14 +61,13 @@ Hit Ray::checkSphere(glm::dvec3 center, double radius) {
 // The search range is within the range
 // of the searchRadius and the nearest
 // point to the scene is chosen.
-Hit Ray::searchNeighborPoints(double searchRadius, PointCloud *pointCloud) {
-  Hit hitInfo;
+std::vector<Hit> Ray::searchNeighborPoints(double searchRadius, PointCloud *pointCloud) {
+  std::vector<Hit> hitsInfo;
 
   searchRadius *= polyscope::state::lengthScale;
   double nearClip = polyscope::view::nearClipRatio*polyscope::state::lengthScale;
   double farClip = polyscope::view::farClipRatio*polyscope::state::lengthScale;
 
-  double maxDist = searchRadius;
   for (int i = 0; i < pointCloud->meshV.rows(); i++) {
     // point position
     glm::dvec3 p = glm::dvec3(
@@ -91,18 +90,22 @@ Hit Ray::searchNeighborPoints(double searchRadius, PointCloud *pointCloud) {
     if (currDepth <= nearClip || farClip <= currDepth) continue;
     
     double currDist = glm::length(glm::cross(p - orig, rayDir)) / glm::length(rayDir); 
-    if (currDist < maxDist) {
-      maxDist = currDist;
+    if (currDist < searchRadius) {
+      Hit hitInfo;
 
       hitInfo.hit = true;
       hitInfo.t = currDepth;
       hitInfo.depth = calcDepthFromCamera(p);
+
+      hitInfo.index = i;
       hitInfo.pos = p;
       hitInfo.normal = n;
+
+      hitsInfo.push_back(hitInfo);
     }
   }
 
-  return hitInfo;
+  return hitsInfo;
 }
 
 // Cast the point to the specified plane

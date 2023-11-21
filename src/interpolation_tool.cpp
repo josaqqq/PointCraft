@@ -46,7 +46,7 @@ void InterpolationTool::drawSketch() {
 
     // Find basis points
     findBasisPoints();
-    if (getBasisPoints()->size() == 0) {
+    if (getBasisPointsIndex()->size() == 0) {
       removePointCloud("Basis Points");
       removeCurveNetworkLine(SketchPrefix);
       resetSketch();
@@ -57,10 +57,32 @@ void InterpolationTool::drawSketch() {
     // registerDiscretizedPointsAsPontCloud("Discretized Points");
     registerBasisPointsAsPointCloud("Basis Points");
 
+    // Calculate approximate surface with Poisson Surface Reconstruction
+    int basisPointsSize = getBasisPointsIndex()->size();
+    Eigen::MatrixXd psrPoints(basisPointsSize, 3);
+    Eigen::MatrixXd psrNormals(basisPointsSize, 3);
+    for (int i = 0; i < basisPointsSize; i++) {
+      int idx = (*getBasisPointsIndex())[i];
+      psrPoints(i, 0) = getPointCloud()->meshV(idx, 0);
+      psrPoints(i, 1) = getPointCloud()->meshV(idx, 1);
+      psrPoints(i, 2) = getPointCloud()->meshV(idx, 2);
+
+      psrNormals(i, 0) = getPointCloud()->meshN(idx, 0);
+      psrNormals(i, 1) = getPointCloud()->meshN(idx, 1);
+      psrNormals(i, 2) = getPointCloud()->meshN(idx, 2);
+    }
+    poissonReconstruct(
+      "Interpolation: PoissonSurfaceReconstruction", 
+      getPointCloud()->averageDistance, 
+      psrPoints, 
+      psrNormals
+    );
+
     // Calculate approximate surface with RBF
     RBF rbf(
+      getPointCloud(),
       getScreen(),
-      getBasisPoints(),
+      getBasisPointsIndex(),
       getDiscretizedPoints()
     );
     rbf.calcInterpolateSurface();
@@ -69,13 +91,13 @@ void InterpolationTool::drawSketch() {
     // Smooth the points with MLS
     Eigen::MatrixXd mlsPoints;
     Eigen::MatrixXd mlsNormals;
-    std::tie(mlsPoints, mlsNormals) = mlsSmoothing(rbfPoints);
+    std::tie(mlsPoints, mlsNormals) = mlsSmoothing(MLSName, rbfPoints);
 
     // // Visualize interpolation
     // visualizeInterpolation(rbfPoints, mlsPoints);
 
     // Add the interpolated points
-    getPointCloud()->addPoints(mlsPoints, mlsNormals);
+    // getPointCloud()->addPoints(mlsPoints, mlsNormals);
 
     // Remove sketch as curve network (LINE)
     removeCurveNetworkLine(SketchPrefix);

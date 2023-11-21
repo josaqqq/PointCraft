@@ -17,7 +17,12 @@
 #include "constants.hpp"
 
 // Reconstruct surface with vertex and normal infromation
-void poissonReconstruct(Eigen::MatrixXd vertices, Eigen::MatrixXd normals) {
+void poissonReconstruct(
+  std::string name,
+  double averageDistance,
+  Eigen::MatrixXd vertices,
+  Eigen::MatrixXd normals
+) {
   // Init point cloud
   pcl::PointCloud<pcl::PointNormal>::Ptr inputCloud(new pcl::PointCloud<pcl::PointNormal>);
   inputCloud->points.resize(vertices.rows());
@@ -25,14 +30,39 @@ void poissonReconstruct(Eigen::MatrixXd vertices, Eigen::MatrixXd normals) {
     inputCloud->points[i].x = vertices(i, 0);
     inputCloud->points[i].y = vertices(i, 1);
     inputCloud->points[i].z = vertices(i, 2);
+
     inputCloud->points[i].normal_x = normals(i, 0);
     inputCloud->points[i].normal_y = normals(i, 1);
     inputCloud->points[i].normal_z = normals(i, 2);
   }
 
+  // Calculate bounding box size
+  const double INF = 1e5;
+  double min_x = INF, max_x = -INF;
+  double min_y = INF, max_y = -INF;
+  double min_z = INF, max_z = -INF;
+  for (int i = 0; i < vertices.rows(); i++) {
+    min_x = std::min(min_x, vertices(i, 0));
+    max_x = std::max(max_x, vertices(i, 0));
+    min_y = std::min(min_y, vertices(i, 1));
+    max_y = std::max(max_y, vertices(i, 1));
+    min_z = std::min(min_z, vertices(i, 2));
+    max_z = std::max(max_z, vertices(i, 2));
+  }
+  // Grid the bounding box with voxels (averageDistance^3)
+  int voxelNum = ((max_x - min_x)*(max_y - min_y)*(max_z - min_z))/(averageDistance*averageDistance*averageDistance);
+
+  int maxDepth = PoissonMaxDepth;
+  for (int i = 0; i <= PoissonMaxDepth; i++) {
+    if (voxelNum <= pow(2, i*3)) {
+      maxDepth = i;
+      break;
+    }
+  }
+
   // Initialize poisson surface reconstruction
   pcl::Poisson<pcl::PointNormal> poisson;
-  poisson.setDepth(PoissonDepth);
+  poisson.setDepth(maxDepth);
   poisson.setInputCloud(inputCloud);
 
   // Reconstruct surface
@@ -65,17 +95,21 @@ void poissonReconstruct(Eigen::MatrixXd vertices, Eigen::MatrixXd normals) {
 
   // Output results
   std::cout << "\nFinished Poisson Surface Reconstruction!" << std::endl;
+  std::cout << "Max Depth:\t" << maxDepth << std::endl;
   std::cout << "Vertex num:\t" << meshVertices->points.size() << std::endl;
   std::cout << "Face num:\t" << mesh.polygons.size() << std::endl;
 
   // Register mesh
-  polyscope::SurfaceMesh *surfaceMesh = polyscope::registerSurfaceMesh(PoissonName, meshV, meshF);
+  polyscope::SurfaceMesh *surfaceMesh = polyscope::registerSurfaceMesh(name, meshV, meshF);
   surfaceMesh->setSurfaceColor(PoissonColor);
   surfaceMesh->setMaterial(PoissonMaterial);
 }
 
 // Smoothing vertices with MLS
-std::pair<Eigen::MatrixXd, Eigen::MatrixXd> mlsSmoothing(Eigen::MatrixXd vertices) {
+std::pair<Eigen::MatrixXd, Eigen::MatrixXd> mlsSmoothing(
+  std::string name,
+  Eigen::MatrixXd vertices
+) {
   // Init point cloud
   pcl::PointCloud<pcl::PointXYZ>::Ptr inputCloud(new pcl::PointCloud<pcl::PointXYZ>);
   inputCloud->points.resize(vertices.rows());
@@ -124,7 +158,7 @@ std::pair<Eigen::MatrixXd, Eigen::MatrixXd> mlsSmoothing(Eigen::MatrixXd vertice
   const glm::dvec3 cameraDir  = polyscope::view::screenCoordsToWorldRay(glm::vec2(polyscope::view::windowWidth/2, polyscope::view::windowHeight/2));
   if (glm::dot(averageNormal, cameraDir) > 0) meshN *= -1;
 
-  polyscope::PointCloud *mlsPoints = polyscope::registerPointCloud(MLSName, meshV);
+  polyscope::PointCloud *mlsPoints = polyscope::registerPointCloud(name, meshV);
   mlsPoints->setPointColor(PointColor);
   mlsPoints->setPointRadius(PointRadius);
 
@@ -137,7 +171,11 @@ std::pair<Eigen::MatrixXd, Eigen::MatrixXd> mlsSmoothing(Eigen::MatrixXd vertice
   return { meshV, meshN };
 }
 
-void greedyProjection(Eigen::MatrixXd vertices, Eigen::MatrixXd normals) {
+void greedyProjection(
+  std::string name,
+  Eigen::MatrixXd vertices,
+  Eigen::MatrixXd normals
+) {
   // Init point cloud
   pcl::PointCloud<pcl::PointNormal>::Ptr inputCloud(new pcl::PointCloud<pcl::PointNormal>);
   inputCloud->points.resize(vertices.rows());
@@ -203,7 +241,7 @@ void greedyProjection(Eigen::MatrixXd vertices, Eigen::MatrixXd normals) {
   std::cout << "Face num:\t" << mesh.polygons.size() << std::endl;
 
   // Register mesh
-  polyscope::SurfaceMesh *surfaceMesh = polyscope::registerSurfaceMesh(GreedyProjName, meshV, meshF);
+  polyscope::SurfaceMesh *surfaceMesh = polyscope::registerSurfaceMesh(name, meshV, meshF);
   surfaceMesh->setSurfaceColor(GreedyProjColor);
   surfaceMesh->setMaterial(GreedyProjMaterial);
 }

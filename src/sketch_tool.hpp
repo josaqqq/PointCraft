@@ -67,17 +67,18 @@ class SketchTool {
     double                    getAverageDepth();
     Plane*                    getScreen();
     std::vector<glm::dvec3>*  getSketchPoints();
-    std::vector<glm::dvec3>*  getBasisPoints();
+    std::vector<int>*         getBasisPointsIndex();
     std::vector<glm::dvec3>*  getDiscretizedPoints();
 
   private:
-    PointCloud *pointCloud;   // Registered point cloud
     int *currentMode;         // Current selected Mode
+
+    PointCloud *pointCloud;   // Registered point cloud
     double averageDepth;      // Average depth of selected points
     Plane screen;             // Plane on nearClip
-    // std::unordered_set<glm::dvec3>   basisSet;       // Used for the guard for duplicated points
+
     std::vector<glm::dvec3>         sketchPoints;      // Sketched points on the camera screen
-    std::vector<glm::dvec3>         basisPoints;       // Selected basis points
+    std::vector<int>                basisPointsIndex;  // Selected basis points index
     std::vector<glm::dvec3>         discretizedPoints; // Discretized points in the basis
 
     // Check the inside/outside of the polygon.

@@ -5,12 +5,14 @@
 
 #include "ray.hpp"
 #include "plane.hpp"
+#include "point_cloud.hpp"
 
 class RBF {
   public:
     RBF(
-      Plane *screen,
-      std::vector<glm::dvec3> *basisPoints,
+      PointCloud              *pointCloud,
+      Plane                   *screen,
+      std::vector<int>        *basisPointsIndex,
       std::vector<glm::dvec3> *discretizedPoints
     );
 
@@ -31,10 +33,11 @@ class RBF {
     int sampleSize;
     int castedSize;
 
+    PointCloud *pointCloud;
     Plane screen;
     Plane averagePlane;
 
-    std::vector<glm::dvec3> *basisPoints;
+    std::vector<glm::dvec3> basisPoints;
     std::vector<glm::dvec3> *discretizedPoints;
 
     Eigen::MatrixXd H;       // Matrix H(i, j) = g(x_i, x_j)

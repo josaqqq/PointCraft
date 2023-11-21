@@ -31,9 +31,9 @@ void SketchTool::initSketch() {
 void SketchTool::resetSketch() {
   *currentMode = 0;
   averageDepth = 0.0;
-  // basisSet.clear();
+
   sketchPoints.clear();
-  basisPoints.clear();
+  basisPointsIndex.clear();
   discretizedPoints.clear();
 }
 
@@ -64,17 +64,32 @@ void SketchTool::registerBasisPointsAsPointCloud(std::string name) {
   // Show basisPoints
 
   std::vector<std::vector<double>> points;
-  for (int i = 0; i < basisPoints.size(); i++) {
+  std::vector<std::vector<double>> normals;
+  for (int i = 0; i < basisPointsIndex.size(); i++) {
+    int idx = basisPointsIndex[i];
+
     points.push_back({
-      basisPoints[i].x,
-      basisPoints[i].y,
-      basisPoints[i].z,
+      pointCloud->meshV(idx, 0),
+      pointCloud->meshV(idx, 1),
+      pointCloud->meshV(idx, 2)
+    });
+    normals.push_back({
+      pointCloud->meshN(idx, 0),
+      pointCloud->meshN(idx, 1),
+      pointCloud->meshN(idx, 2)
     });
   }
 
   polyscope::PointCloud* patchCloud = polyscope::registerPointCloud(name, points);
   patchCloud->setPointColor(BasisPointColor);
   patchCloud->setPointRadius(BasisPointRadius);
+
+  polyscope::PointCloudVectorQuantity *patchVectorQuantity = patchCloud->addVectorQuantity(NormalName, normals);
+  patchVectorQuantity->setVectorColor(BasisPointColor);
+  patchVectorQuantity->setVectorLengthScale(NormalLength);
+  patchVectorQuantity->setVectorRadius(NormalRadius);
+  patchVectorQuantity->setEnabled(NormalEnabled);
+  patchVectorQuantity->setMaterial(NormalMaterial);
 }
 void SketchTool::removePointCloud(std::string name) {
   polyscope::removePointCloud(name, false);
@@ -156,10 +171,10 @@ void SketchTool::discretizeSketchPoints() {
   }
 
   double gridArea = (max_x - min_x)*(max_y - min_y) / PatchSize;
-  double gridSize = sqrt(gridArea);
+  double gridEdge = sqrt(gridArea);
 
-  for (double x = min_x; x < max_x; x += gridSize) {
-    for (double y = min_y; y < max_y; y += gridSize) {
+  for (double x = min_x; x < max_x; x += gridEdge) {
+    for (double y = min_y; y < max_y; y += gridEdge) {
       if (!insidePolygon(x, y, polygonSize)) continue;
       discretizedPoints.push_back(
         screen.unmapCoordinates(glm::dvec3(x, y, 0.0))
@@ -171,20 +186,25 @@ void SketchTool::discretizeSketchPoints() {
 // Select the basis points the user selected
 // and update sketchPoints.
 void SketchTool::findBasisPoints() {
-  std::unordered_set<glm::dvec3> selectedPoints;
+  std::unordered_set<int> selectedPointsIndexSet;
 
   // Cast a ray from discretized points to point cloud.
   glm::dvec3 cameraOrig = polyscope::view::getCameraWorldPosition();
   for (int i = 0; i < discretizedPoints.size(); i++) {
     Ray ray(cameraOrig, discretizedPoints[i]);
-    Hit hitInfo = ray.searchNeighborPoints(pointCloud->averageDistance, pointCloud);
-    if (!hitInfo.hit) continue;
-    selectedPoints.insert(hitInfo.pos);
+    std::vector<Hit> hitsInfo = ray.searchNeighborPoints(pointCloud->averageDistance, pointCloud);
+    for (Hit hitInfo: hitsInfo) {
+      if (!hitInfo.hit) continue;
+      selectedPointsIndexSet.insert(hitInfo.index);
+    }
   }
 
+  std::vector<int> selectedPointsIndex;
+  for (int idx: selectedPointsIndexSet) selectedPointsIndex.push_back(idx);
+
   // Depth detection with DBSCAN
-  Clustering clustering(&selectedPoints, &screen);
-  basisPoints = clustering.executeDBSCAN(pointCloud->averageDistance, DBSCAN_MinPoints);
+  Clustering clustering(&selectedPointsIndex, pointCloud, &screen);
+  basisPointsIndex = clustering.executeDBSCAN(DBSCAN_SearchRange*pointCloud->averageDistance, DBSCAN_MinPoints);
 }
 
 // Return the pointer to member variables.
@@ -194,17 +214,17 @@ PointCloud* SketchTool::getPointCloud() {
 double SketchTool::getAverageDepth() {
   return averageDepth;
 }
+Plane* SketchTool::getScreen() {
+  return &screen;
+}
 std::vector<glm::dvec3>* SketchTool::getSketchPoints() {
   return &sketchPoints;
 }
-std::vector<glm::dvec3>* SketchTool::getBasisPoints() {
-  return &basisPoints;
+std::vector<int>* SketchTool::getBasisPointsIndex() {
+  return &basisPointsIndex;
 }
 std::vector<glm::dvec3>* SketchTool::getDiscretizedPoints() {
   return &discretizedPoints;
-}
-Plane* SketchTool::getScreen() {
-  return &screen;
 }
 
 // Check the inside/outside of the polygon.
