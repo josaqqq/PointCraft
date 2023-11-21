@@ -78,26 +78,26 @@ void InterpolationTool::drawSketch() {
       psrNormals
     );
 
-    // Calculate approximate surface with RBF
-    RBF rbf(
-      getPointCloud(),
-      getScreen(),
-      getBasisPointsIndex(),
-      getDiscretizedPoints()
-    );
-    rbf.calcInterpolateSurface();
-    Eigen::MatrixXd rbfPoints = rbf.castPointsToSurface();
+    // // Calculate approximate surface with RBF
+    // RBF rbf(
+    //   getPointCloud(),
+    //   getScreen(),
+    //   getBasisPointsIndex(),
+    //   getDiscretizedPoints()
+    // );
+    // rbf.calcInterpolateSurface();
+    // Eigen::MatrixXd rbfPoints = rbf.castPointsToSurface();
 
-    // Smooth the points with MLS
-    Eigen::MatrixXd mlsPoints;
-    Eigen::MatrixXd mlsNormals;
-    std::tie(mlsPoints, mlsNormals) = mlsSmoothing(MLSName, rbfPoints);
+    // // Smooth the points with MLS
+    // Eigen::MatrixXd mlsPoints;
+    // Eigen::MatrixXd mlsNormals;
+    // std::tie(mlsPoints, mlsNormals) = mlsSmoothing(MLSName, rbfPoints);
 
     // // Visualize interpolation
     // visualizeInterpolation(rbfPoints, mlsPoints);
 
     // Add the interpolated points
-    // getPointCloud()->addPoints(mlsPoints, mlsNormals);
+    // getPointCloud()->addPoints(psrPoints, psrNormals);
 
     // Remove sketch as curve network (LINE)
     removeCurveNetworkLine(SketchPrefix);
