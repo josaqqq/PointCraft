@@ -3,6 +3,7 @@
 #include "polyscope/polyscope.h"
 
 #include "ray.hpp"
+#include "plane.hpp"
 #include "point_cloud.hpp"
 
 class SketchTool {
@@ -11,66 +12,74 @@ class SketchTool {
     : pointCloud(pointCloud), currentMode(currentMode) {}
     virtual ~SketchTool() {}
 
-    // Draw sketch according to the selected mode.
-    virtual void drawSketch() {};
+    /*
+      Manage functions
+    */
 
-    // Register/Remove Patch as point cloud with patchName.
-    // Be aware that the point cloud with 
-    // the same name is overwritten.
-    void registerPatchAsPointCloud(std::string patchName);
-    void registerPatchAsPointCloud(Eigen::MatrixXd vertices, Eigen::MatrixXd normals);
-    void removePatchAsPointCloud(std::string patchName);
-
-    // Register/Remove sketch as curve network line with sketchName.
-    // Be aware that the curve network with 
-    // the same name is overwritten
-    void registerSketchAsCurveNetworkLine(std::string sketchName);
-    void removeSketchAsCurveNetworkLine(std::string sketchName);
-
-    // Register/Remove sketch as curve network loop with sketchName.
-    // Be aware that the curve network with 
-    // the same name is overwritten
-    void registerSketchAsCurveNetworkLoop(std::string sketchName);
-    void removeSketchAsCurveNetworkLoop(std::string sketchName);
-
-    // Select the boundary points the user selected
-    // and update boundaryPoints.
-    bool addBoundaryPoints(Hit hitInfo);
-
-    // Cast the boundary points to the plane orthogonal to camera direction
-    // and update boundaryOnPlane.
-    void castBoundaryToCameraPlane();
-
-    // Cast the boundary points to the screen and update boundaryOnPlane.
-    void castBoundaryToScreen();
-
-    // Discretize the boundary and update discretiedPoints.
-    void discretizeCastedBoundary();
+    // Initialize member variables.
+    void initSketch();
 
     // Reset all member variables.
     void resetSketch();
 
+    // Draw sketch according to the selected mode.
+    virtual void drawSketch() {};
+
+    /*
+      Viewer functions
+    */
+
+    // Register/Remove point cloud with name.
+    // Be aware that the point cloud with 
+    // the same name is overwritten.
+    void registerDiscretizedPointsAsPontCloud(std::string name);
+    void registerBasisPointsAsPointCloud(std::string name);
+    void removePointCloud(std::string name);
+
+    // Register/Remove curve network line with name.
+    // Be aware that the curve network with 
+    // the same name is overwritten
+    void registerSketchPointsAsCurveNetworkLine(std::string name);
+    void removeCurveNetworkLine(std::string name);
+
+    // Register/Remove curve network loop with name.
+    // Be aware that the curve network with 
+    // the same name is overwritten
+    void registerSketchAsCurveNetworkLoop(std::string name);
+    void removeCurveNetworkLoop(std::string name);
+
+    /*
+      Geometry functions
+    */
+
+    // Add the specified point to sketchPoints
+    void addSketchPoint(glm::dvec3 p);
+
+    // Discretize the basis and update discretiedPoints.
+    void discretizeSketchPoints();
+
+    // Select the base points the user selected
+    // and update basePoints.
+    void findBasisPoints();
+
     // Return the pointer to member variables.
-    double                    getAverageDepth();
     PointCloud*               getPointCloud();
-    std::vector<Hit>*         getBoundaryPoints();
-    std::vector<glm::dvec2>*  getBoundaryOnPlane();
-    std::vector<glm::dvec2>*  getDiscretizedPoints();
-    std::pair<glm::dvec3, glm::dvec3> getOrthogonalBasis();
+    double                    getAverageDepth();
+    Plane*                    getScreen();
+    std::vector<glm::dvec3>*  getSketchPoints();
+    std::vector<int>*         getBasisPointsIndex();
+    std::vector<glm::dvec3>*  getDiscretizedPoints();
 
   private:
-    PointCloud *pointCloud;
+    int *currentMode;         // Current selected Mode
 
-    int *currentMode;     // Current selected Mode
-    double averageDepth;  // Average depth of selected points
-    // std::unordered_set<glm::dvec3>   boundarySet;       // Used for the guard for duplicated points
-    std::vector<Hit>                boundaryPoints;    // Selected boundary information
-    std::vector<glm::dvec2>         boundaryOnPlane;   // Boundary points casted onto plane
-    std::vector<glm::dvec2>         discretizedPoints; // Discretized points in the boundary
+    PointCloud *pointCloud;   // Registered point cloud
+    double averageDepth;      // Average depth of selected points
+    Plane screen;             // Plane on nearClip
 
-    // Calculate orthogonal basis with Gram-Schmidt orthonormalization.
-    glm::dvec3 orthoU, orthoV;  // orthogonal basis for "camera plane"
-    void calcOrthogonalBasis(glm::dvec3 normal);
+    std::vector<glm::dvec3>         sketchPoints;      // Sketched points on the camera screen
+    std::vector<int>                basisPointsIndex;  // Selected basis points index
+    std::vector<glm::dvec3>         discretizedPoints; // Discretized points in the basis
 
     // Check the inside/outside of the polygon.
     //  1.  Draw a half-line parallel to the x-axis from a point.

@@ -3,22 +3,23 @@
 #include <iostream>
 
 #include "ray.hpp"
+#include "plane.hpp"
 
+// Ray from { xScreen, yScreen }
 Ray::Ray(double xScreen, double yScreen) {
-  screenCoord = glm::vec2(xScreen, yScreen);
   orig        = polyscope::view::getCameraWorldPosition();
   rayDir      = polyscope::view::screenCoordsToWorldRay(glm::vec2(xScreen, yScreen));
   cameraDir   = polyscope::view::screenCoordsToWorldRay(glm::vec2(polyscope::view::windowWidth/2, polyscope::view::windowHeight/2));
 }
 
-Ray::Ray(double xScreen, double yScreen, PointCloud *pointCloud) : pointCloud(pointCloud) {
-  screenCoord = glm::vec2(xScreen, yScreen);
+// Ray from p to q
+Ray::Ray(glm::dvec3 p, glm::dvec3 q){
   orig        = polyscope::view::getCameraWorldPosition();
-  rayDir      = polyscope::view::screenCoordsToWorldRay(glm::vec2(xScreen, yScreen));
+  rayDir      = glm::normalize(q - p);
   cameraDir   = polyscope::view::screenCoordsToWorldRay(glm::vec2(polyscope::view::windowWidth/2, polyscope::view::windowHeight/2));
 }
 
-double Ray::calcDepthFromCamera(glm::vec3 point) {
+double Ray::calcDepthFromCamera(glm::dvec3 point) {
   double d = -glm::dot(cameraDir, orig);
   double depth = std::abs(glm::dot(cameraDir, point) + d) / glm::length(cameraDir);
   return depth;
@@ -27,11 +28,11 @@ double Ray::calcDepthFromCamera(glm::vec3 point) {
 // Check whether this ray intersect
 // with the sphere specified with 
 // center and radius.
-Hit Ray::checkSphere(glm::vec3 center, double radius) {
-  Hit hitInfo(screenCoord);
+Hit Ray::checkSphere(glm::dvec3 center, double radius) {
+  Hit hitInfo;
 
   // Solve hit problem with quadratic equation.
-  glm::vec3 oc = orig - center;
+  glm::dvec3 oc = orig - center;
   double a = glm::dot(rayDir, rayDir);
   double b = 2.0*glm::dot(oc, rayDir);
   double c = glm::dot(oc, oc) - radius*radius;
@@ -44,7 +45,7 @@ Hit Ray::checkSphere(glm::vec3 center, double radius) {
     // Ray hits the sphere.
     hitInfo.hit = true;
     hitInfo.t = (-b - glm::sqrt(D)) / (2.0*a);
-    hitInfo.pos = orig + static_cast<float>(hitInfo.t)*rayDir;
+    hitInfo.pos = orig + hitInfo.t*rayDir;
     hitInfo.depth = calcDepthFromCamera(hitInfo.pos);
     hitInfo.normal = glm::normalize(hitInfo.pos - center);
 
@@ -60,22 +61,22 @@ Hit Ray::checkSphere(glm::vec3 center, double radius) {
 // The search range is within the range
 // of the searchRadius and the nearest
 // point to the scene is chosen.
-Hit Ray::searchNeighborPoints(double searchRadius) {
-  searchRadius *= 2.0;
-    // TODO: Somehow the scale is different... We need to check out the lengthScale.
+std::vector<Hit> Ray::searchNeighborPoints(double searchRadius, PointCloud *pointCloud) {
+  std::vector<Hit> hitsInfo;
 
-  Hit hitInfo(screenCoord);
+  searchRadius *= polyscope::state::lengthScale;
+  double nearClip = polyscope::view::nearClipRatio*polyscope::state::lengthScale;
+  double farClip = polyscope::view::farClipRatio*polyscope::state::lengthScale;
 
-  double maxDepth = 100000.0;
   for (int i = 0; i < pointCloud->meshV.rows(); i++) {
     // point position
-    glm::vec3 p = glm::vec3(
+    glm::dvec3 p = glm::dvec3(
       pointCloud->meshV(i, 0),
       pointCloud->meshV(i, 1),
       pointCloud->meshV(i, 2)
     );
     // point normal
-    glm::vec3 n = glm::vec3(
+    glm::dvec3 n = glm::dvec3(
       pointCloud->meshN(i, 0),
       pointCloud->meshN(i, 1),
       pointCloud->meshN(i, 2)
@@ -85,38 +86,41 @@ Hit Ray::searchNeighborPoints(double searchRadius) {
     if (glm::dot(rayDir, n) >= 0.0) continue;
 
     // p is outside of the scene.
-    // TODO: Utilize nearClip, farClip
     double currDepth = glm::dot(p - orig, rayDir) / glm::length(rayDir);
-    if (currDepth <= 0) continue;
+    if (currDepth <= nearClip || farClip <= currDepth) continue;
     
     double currDist = glm::length(glm::cross(p - orig, rayDir)) / glm::length(rayDir); 
-    if (currDist < searchRadius && currDepth < maxDepth) {
-      maxDepth = currDepth;
+    if (currDist < searchRadius) {
+      Hit hitInfo;
 
       hitInfo.hit = true;
       hitInfo.t = currDepth;
       hitInfo.depth = calcDepthFromCamera(p);
+
+      hitInfo.index = i;
       hitInfo.pos = p;
       hitInfo.normal = n;
+
+      hitsInfo.push_back(hitInfo);
     }
   }
 
-  return hitInfo;
+  return hitsInfo;
 }
 
 // Cast the point to the specified plane
 // that is parallel to "camera plane".
-// -> just approximation now.
-Hit Ray::castPointToPlane(double depth) {
-  Hit hitInfo(screenCoord);
+Hit Ray::castPointToPlane(Plane* plane) {
+  Hit hitInfo;
+
+  double depth = std::abs(plane->mapCoordinates(orig).z);
 
   hitInfo.hit = true;
-  hitInfo.t = depth;
+  hitInfo.t = depth/glm::dot(rayDir, cameraDir);
   hitInfo.depth = depth;
 
-  // TODO: we need to consider the true orig.
-  hitInfo.pos = orig + (float)depth*rayDir;
-  hitInfo.normal = -rayDir;
+  hitInfo.pos = orig + hitInfo.t*rayDir;
+  hitInfo.normal = -cameraDir;
 
   return hitInfo;
 }

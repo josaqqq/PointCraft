@@ -2,33 +2,69 @@
 
 #include "rbf.hpp"
 
-void RBF::calcInterpolateSurface() {
-  sampleSize = boundaryOnPlane->size();
+RBF::RBF(
+  PointCloud              *pointCloud,
+  Plane                   *screen,
+  std::vector<int>        *basisPointsIndex,
+  std::vector<glm::dvec3> *discretizedPoints
+) : pointCloud(pointCloud), screen(*screen), discretizedPoints(discretizedPoints) {
+  sampleSize = basisPointsIndex->size();
+  castedSize = discretizedPoints->size();
 
+  // initialize basisPoints
+  basisPoints.resize(sampleSize);
+  for (int i = 0; i < sampleSize; i++) {
+    int idx = (*basisPointsIndex)[i];
+
+    basisPoints[i] = glm::dvec3(
+      pointCloud->meshV(idx, 0),
+      pointCloud->meshV(idx, 1),
+      pointCloud->meshV(idx, 2)
+    );
+  }
+
+  // Calculate average depth from screen to basisPoints
+  double averageDepth = 0.0;
+  for (int i = 0; i < sampleSize; i++) {
+    averageDepth += screen->mapCoordinates(basisPoints[i]).z;
+  }
+  averageDepth /= sampleSize;
+
+  // Calculate average plane for basis Points
+  averagePlane = Plane(screen->getOrigin() + averageDepth*screen->getNormal(), screen->getNormal());
+
+  // Cast discretizedPoints on screen to averagePlane
+  const glm::dvec3 cameraOrig = polyscope::view::getCameraWorldPosition();
+  for (int i = 0; i < castedSize; i++) {
+    // Cast a ray for each discretized point
+    Ray ray(cameraOrig, (*discretizedPoints)[i]);
+    Hit hitInfo = ray.castPointToPlane(&averagePlane);
+    if (!hitInfo.hit) continue;
+    (*discretizedPoints)[i] = averagePlane.mapCoordinates(hitInfo.pos);
+  }
+}
+
+void RBF::calcInterpolateSurface() {
   H = Eigen::MatrixXd::Zero(sampleSize, sampleSize);
   for (int i = 0; i < sampleSize; i++) {
     for (int j = 0; j < sampleSize; j++) {
       if (i == j) continue;
 
-      glm::dvec2 x_i = (*boundaryOnPlane)[i];
-      glm::dvec2 x_j = (*boundaryOnPlane)[j];
-      H(i, j) = greenFunction(x_i, x_j);
+      glm::dvec3 castedBasis_i = averagePlane.mapCoordinates(basisPoints[i]);
+      glm::dvec3 castedBasis_j = averagePlane.mapCoordinates(basisPoints[j]);
+      H(i, j) = greenFunction(castedBasis_i, castedBasis_j);
     }
   }
 
   y = Eigen::VectorXd(sampleSize);
   for (int i = 0; i < sampleSize; i++) {
-    y(i) = (*boundaryPoints)[i].depth - averageDepth;
+    y(i) = averagePlane.mapCoordinates(basisPoints[i]).z;
   }
 
   w = H.colPivHouseholderQr().solve(y);
 }
 
 Eigen::MatrixXd RBF::castPointsToSurface() {
-  castedSize = discretizedPoints->size();
-  const glm::dvec3 orig       = polyscope::view::getCameraWorldPosition();
-  const glm::dvec3 cameraDir  = polyscope::view::screenCoordsToWorldRay(glm::vec2(polyscope::view::windowWidth/2, polyscope::view::windowHeight/2));
-
   Eigen::MatrixXd castedPoints(castedSize, 3); 
 
   // for each discretized point
@@ -36,11 +72,13 @@ Eigen::MatrixXd RBF::castPointsToSurface() {
     // for each green function
     double height = 0.0;
     for (int j = 0; j < sampleSize; j++) {
-      height += w(j)*greenFunction((*discretizedPoints)[i], (*boundaryOnPlane)[j]);
+      glm::dvec3 castedBasis = averagePlane.mapCoordinates(basisPoints[j]);
+      height += w(j)*greenFunction((*discretizedPoints)[i], castedBasis);
     }
 
-    glm::dvec3 castedPoint = 
-      orig + (*discretizedPoints)[i].x*orthoU + (*discretizedPoints)[i].y*orthoV + (height + averageDepth)*cameraDir;
+    glm::dvec3 castedPoint = averagePlane.unmapCoordinates(
+      glm::dvec3((*discretizedPoints)[i].x, (*discretizedPoints)[i].y, height)
+    );
     castedPoints.row(i) <<
       castedPoint.x,
       castedPoint.y,
@@ -50,7 +88,7 @@ Eigen::MatrixXd RBF::castPointsToSurface() {
   return castedPoints;
 }
 
-double RBF::greenFunction(glm::dvec2 x_i, glm::dvec2 x_j) {
+double RBF::greenFunction(glm::dvec3 x_i, glm::dvec3 x_j) {
   double dist = glm::length(x_i - x_j);
   if (dist == 0) return 0.0;
   return dist * dist * (std::log(dist) - 1.0d);

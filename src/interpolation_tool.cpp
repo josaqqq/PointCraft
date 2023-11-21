@@ -1,8 +1,27 @@
 #include "polyscope/polyscope.h"
 
+#include "polyscope/point_cloud.h"
+#include "polyscope/view.h"
+
 #include "constants.hpp"
 #include "interpolation_tool.hpp"
 #include "rbf.hpp"
+#include "surface.hpp"
+
+void visualizeInterpolation(Eigen::MatrixXd &rbfPoints, Eigen::MatrixXd &mlsPoints) {
+  // RBF points
+  std::vector<std::vector<double>> points(rbfPoints.size());
+  for (int i = 0; i < rbfPoints.rows(); i++) {
+    points[i] = {
+      rbfPoints(i, 0),
+      rbfPoints(i, 1),
+      rbfPoints(i, 2)
+    };
+  }
+  polyscope::PointCloud* rbfCloud = polyscope::registerPointCloud(RBFName, rbfPoints);
+  rbfCloud->setPointColor(RBFColor);
+  rbfCloud->setPointRadius(PointRadius);
+}
 
 void InterpolationTool::drawSketch() {
   ImGuiIO &io = ImGui::GetIO();
@@ -12,48 +31,76 @@ void InterpolationTool::drawSketch() {
     double yPos = io.DisplayFramebufferScale.y * mousePos.y;
 
     // Cast a ray
-    Ray ray(xPos, yPos, getPointCloud());
-    Hit hitInfo = ray.searchNeighborPoints(CurveNetworkRadius);
+    Ray ray(xPos, yPos);
+    Hit hitInfo = ray.castPointToPlane(getScreen());
     if (!hitInfo.hit) return;
-    addBoundaryPoints(hitInfo);
+    addSketchPoint(hitInfo.pos);
 
-    // Register sketch as curve network (LINE)
-    registerSketchAsCurveNetworkLine(TracePrefix);
+    // Register sketchPoints as curve network (LINE)
+    registerSketchPointsAsCurveNetworkLine(SketchPrefix);
   }
 
-  if (ImGui::IsMouseReleased(ImGuiMouseButton_Left) && getBoundaryPoints()->size() > 0) {
-    // Cast boundary points to the plane orthogonal to camera direction.
-    castBoundaryToCameraPlane();
-
+  if (ImGui::IsMouseReleased(ImGuiMouseButton_Left) && getSketchPoints()->size() > 0) {
     // Discretize the bounded area.
-    discretizeCastedBoundary();
+    discretizeSketchPoints();
 
-    // Remove sketch as curve network (LINE)
-    removeSketchAsCurveNetworkLine(TracePrefix);
+    // Find basis points
+    findBasisPoints();
+    if (getBasisPointsIndex()->size() == 0) {
+      removePointCloud("Basis Points");
+      removeCurveNetworkLine(SketchPrefix);
+      resetSketch();
+      return;
+    }
 
+    // Register calculated points.
+    // registerDiscretizedPointsAsPontCloud("Discretized Points");
+    registerBasisPointsAsPointCloud("Basis Points");
+
+    // Calculate approximate surface with Poisson Surface Reconstruction
+    int basisPointsSize = getBasisPointsIndex()->size();
+    Eigen::MatrixXd psrPoints(basisPointsSize, 3);
+    Eigen::MatrixXd psrNormals(basisPointsSize, 3);
+    for (int i = 0; i < basisPointsSize; i++) {
+      int idx = (*getBasisPointsIndex())[i];
+      psrPoints(i, 0) = getPointCloud()->meshV(idx, 0);
+      psrPoints(i, 1) = getPointCloud()->meshV(idx, 1);
+      psrPoints(i, 2) = getPointCloud()->meshV(idx, 2);
+
+      psrNormals(i, 0) = getPointCloud()->meshN(idx, 0);
+      psrNormals(i, 1) = getPointCloud()->meshN(idx, 1);
+      psrNormals(i, 2) = getPointCloud()->meshN(idx, 2);
+    }
+    poissonReconstruct(
+      "Interpolation: PoissonSurfaceReconstruction", 
+      getPointCloud()->averageDistance, 
+      psrPoints, 
+      psrNormals
+    );
+
+    // Calculate approximate surface with RBF
     RBF rbf(
-      getAverageDepth(),
-      getOrthogonalBasis(),
-      getBoundaryPoints(),
-      getBoundaryOnPlane(),
+      getPointCloud(),
+      getScreen(),
+      getBasisPointsIndex(),
       getDiscretizedPoints()
     );
     rbf.calcInterpolateSurface();
-    Eigen::MatrixXd newV = rbf.castPointsToSurface();
+    Eigen::MatrixXd rbfPoints = rbf.castPointsToSurface();
 
-    // TODO: We need to calculate normals
-    Eigen::MatrixXd newN(newV.rows(), 3);
-    for (int i = 0; i < newV.rows(); i++) {
-      double length = glm::length(glm::dvec3(newV(i, 0), newV(i, 1), newV(i, 2)));
-      newN(i, 0) = newV(i, 0) / length;
-      newN(i, 1) = newV(i, 1) / length;
-      newN(i, 2) = newV(i, 2) / length;
-    }
+    // Smooth the points with MLS
+    Eigen::MatrixXd mlsPoints;
+    Eigen::MatrixXd mlsNormals;
+    std::tie(mlsPoints, mlsNormals) = mlsSmoothing(MLSName, rbfPoints);
 
-    // Register calculated point cloud
-    registerPatchAsPointCloud(newV, newN);
+    // // Visualize interpolation
+    // visualizeInterpolation(rbfPoints, mlsPoints);
 
-    getPointCloud()->addPoints(newV, newN);
+    // Add the interpolated points
+    // getPointCloud()->addPoints(mlsPoints, mlsNormals);
+
+    // Remove sketch as curve network (LINE)
+    removeCurveNetworkLine(SketchPrefix);
 
     resetSketch();
   }

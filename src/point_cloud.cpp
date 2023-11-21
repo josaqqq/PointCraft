@@ -37,6 +37,55 @@ PointCloud::PointCloud(std::string filename) {
   updatePointCloud();
 } 
 
+// Enable or Disable the point cloud and normals
+void PointCloud::setPointCloudEnabled(bool flag) {
+  pointCloud->setEnabled(flag);
+}
+void PointCloud::setPointCloudNormalEnabled(bool flag) {
+  vectorQuantity->setEnabled(flag);
+}
+
+// Update point cloud
+//   - update octree
+//   - render points and normals
+void PointCloud::updatePointCloud() {
+  // Update Octree
+  octree = Octree(meshV, OctreeResolution);
+
+  // Register Points
+  pointCloud = polyscope::registerPointCloud(PointName, meshV);
+  pointCloud->setPointColor(PointColor);
+  pointCloud->setPointRadius(PointRadius);
+
+  // Register Normals
+  vectorQuantity = pointCloud->addVectorQuantity(NormalName, meshN);
+  vectorQuantity->setVectorColor(NormalColor);
+  vectorQuantity->setVectorLengthScale(NormalLength);
+  vectorQuantity->setVectorRadius(NormalRadius);
+  vectorQuantity->setEnabled(NormalEnabled);
+  vectorQuantity->setMaterial(NormalMaterial);
+
+  // Reconstruct Surfaces
+  poissonReconstruct(PoissonName, averageDistance, meshV, meshN);
+  greedyProjection(GreedyProjName, meshV, meshN);
+}
+
+// Add points with information of the position and the normal.
+void PointCloud::addPoints(Eigen::MatrixXd newV, Eigen::MatrixXd newN) {
+  Eigen::MatrixXd concatV = Eigen::MatrixXd::Zero(meshV.rows() + newV.rows(), meshV.cols());
+  concatV << meshV, newV;
+  meshV = concatV;
+
+  Eigen::MatrixXd concatN = Eigen::MatrixXd::Zero(meshN.rows() + newN.rows(), meshN.cols());
+  concatN << meshN, newN;
+  meshN = concatN;
+
+  // Update point cloud
+  //   - update octree
+  //   - render points and normals
+  updatePointCloud();
+}
+
 // Move points to set the gravity point to (0.0, 0.0, 0.0).
 void PointCloud::movePointsToOrigin() {
   double x = 0.0;
@@ -57,45 +106,4 @@ void PointCloud::movePointsToOrigin() {
     meshV(i, 1) -= y;
     meshV(i, 2) -= z;
   }
-}
-
-// Update point cloud
-//   - update octree
-//   - render points and normals
-void PointCloud::updatePointCloud() {
-  // Update Octree
-  octree = Octree(meshV, OctreeResolution);
-
-  // Register Points
-  polyscope::PointCloud* pointCloud = polyscope::registerPointCloud(PointName, meshV);
-  pointCloud->setPointColor(PointColor);
-  pointCloud->setPointRadius(PointRadius);
-
-  // Register Normals
-  polyscope::PointCloudVectorQuantity *vectorQuantity = pointCloud->addVectorQuantity(NormalName, meshN);
-  vectorQuantity->setVectorColor(NormalColor);
-  vectorQuantity->setVectorLengthScale(NormalLength);
-  vectorQuantity->setVectorRadius(NormalRadius);
-  vectorQuantity->setEnabled(NormalEnabled);
-  vectorQuantity->setMaterial(NormalMaterial);
-
-  // Reconstruct Surfaces
-  poissonReconstruct(meshV, meshN);
-  greedyProjection(meshV, meshN);
-}
-
-// Add points with information of the position and the normal.
-void PointCloud::addPoints(Eigen::MatrixXd newV, Eigen::MatrixXd newN) {
-  Eigen::MatrixXd concatV = Eigen::MatrixXd::Zero(meshV.rows() + newV.rows(), meshV.cols());
-  concatV << meshV, newV;
-  meshV = concatV;
-
-  Eigen::MatrixXd concatN = Eigen::MatrixXd::Zero(meshN.rows() + newN.rows(), meshN.cols());
-  concatN << meshN, newN;
-  meshN = concatN;
-
-  // Update point cloud
-  //   - update octree
-  //   - render points and normals
-  updatePointCloud();
 }

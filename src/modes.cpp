@@ -1,4 +1,6 @@
 #include "polyscope/polyscope.h"
+
+#include "polyscope/point_cloud.h"
 #include "polyscope/surface_mesh.h"
 
 #include "modes.hpp"
@@ -6,8 +8,40 @@
 #include "constants.hpp"
 
 void ModeSelector::enableModeSelection(ImGuiIO &io) {
-  // Surface Selection
-  ImGui::Text("Surface Selection");
+  // Point Cloud Visualization
+  // ImGui::Text("Point Cloud Visualization");
+  // ImGui::Text("   "); ImGui::SameLine();
+  // ImGui::RadioButton("Hide", currentPointCloud, MODE_HIDE);
+  // ImGui::Text("   "); ImGui::SameLine();
+  // ImGui::RadioButton("Show", currentPointCloud, MODE_SHOW);
+
+  // switch (*currentPointCloud) {
+  //   case MODE_HIDE:
+  //     pointCloud->setPointCloudEnabled(false);
+  //     break;
+  //   case MODE_SHOW:
+  //     pointCloud->setPointCloudEnabled(true);
+  //     break;
+  // }
+
+  // Point Cloud Normal Visualization
+  // ImGui::Text("Normal Visualization");
+  // ImGui::Text("   "); ImGui::SameLine();
+  // ImGui::RadioButton("Hide", currentPointCloudNormal, MODE_HIDE);
+  // ImGui::Text("   "); ImGui::SameLine();
+  // ImGui::RadioButton("Show", currentPointCloudNormal, MODE_SHOW);
+
+  // switch (*currentPointCloudNormal) {
+  //   case MODE_HIDE:
+  //     pointCloud->setPointCloudNormalEnabled(false);
+  //     break;
+  //   case MODE_SHOW:
+  //     pointCloud->setPointCloudNormalEnabled(true);
+  //     break;
+  // }
+
+  // Surface Visualization
+  ImGui::Text("Surface Visualization");
   ImGui::Text("   "); ImGui::SameLine();
   ImGui::RadioButton("None", currentSurfaceMode, SURFACE_MODE_NONE);
   ImGui::Text("   "); ImGui::SameLine();
@@ -32,20 +66,25 @@ void ModeSelector::enableModeSelection(ImGuiIO &io) {
       break;
   }
 
-  ImGui::Text("Mode Selection:");
+  // Tool Selection
+  ImGui::Text("Tool Selection:");
   ImGui::Text("   "); ImGui::SameLine();
-  if (ImGui::Button("Reset Mode"))          *currentMode = MODE_NONE;
+  if (ImGui::Button("Reset Tool")) {
+    *currentMode = MODE_NONE;
+  }
   ImGui::Text("   "); ImGui::SameLine();
-  if (ImGui::Button("Interpolation Mode"))  *currentMode = MODE_INTERPOLATION;
+  if (ImGui::Button("Interpolation Tool")) {
+    *currentMode = MODE_INTERPOLATION;
+    interpolationTool->initSketch();
+  }
 
   switch (*currentMode) {
     case MODE_NONE:
-      ImGui::Text("   Selected Mode: None");
+      ImGui::Text("   Selected Tool: None");
       polyscope::view::moveScale = 1.0;
       break;
-
     case MODE_INTERPOLATION:
-      ImGui::Text("   Selected Mode: Interpolation Mode");
+      ImGui::Text("   Selected Tool: Interpolation Tool");
       polyscope::view::moveScale = 0.0;
       interpolationTool->drawSketch();
       break;
