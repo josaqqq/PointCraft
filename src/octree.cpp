@@ -28,7 +28,6 @@ double Octree::calcAverageDistance() {
     std::vector<int> pointIdx;
     std::vector<float> pointDistance;
 
-
     pcl::PointXYZ searchPoint(meshV(i, 0), meshV(i, 1), meshV(i, 2));
 
     int foundNum = octree.nearestKSearch(

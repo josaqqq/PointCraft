@@ -102,5 +102,6 @@ const std::string PseudoSurfaceMaterial = "normal";
 //
 // Clustering
 //
+const std::string DBSCAN_Name = "DBSCAN Labeling";
 const double DBSCAN_SearchRange = 1.0;
 const int DBSCAN_MinPoints = 1;

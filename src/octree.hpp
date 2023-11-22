@@ -11,7 +11,7 @@ class Octree {
     Octree(Eigen::MatrixXd meshV, double resolution);
     ~Octree() {}
 
-    // Search nearest neighbor for each point, 
+    // Search the nearest neighbor for each point, 
     // and then calculate average distance for
     // the point cloud.
     double calcAverageDistance();

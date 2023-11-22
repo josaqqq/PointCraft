@@ -54,8 +54,9 @@ void poissonReconstruct(
     min_z = std::min(min_z, vertices(i, 2));
     max_z = std::max(max_z, vertices(i, 2));
   }
-  // Grid the bounding box with voxels (averageDistance^3)
-  int voxelNum = ((max_x - min_x)*(max_y - min_y)*(max_z - min_z))/(averageDistance*averageDistance*averageDistance);
+  // Grid the bounding box with voxels ((averageDistance/2.0)^3)
+  double voxelEdge = averageDistance / 2.0;
+  int voxelNum = ((max_x - min_x)*(max_y - min_y)*(max_z - min_z))/(voxelEdge*voxelEdge*voxelEdge);
 
   int maxDepth = PoissonMaxDepth;
   for (int i = 0; i <= PoissonMaxDepth; i++) {
