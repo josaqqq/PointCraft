@@ -6,6 +6,7 @@
 const std::array<float, 4> BackgroundColor = { 0.025, 0.025, 0.025, 0.000 };
 const int WindowWidth = 1024;
 const int WindowHeight = 1024;
+const double ScreenOffset = 10.0;
 
 //
 // Point Cloud parameters
@@ -20,6 +21,10 @@ const double NormalLength = 0.015;
 const double NormalRadius = 0.001;
 const bool NormalEnabled = true;
 const std::string NormalMaterial = "flat";
+
+const std::string ScalarName = "depth map";
+const std::string ScalarColorMap = "viridis";
+const bool ScalarEnabled = true;
 
 //
 // Octree parameters
@@ -86,6 +91,13 @@ const bool GreedyProjNormalConsistency = false;
 
 const glm::dvec3 GreedyProjColor = { 0.155, 0.186, 0.790 };
 const std::string GreedyProjMaterial = "normal";
+
+//
+// Pseudo Surface
+//
+const std::string PseudoSurfaceName = "Pseudo Surface";
+const glm::dvec3 PseudoSurfaceColor = { 0.155, 0.186, 0.790 };
+const std::string PseudoSurfaceMaterial = "normal";
 
 //
 // Clustering

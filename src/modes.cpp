@@ -45,22 +45,33 @@ void ModeSelector::enableModeSelection(ImGuiIO &io) {
   ImGui::Text("   "); ImGui::SameLine();
   ImGui::RadioButton("None", currentSurfaceMode, SURFACE_MODE_NONE);
   ImGui::Text("   "); ImGui::SameLine();
+  ImGui::RadioButton("Pseudo Surface", currentSurfaceMode, SURFACE_MODE_PSEUDO);
+  ImGui::Text("   "); ImGui::SameLine();
   ImGui::RadioButton("Poisson Surface", currentSurfaceMode, SURFACE_MODE_POISSON);
   ImGui::Text("   "); ImGui::SameLine();
   ImGui::RadioButton("Greedy Surface", currentSurfaceMode, SURFACE_MODE_GREEDY);
 
+  polyscope::SurfaceMesh *pseudoSurface = polyscope::getSurfaceMesh(PseudoSurfaceName);
   polyscope::SurfaceMesh *poissonSurface = polyscope::getSurfaceMesh(PoissonName);
   polyscope::SurfaceMesh *greedySurface = polyscope::getSurfaceMesh(GreedyProjName);
   switch (*currentSurfaceMode) {
     case SURFACE_MODE_NONE:
+      pseudoSurface->setEnabled(false);
+      poissonSurface->setEnabled(false);
+      greedySurface->setEnabled(false);
+      break;
+    case SURFACE_MODE_PSEUDO:
+      pseudoSurface->setEnabled(true);
       poissonSurface->setEnabled(false);
       greedySurface->setEnabled(false);
       break;
     case SURFACE_MODE_POISSON:
+      pseudoSurface->setEnabled(false);
       poissonSurface->setEnabled(true);
       greedySurface->setEnabled(false);
       break;
     case SURFACE_MODE_GREEDY:
+      pseudoSurface->setEnabled(false);
       poissonSurface->setEnabled(false);
       greedySurface->setEnabled(true);
       break;

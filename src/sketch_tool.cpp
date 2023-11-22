@@ -16,7 +16,7 @@
 
 // Initialize screen information
 void SketchTool::initSketch() {
-  double nearClip = polyscope::view::nearClipRatio*polyscope::state::lengthScale * 10.0;
+  double nearClip = polyscope::view::nearClipRatio*polyscope::state::lengthScale * ScreenOffset;
   glm::dvec3 cameraOrig = polyscope::view::getCameraWorldPosition();
   glm::dvec3 cameraDir = polyscope::view::screenCoordsToWorldRay(
     glm::vec2(polyscope::view::windowWidth/2, polyscope::view::windowHeight/2)

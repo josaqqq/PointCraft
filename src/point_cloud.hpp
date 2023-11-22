@@ -38,4 +38,5 @@ class PointCloud {
     Octree octree;
     polyscope::PointCloud *pointCloud;
     polyscope::PointCloudVectorQuantity *vectorQuantity;
+    polyscope::PointCloudScalarQuantity *scalarQuantity;
 };

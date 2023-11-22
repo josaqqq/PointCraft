@@ -65,9 +65,17 @@ void PointCloud::updatePointCloud() {
   vectorQuantity->setEnabled(NormalEnabled);
   vectorQuantity->setMaterial(NormalMaterial);
 
+  // // Register Scalar Quantity
+  // std::vector<double> scalarValues(meshV.rows());
+  // for (int i = 0; i < meshV.rows(); i++) scalarValues[i] = meshV(i, 2);
+  // scalarQuantity = pointCloud->addScalarQuantity(ScalarName, scalarValues);
+  // scalarQuantity->setColorMap(ScalarColorMap);
+  // scalarQuantity->setEnabled(ScalarEnabled);
+
   // Reconstruct Surfaces
   poissonReconstruct(PoissonName, averageDistance, meshV, meshN);
   greedyProjection(GreedyProjName, meshV, meshN);
+  pseudoSurface(PseudoSurfaceName, averageDistance, meshV, meshN);
 }
 
 // Add points with information of the position and the normal.

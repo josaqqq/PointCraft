@@ -18,6 +18,7 @@ enum VisualizationMode {
 
 enum SurfaceMode {
   SURFACE_MODE_NONE,
+  SURFACE_MODE_PSEUDO,
   SURFACE_MODE_POISSON,
   SURFACE_MODE_GREEDY,
 };
@@ -44,7 +45,7 @@ struct ModeSelector {
       *currentMode = MODE_NONE;
       *currentPointCloud = MODE_SHOW;
       *currentPointCloudNormal = MODE_SHOW;
-      *currentSurfaceMode = SURFACE_MODE_GREEDY;
+      *currentSurfaceMode = SURFACE_MODE_PSEUDO;
     }
 
     ~ModeSelector() {}

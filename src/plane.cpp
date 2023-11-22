@@ -11,6 +11,11 @@ Plane::Plane(glm::dvec3 o, glm::dvec3 n) : o(o), n(n) {
 
   v = e2 - glm::dot(e2, n)*n - glm::dot(e2, u)*u;
   v /= glm::length(v);
+
+  // Right-handed system
+  if (glm::dot(glm::cross(u, v), n) < 0) {
+    std::swap(u, v);
+  }
 }
 
 // Map the point from {x, y, z} to {n, u, v}

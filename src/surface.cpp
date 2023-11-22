@@ -11,9 +11,12 @@
 #include <pcl/surface/mls.h>
 #include <pcl/surface/gp3.h>
 
+#include <glm/gtx/transform.hpp>
+
 #include <string>
 
 #include "surface.hpp"
+#include "plane.hpp"
 #include "constants.hpp"
 
 // Reconstruct surface with vertex and normal infromation
@@ -23,6 +26,8 @@ void poissonReconstruct(
   Eigen::MatrixXd vertices,
   Eigen::MatrixXd normals
 ) {
+  averageDistance *= polyscope::state::lengthScale;
+
   // Init point cloud
   pcl::PointCloud<pcl::PointNormal>::Ptr inputCloud(new pcl::PointCloud<pcl::PointNormal>);
   inputCloud->points.resize(vertices.rows());
@@ -95,6 +100,7 @@ void poissonReconstruct(
 
   // Output results
   std::cout << "\nFinished Poisson Surface Reconstruction!" << std::endl;
+  std::cout << "Voxel num:\t" << voxelNum << std::endl;
   std::cout << "Max Depth:\t" << maxDepth << std::endl;
   std::cout << "Vertex num:\t" << meshVertices->points.size() << std::endl;
   std::cout << "Face num:\t" << mesh.polygons.size() << std::endl;
@@ -244,4 +250,50 @@ void greedyProjection(
   polyscope::SurfaceMesh *surfaceMesh = polyscope::registerSurfaceMesh(name, meshV, meshF);
   surfaceMesh->setSurfaceColor(GreedyProjColor);
   surfaceMesh->setMaterial(GreedyProjMaterial);
+}
+
+// Show hexagons for each vertex as a pseudo surface.
+void pseudoSurface(
+  std::string name,
+  double averageDistance,
+  Eigen::MatrixXd vertices,
+  Eigen::MatrixXd normals
+) {
+  averageDistance *= polyscope::state::lengthScale;
+
+  int N = vertices.rows();
+  Eigen::MatrixXd meshV(N*7, 3);
+  Eigen::MatrixXd meshF(N*6, 3);
+
+  // Calculate rotation matrix
+  double angleInDegrees = 60.0d;
+  double angleInRadians = glm::radians(angleInDegrees);
+  glm::dmat4 rot = glm::rotate(angleInRadians, glm::dvec3(0.0, 0.0, 1.0));
+
+  // Register each hexagon
+  for (int i = 0; i < N; i++) {
+    glm::dvec3 o = glm::dvec3(vertices(i, 0), vertices(i, 1), vertices(i, 2));
+    glm::dvec3 n = glm::dvec3(normals(i, 0), normals(i, 1), normals(i, 2));
+
+    Plane plane(o, n);
+    meshV.row(i) << o.x, o.y, o.z;
+    
+    // Register vertex point
+    glm::dvec4 hex = glm::dvec4(averageDistance/2.0, 0.0, 0.0, 0.0);
+    for (int j = 0; j < 6; j++) {
+      glm::dvec3 hexInWorld = plane.unmapCoordinates(glm::dvec3(hex.x, hex.y, hex.z));
+      meshV.row((j + 1)*N + i) << hexInWorld.x, hexInWorld.y, hexInWorld.z;
+      hex = rot*hex;
+    }
+
+    // Register face index
+    for (int j = 0; j < 6; j++) {
+      meshF.row(i*6 + j) << i, (j + 1)*N + i, ((j + 1)%6 + 1)*N + i;
+    }
+  }
+
+  // Register mesh
+  polyscope::SurfaceMesh *surfaceMesh = polyscope::registerSurfaceMesh(name, meshV, meshF);
+  surfaceMesh->setSurfaceColor(PseudoSurfaceColor);
+  surfaceMesh->setMaterial(PseudoSurfaceMaterial);
 }

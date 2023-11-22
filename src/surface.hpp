@@ -23,3 +23,11 @@ void greedyProjection(
   Eigen::MatrixXd vertices,
   Eigen::MatrixXd normals
 );
+
+// Show hexagons for each vertex as a pseudo surface.
+void pseudoSurface(
+  std::string name,
+  double averageDistance,
+  Eigen::MatrixXd vertices,
+  Eigen::MatrixXd normals
+);
