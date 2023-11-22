@@ -69,14 +69,14 @@ void SketchTool::registerBasisPointsAsPointCloud(std::string name) {
     int idx = basisPointsIndex[i];
 
     points.push_back({
-      pointCloud->meshV(idx, 0),
-      pointCloud->meshV(idx, 1),
-      pointCloud->meshV(idx, 2)
+      pointCloud->Vertices(idx, 0),
+      pointCloud->Vertices(idx, 1),
+      pointCloud->Vertices(idx, 2)
     });
     normals.push_back({
-      pointCloud->meshN(idx, 0),
-      pointCloud->meshN(idx, 1),
-      pointCloud->meshN(idx, 2)
+      pointCloud->Normals(idx, 0),
+      pointCloud->Normals(idx, 1),
+      pointCloud->Normals(idx, 2)
     });
   }
 
@@ -84,10 +84,10 @@ void SketchTool::registerBasisPointsAsPointCloud(std::string name) {
   patchCloud->setPointColor(BasisPointColor);
   patchCloud->setPointRadius(BasisPointRadius);
 
-  polyscope::PointCloudVectorQuantity *patchVectorQuantity = patchCloud->addVectorQuantity(NormalName, normals);
+  polyscope::PointCloudVectorQuantity* patchVectorQuantity = patchCloud->addVectorQuantity(NormalName, normals);
   patchVectorQuantity->setVectorColor(BasisPointColor);
   patchVectorQuantity->setVectorLengthScale(NormalLength);
-  patchVectorQuantity->setVectorRadius(NormalRadius);
+  patchVectorQuantity->setVectorRadius(NormalRadius * 1.1);
   patchVectorQuantity->setEnabled(NormalEnabled);
   patchVectorQuantity->setMaterial(NormalMaterial);
 }
@@ -194,8 +194,7 @@ void SketchTool::findBasisPoints() {
     Ray ray(cameraOrig, discretizedPoints[i]);
     std::vector<Hit> hitsInfo = ray.searchNeighborPoints(pointCloud->averageDistance, pointCloud);
     for (Hit hitInfo: hitsInfo) {
-      if (!hitInfo.hit) continue;
-      selectedPointsIndexSet.insert(hitInfo.index);
+      if (hitInfo.hit) selectedPointsIndexSet.insert(hitInfo.index);
     }
   }
 

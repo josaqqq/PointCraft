@@ -29,7 +29,8 @@ const bool ScalarEnabled = true;
 //
 // Octree parameters
 //
-const double OctreeResolution = 64.0;
+const double OctreeResolution = 0.01;  // The length of the smallest voxels at lowest octree level.
+const int RayMaxStep = 10000;
 
 //
 // Patch parameters

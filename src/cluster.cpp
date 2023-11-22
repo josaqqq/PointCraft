@@ -53,9 +53,9 @@ void visualizeCluster(
     for (int idx: i.second) {
       // point and point casted on camera line.
       glm::dvec3 p = glm::dvec3(
-        pointCloud->meshV(idx, 0),
-        pointCloud->meshV(idx, 1),
-        pointCloud->meshV(idx, 2)
+        pointCloud->Vertices(idx, 0),
+        pointCloud->Vertices(idx, 1),
+        pointCloud->Vertices(idx, 2)
       );
       glm::dvec3 castedP = cameraOrig + glm::dot(cameraDir, p - cameraOrig)*cameraDir;
 
@@ -87,9 +87,9 @@ std::vector<int> Clustering::executeDBSCAN(double eps, int minPoints) {
     int idx = (*pointsIndex)[i];
 
     glm::dvec3 p = glm::dvec3(
-      pointCloud->meshV(idx, 0),
-      pointCloud->meshV(idx, 1),
-      pointCloud->meshV(idx, 2)
+      pointCloud->Vertices(idx, 0),
+      pointCloud->Vertices(idx, 1),
+      pointCloud->Vertices(idx, 2)
     );
     depths[i] = plane->mapCoordinates(p).z;
   }
@@ -156,7 +156,7 @@ std::vector<int> Clustering::executeDBSCAN(double eps, int minPoints) {
   double minDepth = 1e5;
   for (std::pair<int, double> i: labelToDepth) {
     double averageDepth = i.second / labelToCount[i.first];
-    if (averageDepth < minDepth) {
+    if (std::abs(averageDepth) < minDepth) {
       minDepthLabel = i.first;
       minDepth = averageDepth;
     }

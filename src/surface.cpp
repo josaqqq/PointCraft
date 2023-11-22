@@ -20,11 +20,11 @@
 #include "constants.hpp"
 
 // Reconstruct surface with vertex and normal infromation
-void poissonReconstruct(
+std::pair<Eigen::MatrixXd, Eigen::MatrixXi> poissonReconstruct(
   std::string name,
   double averageDistance,
-  Eigen::MatrixXd vertices,
-  Eigen::MatrixXd normals
+  Eigen::MatrixXd &vertices,
+  Eigen::MatrixXd &normals
 ) {
   averageDistance *= polyscope::state::lengthScale;
 
@@ -55,6 +55,7 @@ void poissonReconstruct(
     max_z = std::max(max_z, vertices(i, 2));
   }
   // Grid the bounding box with voxels ((averageDistance/2.0)^3)
+
   double voxelEdge = averageDistance / 2.0;
   int voxelNum = ((max_x - min_x)*(max_y - min_y)*(max_z - min_z))/(voxelEdge*voxelEdge*voxelEdge);
 
@@ -99,23 +100,30 @@ void poissonReconstruct(
     }
   }
 
-  // Output results
-  std::cout << "\nFinished Poisson Surface Reconstruction!" << std::endl;
-  std::cout << "Voxel num:\t" << voxelNum << std::endl;
-  std::cout << "Max Depth:\t" << maxDepth << std::endl;
-  std::cout << "Vertex num:\t" << meshVertices->points.size() << std::endl;
-  std::cout << "Face num:\t" << mesh.polygons.size() << std::endl;
-
   // Register mesh
   polyscope::SurfaceMesh *surfaceMesh = polyscope::registerSurfaceMesh(name, meshV, meshF);
   surfaceMesh->setSurfaceColor(PoissonColor);
   surfaceMesh->setMaterial(PoissonMaterial);
+
+  // Output results
+  std::cout << "\nFinished Poisson Surface Reconstruction!"                   << std::endl;
+  std::cout << "\tVoxel num\t->\t"            << voxelNum                     << std::endl;
+  std::cout << "\tMax Depth\t->\t"            << maxDepth                     << std::endl;
+  std::cout << "\tVertex num\t->\t"           << meshVertices->points.size()  << std::endl;
+  std::cout << "\tFace num\t->\t"             << mesh.polygons.size()         << std::endl;
+  std::cout << "\tInput Vertices Size\t->\t"  << vertices.rows()              << std::endl;
+  std::cout << "\tInput Normals Size\t->\t"   << normals.rows()               << std::endl;
+  std::cout << "\tOutput Vertices Size\t->\t" << meshV.rows()                 << std::endl;
+  std::cout << "\tOutput Faces Size\t->\t"    << meshF.rows()                 << std::endl;
+  std::cout                                                                   << std::endl;
+
+  return { meshV, meshF };
 }
 
 // Smoothing vertices with MLS
 std::pair<Eigen::MatrixXd, Eigen::MatrixXd> mlsSmoothing(
   std::string name,
-  Eigen::MatrixXd vertices
+  Eigen::MatrixXd &vertices
 ) {
   // Init point cloud
   pcl::PointCloud<pcl::PointXYZ>::Ptr inputCloud(new pcl::PointCloud<pcl::PointXYZ>);
@@ -143,45 +151,45 @@ std::pair<Eigen::MatrixXd, Eigen::MatrixXd> mlsSmoothing(
   pcl::PointCloud<pcl::PointNormal>::Ptr outputCloud(new pcl::PointCloud<pcl::PointNormal>);
   mls.process(*outputCloud);
 
-  Eigen::MatrixXd meshV(outputCloud->size(), 3);
-  Eigen::MatrixXd meshN(outputCloud->size(), 3);
+  Eigen::MatrixXd Vertices(outputCloud->size(), 3);
+  Eigen::MatrixXd Normals(outputCloud->size(), 3);
   glm::dvec3 averageNormal = glm::dvec3(0.0, 0.0, 0.0);
   for (int i = 0; i < outputCloud->size(); i++) {
-    meshV.row(i) << 
+    Vertices.row(i) << 
       outputCloud->points[i].x,
       outputCloud->points[i].y,
       outputCloud->points[i].z;
     
-    meshN.row(i) <<
+    Normals.row(i) <<
       outputCloud->points[i].normal_x,
       outputCloud->points[i].normal_y,
       outputCloud->points[i].normal_z;
     
-    averageNormal += glm::dvec3(meshN(i, 0), meshN(i, 1), meshN(i, 2));
+    averageNormal += glm::dvec3(Normals(i, 0), Normals(i, 1), Normals(i, 2));
   }
   averageNormal /= (double)outputCloud->size();
   
   // If the averageNormal is the same direction with cameraDir, flip the normals
   const glm::dvec3 cameraDir  = polyscope::view::screenCoordsToWorldRay(glm::vec2(polyscope::view::windowWidth/2, polyscope::view::windowHeight/2));
-  if (glm::dot(averageNormal, cameraDir) > 0) meshN *= -1;
+  if (glm::dot(averageNormal, cameraDir) > 0) Normals *= -1;
 
-  polyscope::PointCloud *mlsPoints = polyscope::registerPointCloud(name, meshV);
+  polyscope::PointCloud *mlsPoints = polyscope::registerPointCloud(name, Vertices);
   mlsPoints->setPointColor(PointColor);
   mlsPoints->setPointRadius(PointRadius);
 
-  polyscope::PointCloudVectorQuantity *mlsVectorQuantity = mlsPoints->addVectorQuantity(NormalName, meshN);
+  polyscope::PointCloudVectorQuantity *mlsVectorQuantity = mlsPoints->addVectorQuantity(NormalName, Normals);
   mlsVectorQuantity->setVectorColor(NormalColor);
   mlsVectorQuantity->setVectorLengthScale(NormalLength);
   mlsVectorQuantity->setVectorRadius(NormalRadius);
   mlsVectorQuantity->setEnabled(NormalEnabled);
 
-  return { meshV, meshN };
+  return { Vertices, Normals };
 }
 
 void greedyProjection(
   std::string name,
-  Eigen::MatrixXd vertices,
-  Eigen::MatrixXd normals
+  Eigen::MatrixXd &vertices,
+  Eigen::MatrixXd &normals
 ) {
   // Init point cloud
   pcl::PointCloud<pcl::PointNormal>::Ptr inputCloud(new pcl::PointCloud<pcl::PointNormal>);
@@ -257,8 +265,8 @@ void greedyProjection(
 void pseudoSurface(
   std::string name,
   double averageDistance,
-  Eigen::MatrixXd vertices,
-  Eigen::MatrixXd normals
+  Eigen::MatrixXd &vertices,
+  Eigen::MatrixXd &normals
 ) {
   averageDistance *= polyscope::state::lengthScale;
 

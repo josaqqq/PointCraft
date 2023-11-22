@@ -17,9 +17,9 @@ RBF::RBF(
     int idx = (*basisPointsIndex)[i];
 
     basisPoints[i] = glm::dvec3(
-      pointCloud->meshV(idx, 0),
-      pointCloud->meshV(idx, 1),
-      pointCloud->meshV(idx, 2)
+      pointCloud->Vertices(idx, 0),
+      pointCloud->Vertices(idx, 1),
+      pointCloud->Vertices(idx, 2)
     );
   }
 
@@ -39,8 +39,7 @@ RBF::RBF(
     // Cast a ray for each discretized point
     Ray ray(cameraOrig, (*discretizedPoints)[i]);
     Hit hitInfo = ray.castPointToPlane(&averagePlane);
-    if (!hitInfo.hit) continue;
-    (*discretizedPoints)[i] = averagePlane.mapCoordinates(hitInfo.pos);
+    if (hitInfo.hit) (*discretizedPoints)[i] = averagePlane.mapCoordinates(hitInfo.pos);
   }
 }
 

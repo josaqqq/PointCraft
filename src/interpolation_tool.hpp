@@ -11,4 +11,11 @@ class InterpolationTool : public SketchTool {
     void drawSketch() override;
 
   private:
+    void draggingEvent();
+    void releasedEvent();
+
+    void renderInterpolatedPoints(
+      Eigen::MatrixXd &newV,
+      Eigen::MatrixXd &newN
+    );
 };

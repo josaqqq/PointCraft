@@ -17,11 +17,6 @@
 #include "point_cloud.hpp"
 #include "constants.hpp"
 
-int currentMode;
-int currentPointCloud;
-int currentPointCloudNormal;
-int currentSurfaceMode;
-PointCloud pointCloud;
 ModeSelector modeSelector;
 
 void callback() {
@@ -69,7 +64,11 @@ int main(int argc, char **argv) {
   polyscope::view::bgColor = BackgroundColor;
 
   // Initialize classes
-  pointCloud = PointCloud(args::get(inFile));
+  int currentMode;
+  int currentPointCloud;
+  int currentPointCloudNormal;
+  int currentSurfaceMode;
+  PointCloud pointCloud(args::get(inFile));
   InterpolationTool interpolationTool(&pointCloud, &currentMode);
   modeSelector = ModeSelector(
     &currentMode, 

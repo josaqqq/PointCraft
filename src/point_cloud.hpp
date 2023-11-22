@@ -5,19 +5,18 @@
 #include <Eigen/Dense>
 #include <string>
 
-#include "octree.hpp"
+#include <pcl/octree/octree_search.h>
 
 class PointCloud {
   public:
-    PointCloud() {}
     PointCloud(std::string filename);
     ~PointCloud() {}
 
-    Eigen::MatrixXd meshV;    // double matrix of vertex positions
-    Eigen::MatrixXd meshN;    // double matrix of corner normals
-    Eigen::MatrixXi meshF;    // list of face indices into vertex positions
+    Eigen::MatrixXd Vertices;    // double matrix of vertex positions
+    Eigen::MatrixXd Normals;    // double matrix of corner normals
 
-    double averageDistance;
+    double averageDistance;       // Average Distance between a point and the nearest neighbor
+    double boundingSphereRadius;  // Radius of bounding sphere of point cloud
 
     // Enable or Disable the point cloud and normals
     void setPointCloudEnabled(bool flag);
@@ -31,11 +30,22 @@ class PointCloud {
     // Add points with information of the position and the normal.
     void addPoints(Eigen::MatrixXd newV, Eigen::MatrixXd newN);
 
-  private:
-    // Move points to set the gravity point to (0.0, 0.0, 0.0).
-    void movePointsToOrigin();
+    // Return the pointer to member variables
+    pcl::octree::OctreePointCloudSearch<pcl::PointXYZ>* getOctree();
 
-    Octree octree;
+  private:
+    // Move points to set the gravity point to (0.0, 0.0, 0.0),
+    // and then calculate bounding sphere radius.
+    void scalePointCloud();
+
+    // Update registered vertices
+    void updateOctree();
+
+    // Calculate average distance between the nearest points.
+    double calcAverageDistance();
+
+    pcl::octree::OctreePointCloudSearch<pcl::PointXYZ> octree;
+
     polyscope::PointCloud *pointCloud;
     polyscope::PointCloudVectorQuantity *vectorQuantity;
     polyscope::PointCloudScalarQuantity *scalarQuantity;

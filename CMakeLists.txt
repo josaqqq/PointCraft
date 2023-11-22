@@ -80,7 +80,6 @@ add_executable(
     src/plane.cpp
     src/cluster.cpp
     src/modes.cpp
-    src/octree.cpp
     src/point_cloud.cpp
     src/sketch_tool.cpp
     src/interpolation_tool.cpp
