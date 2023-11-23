@@ -133,6 +133,10 @@ Hit Ray::meshIntersection(Eigen::MatrixXd &meshV, Eigen::MatrixXi &meshF, PointC
   if (adjacentMeshCount == 0) return hitInfo;
   averageNormal /= adjacentMeshCount;
 
+  // If averageNormal and the camera direction 
+  // are not facing each other, then return
+  if (glm::dot(averageNormal, cameraDir) >= 0) return hitInfo;
+
   hitInfo.hit = true;
   hitInfo.index = minDistIndex;
   hitInfo.normal = averageNormal;
