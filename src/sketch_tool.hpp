@@ -23,7 +23,7 @@ class SketchTool {
     void resetSketch();
 
     // Draw sketch according to the selected mode.
-    virtual void drawSketch() {};
+    virtual bool drawSketch() {};
 
     /*
       Viewer functions

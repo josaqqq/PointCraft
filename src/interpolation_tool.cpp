@@ -8,9 +8,16 @@
 #include "rbf.hpp"
 #include "surface.hpp"
 
-void InterpolationTool::drawSketch() {
-  if (ImGui::IsMouseDown(ImGuiMouseButton_Left)) draggingEvent();
-  if (ImGui::IsMouseReleased(ImGuiMouseButton_Left) && getSketchPoints()->size() > 0) releasedEvent();
+bool InterpolationTool::drawSketch() {
+  if (ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
+    draggingEvent();
+    return false;
+  } else if (ImGui::IsMouseReleased(ImGuiMouseButton_Left) && getSketchPoints()->size() > 0) {
+    releasedEvent();
+    return true;
+  }
+
+  return false;
 }
 
 void InterpolationTool::draggingEvent() {
