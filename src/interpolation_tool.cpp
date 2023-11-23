@@ -62,7 +62,7 @@ void InterpolationTool::releasedEvent() {
 
   std::tie(psrPoints, psrFaces) = poissonReconstruct(
     "Interpolation: PSR",
-    getPointCloud()->averageDistance,
+    getPointCloud()->getAverageDistance(),
     psrPoints,
     psrNormals  
   );

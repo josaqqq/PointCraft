@@ -95,6 +95,12 @@ void PointCloud::addPoints(Eigen::MatrixXd newV, Eigen::MatrixXd newN) {
 }
 
 // Return the pointer to member variables
+double PointCloud::getAverageDistance() {
+  return averageDistance;
+}
+double PointCloud::getBoundingSphereRadius() {
+  return boundingSphereRadius;
+}
 pcl::octree::OctreePointCloudSearch<pcl::PointXYZ>* PointCloud::getOctree() {
   return &octree;
 }

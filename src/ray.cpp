@@ -61,7 +61,7 @@ Hit Ray::meshIntersection(Eigen::MatrixXd &meshV, Eigen::MatrixXi &meshF, PointC
 
   // Check the intersection with bounding sphere
   // <- Point cloud is centered at (0, 0, 0)
-  Hit hitSphere = checkSphere(glm::dvec3(0.0, 0.0, 0.0), pointCloud->boundingSphereRadius);
+  Hit hitSphere = checkSphere(glm::dvec3(0.0, 0.0, 0.0), pointCloud->getBoundingSphereRadius());
   if (!hitSphere.hit) return hitInfo;
 
   // Construct Octree
@@ -82,10 +82,10 @@ Hit Ray::meshIntersection(Eigen::MatrixXd &meshV, Eigen::MatrixXi &meshF, PointC
   double minDist = 1e5;
   for (int i = 0; i < RayMaxStep; i++) {
     // current center of the searching area
-    glm::dvec3 currentCenter = startPoint + (double)i*pointCloud->averageDistance*rayDir;
+    glm::dvec3 currentCenter = startPoint + (double)i*pointCloud->getAverageDistance()*rayDir;
 
     // Check whether currentCenter is in the searched area
-    if (glm::length(currentCenter) > pointCloud->boundingSphereRadius) break;
+    if (glm::length(currentCenter) > pointCloud->getBoundingSphereRadius()) break;
 
     // Search for nearest neighbors within the searchRadius.
     const int K = 1;
@@ -156,17 +156,17 @@ std::vector<Hit> Ray::searchNeighborPoints(double searchRadius, PointCloud *poin
 
   // Check the intersection with bounding sphere
   // <- Point cloud is centered at (0, 0, 0)
-  Hit hitSphere = checkSphere(glm::dvec3(0.0, 0.0, 0.0), pointCloud->boundingSphereRadius);
+  Hit hitSphere = checkSphere(glm::dvec3(0.0, 0.0, 0.0), pointCloud->getBoundingSphereRadius());
   if (!hitSphere.hit) return hitsInfo;
 
   // Search for nearest neighbors traversing the ray
   glm::dvec3 startPoint = hitSphere.pos + (double)1e-5*rayDir;
   for (int i = 0; i < RayMaxStep; i++) {
     // current center of the searching area
-    glm::dvec3 currentCenter = startPoint + (double)i*pointCloud->averageDistance*rayDir;
+    glm::dvec3 currentCenter = startPoint + (double)i*pointCloud->getAverageDistance()*rayDir;
 
     // Check whether currentCenter is in the searched area
-    if (glm::length(currentCenter) > pointCloud->boundingSphereRadius) break;
+    if (glm::length(currentCenter) > pointCloud->getBoundingSphereRadius()) break;
 
     // Search for nearest neighbors within the searchRadius.
     std::vector<int>    hitPointIndices;

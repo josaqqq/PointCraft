@@ -80,7 +80,7 @@ int main(int argc, char **argv) {
   );
 
   // Reconstruct Surfaces
-  poissonReconstruct(PoissonName, pointCloud.averageDistance, pointCloud.Vertices, pointCloud.Normals);
+  poissonReconstruct(PoissonName, pointCloud.getAverageDistance(), pointCloud.Vertices, pointCloud.Normals);
   greedyProjection(GreedyProjName, pointCloud.Vertices, pointCloud.Normals);
 
   // Add the callback
