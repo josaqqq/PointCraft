@@ -107,6 +107,9 @@ Hit Ray::meshIntersection(Eigen::MatrixXd &meshV, Eigen::MatrixXi &meshF, PointC
 
   // If the ray hits no point, then return
   if (minDistIndex == -1) return hitInfo;
+  // If the nearest neighbor was not within the search range, then return
+  // TODO: This may not work well
+  if (minDist >= pointCloud->getAverageDistance()) return hitInfo;
 
   // Search for faces adjacent to the selected vertex
   // and calculate the average normal.
