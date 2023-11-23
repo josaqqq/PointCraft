@@ -40,8 +40,30 @@ void ModeSelector::enableModeSelection(ImGuiIO &io) {
   //     break;
   // }
 
+  // Surface Reconstruction
+  ImGui::Text("Surface Reconstruction");
+  ImGui::Text("   "); ImGui::SameLine();
+  if (ImGui::Button("Reconstruct Poisson Surface")) {
+    poissonReconstruct(
+      PoissonName,
+      pointCloud->averageDistance,
+      pointCloud->Vertices,
+      pointCloud->Normals
+    );
+    *currentSurfaceMode = SURFACE_MODE_POISSON;
+  }
+  ImGui::Text("   "); ImGui::SameLine();
+  if (ImGui::Button("Reconstruct Greedy Surface")) {
+    greedyProjection(
+      GreedyProjName,
+      pointCloud->Vertices,
+      pointCloud->Normals
+    );
+    *currentSurfaceMode = SURFACE_MODE_GREEDY;
+  }
+
   // Surface Visualization
-  ImGui::Text("Surface Visualization");
+  ImGui::Text("Surface Visualization:");
   ImGui::Text("   "); ImGui::SameLine();
   ImGui::RadioButton("None", currentSurfaceMode, SURFACE_MODE_NONE);
   ImGui::Text("   "); ImGui::SameLine();

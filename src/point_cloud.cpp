@@ -69,14 +69,12 @@ void PointCloud::updatePointCloud() {
   // scalarQuantity->setColorMap(ScalarColorMap);
   // scalarQuantity->setEnabled(ScalarEnabled);
 
-  std::cout << "Point Cloud Data:"                               << std::endl;
-  std::cout << "\tVertex num:\t\t"            << Vertices.rows()  << std::endl;
-  std::cout << "\tNormal num:\t\t"            << Normals.rows()   << std::endl;
-  std::cout << "\tAverage Distance\t"         << averageDistance  << std::endl;
+  std::cout << "Point Cloud Data:"                                << std::endl;
+  std::cout << "\tVertex num\t\t->\t"       << Vertices.rows()    << std::endl;
+  std::cout << "\tNormal num\t\t->\t"       << Normals.rows()     << std::endl;
+  std::cout << "\tAverage Distance\t->\t"   << averageDistance    << std::endl;
 
-  // Reconstruct Surfaces
-  poissonReconstruct(PoissonName, averageDistance, Vertices, Normals);
-  greedyProjection(GreedyProjName, Vertices, Normals);
+  // Show Pseudo Surface
   pseudoSurface(PseudoSurfaceName, averageDistance, Vertices, Normals);
 }
 
