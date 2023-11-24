@@ -8,6 +8,30 @@
 #include "constants.hpp"
 
 void ModeSelector::enableModeSelection(ImGuiIO &io) {
+  // Tool Selection
+  ImGui::Text("Tool Selection:");
+  ImGui::Text("   "); ImGui::SameLine();
+  if (ImGui::Button("Reset Tool")) {
+    *currentMode = MODE_NONE;
+  }
+  ImGui::Text("   "); ImGui::SameLine();
+  if (ImGui::Button("Interpolation Tool")) {
+    *currentMode = MODE_INTERPOLATION;
+    interpolationTool->initSketch();
+  }
+
+  switch (*currentMode) {
+    case MODE_NONE:
+      ImGui::Text("   Selected Tool: None");
+      polyscope::view::moveScale = 1.0;
+      break;
+    case MODE_INTERPOLATION:
+      ImGui::Text("   Selected Tool: Interpolation Tool");
+      polyscope::view::moveScale = 0.0;
+      if (interpolationTool->drawSketch()) *currentSurfaceMode = SURFACE_MODE_PSEUDO;
+      break;
+  }
+
   // Point Cloud Visualization
   // ImGui::Text("Point Cloud Visualization");
   // ImGui::Text("   "); ImGui::SameLine();
@@ -40,8 +64,30 @@ void ModeSelector::enableModeSelection(ImGuiIO &io) {
   //     break;
   // }
 
+  // Surface Reconstruction
+  ImGui::Text("\nSurface Reconstruction");
+  ImGui::Text("   "); ImGui::SameLine();
+  if (ImGui::Button("Reconstruct Poisson Surface")) {
+    poissonReconstruct(
+      PoissonName,
+      pointCloud->getAverageDistance(),
+      pointCloud->Vertices,
+      pointCloud->Normals
+    );
+    *currentSurfaceMode = SURFACE_MODE_POISSON;
+  }
+  ImGui::Text("   "); ImGui::SameLine();
+  if (ImGui::Button("Reconstruct Greedy Surface")) {
+    greedyProjection(
+      GreedyProjName,
+      pointCloud->Vertices,
+      pointCloud->Normals
+    );
+    *currentSurfaceMode = SURFACE_MODE_GREEDY;
+  }
+
   // Surface Visualization
-  ImGui::Text("Surface Visualization");
+  ImGui::Text("\nSurface Visualization:");
   ImGui::Text("   "); ImGui::SameLine();
   ImGui::RadioButton("None", currentSurfaceMode, SURFACE_MODE_NONE);
   ImGui::Text("   "); ImGui::SameLine();
@@ -74,30 +120,6 @@ void ModeSelector::enableModeSelection(ImGuiIO &io) {
       pseudoSurface->setEnabled(false);
       poissonSurface->setEnabled(false);
       greedySurface->setEnabled(true);
-      break;
-  }
-
-  // Tool Selection
-  ImGui::Text("Tool Selection:");
-  ImGui::Text("   "); ImGui::SameLine();
-  if (ImGui::Button("Reset Tool")) {
-    *currentMode = MODE_NONE;
-  }
-  ImGui::Text("   "); ImGui::SameLine();
-  if (ImGui::Button("Interpolation Tool")) {
-    *currentMode = MODE_INTERPOLATION;
-    interpolationTool->initSketch();
-  }
-
-  switch (*currentMode) {
-    case MODE_NONE:
-      ImGui::Text("   Selected Tool: None");
-      polyscope::view::moveScale = 1.0;
-      break;
-    case MODE_INTERPOLATION:
-      ImGui::Text("   Selected Tool: Interpolation Tool");
-      polyscope::view::moveScale = 0.0;
-      interpolationTool->drawSketch();
       break;
   }
 }

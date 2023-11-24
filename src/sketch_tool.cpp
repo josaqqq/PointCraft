@@ -192,18 +192,19 @@ void SketchTool::findBasisPoints() {
   glm::dvec3 cameraOrig = polyscope::view::getCameraWorldPosition();
   for (int i = 0; i < discretizedPoints.size(); i++) {
     Ray ray(cameraOrig, discretizedPoints[i]);
-    std::vector<Hit> hitsInfo = ray.searchNeighborPoints(pointCloud->averageDistance, pointCloud);
+    std::vector<Hit> hitsInfo = ray.searchNeighborPoints(pointCloud->getAverageDistance(), pointCloud);
     for (Hit hitInfo: hitsInfo) {
       if (hitInfo.hit) selectedPointsIndexSet.insert(hitInfo.index);
     }
   }
 
+  // std::set<int> -> std::vector<int>
   std::vector<int> selectedPointsIndex;
   for (int idx: selectedPointsIndexSet) selectedPointsIndex.push_back(idx);
 
   // Depth detection with DBSCAN
   Clustering clustering(&selectedPointsIndex, pointCloud, &screen);
-  basisPointsIndex = clustering.executeDBSCAN(DBSCAN_SearchRange*pointCloud->averageDistance, DBSCAN_MinPoints);
+  basisPointsIndex = clustering.executeDBSCAN(DBSCAN_SearchRange*pointCloud->getAverageDistance(), DBSCAN_MinPoints);
 }
 
 // Return the pointer to member variables.

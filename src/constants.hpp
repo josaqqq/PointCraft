@@ -75,7 +75,6 @@ const std::string MLSName = "Interpolation MLS";
 const glm::dvec3 MLSColor = { 0.000, 0.000, 1.000 };
 
 const int MLSPolynomialOrder = 2;
-const bool MLSPolynomialFitFlag = true;
 const double MLSSearchRadius = 0.3;
 
 //

@@ -79,6 +79,10 @@ int main(int argc, char **argv) {
     &interpolationTool
   );
 
+  // Reconstruct Surfaces
+  poissonReconstruct(PoissonName, pointCloud.getAverageDistance(), pointCloud.Vertices, pointCloud.Normals);
+  greedyProjection(GreedyProjName, pointCloud.Vertices, pointCloud.Normals);
+
   // Add the callback
   polyscope::state::userCallback = callback;
 

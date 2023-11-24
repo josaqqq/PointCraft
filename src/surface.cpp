@@ -143,7 +143,6 @@ std::pair<Eigen::MatrixXd, Eigen::MatrixXd> mlsSmoothing(
   mls.setComputeNormals(true);
   mls.setInputCloud(inputCloud);
   mls.setPolynomialOrder(MLSPolynomialOrder);
-  mls.setPolynomialFit(MLSPolynomialFitFlag);
   mls.setSearchMethod(tree);
   mls.setSearchRadius(MLSSearchRadius);
 

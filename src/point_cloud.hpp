@@ -15,9 +15,6 @@ class PointCloud {
     Eigen::MatrixXd Vertices;    // double matrix of vertex positions
     Eigen::MatrixXd Normals;    // double matrix of corner normals
 
-    double averageDistance;       // Average Distance between a point and the nearest neighbor
-    double boundingSphereRadius;  // Radius of bounding sphere of point cloud
-
     // Enable or Disable the point cloud and normals
     void setPointCloudEnabled(bool flag);
     void setPointCloudNormalEnabled(bool flag);
@@ -31,6 +28,8 @@ class PointCloud {
     void addPoints(Eigen::MatrixXd newV, Eigen::MatrixXd newN);
 
     // Return the pointer to member variables
+    double getAverageDistance();
+    double getBoundingSphereRadius();
     pcl::octree::OctreePointCloudSearch<pcl::PointXYZ>* getOctree();
 
   private:
@@ -43,6 +42,9 @@ class PointCloud {
 
     // Calculate average distance between the nearest points.
     double calcAverageDistance();
+
+    double averageDistance;       // Average Distance between a point and the nearest neighbor
+    double boundingSphereRadius;  // Radius of bounding sphere of point cloud
 
     pcl::octree::OctreePointCloudSearch<pcl::PointXYZ> octree;
 
