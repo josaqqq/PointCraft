@@ -3,6 +3,7 @@
 
 #include <igl/readOBJ.h>
 
+#include <pcl/io/pcd_io.h>
 #include <pcl/point_cloud.h>
 
 #include <Eigen/Dense>
@@ -14,13 +15,43 @@
 PointCloud::PointCloud(std::string filename) : octree(OctreeResolution) {
   std::cout << "loading: " << filename << std::endl;
 
-  // Read the mesh
-  Eigen::MatrixXi _F;  // list of face indices into vertex positions
-  Eigen::MatrixXd _TC;     // double matrix of texture coordinates
-  Eigen::MatrixXi _FTC;    // list of face indices into vertex texture coordinates
-  Eigen::MatrixXi _FN;     // list of face indices into vertex normals
-  igl::readOBJ(filename, Vertices, _TC, Normals, _F, _FTC, _FN);
-  if (Normals.rows() == 0) std::cout << "ERROR: Please include normal information." << std::endl;
+  // Extract file format
+  if (filename.length() < 3) exit(1);
+  std::string fileFormat = filename.substr(filename.size() - 3);
+
+  if (fileFormat == "obj") {
+    // Read .obj
+    Eigen::MatrixXi _F;  // list of face indices into vertex positions
+    Eigen::MatrixXd _TC;     // double matrix of texture coordinates
+    Eigen::MatrixXi _FTC;    // list of face indices into vertex texture coordinates
+    Eigen::MatrixXi _FN;     // list of face indices into vertex normals
+    igl::readOBJ(filename, Vertices, _TC, Normals, _F, _FTC, _FN);
+    if (Normals.rows() == 0) std::cerr << "ERROR: Please include normal information." << std::endl;
+  } else if (fileFormat == "pcd") {
+    // Read .pcd
+    pcl::PointCloud<pcl::PointNormal>::Ptr cloud(new pcl::PointCloud<pcl::PointNormal>);
+    if (pcl::io::loadPCDFile<pcl::PointNormal>(filename, *cloud) == -1) {
+      std::cerr << "ERROR: Couldn't read file" << std::endl;
+      exit(1);
+    }
+
+    // Extract vertices and normals
+    int cloudSize = cloud->points.size();
+    Vertices = Eigen::MatrixXd(cloudSize, 3);
+    Normals = Eigen::MatrixXd(cloudSize, 3);
+    for (int i = 0; i < cloudSize; i++) {
+      Vertices.row(i) << 
+        cloud->points[i].x,
+        cloud->points[i].y,
+        cloud->points[i].z;
+      Normals.row(i) << 
+        cloud->points[i].normal_x,
+        cloud->points[i].normal_y,
+        cloud->points[i].normal_z;
+    }
+
+    // TODO: We need to estimate points' normals here
+  }
 
   // Update scaling
   scalePointCloud();
