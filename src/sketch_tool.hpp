@@ -44,7 +44,7 @@ class SketchTool {
     // Register/Remove curve network loop with name.
     // Be aware that the curve network with 
     // the same name is overwritten
-    void registerSketchAsCurveNetworkLoop(std::string name);
+    void registerSketchPointsAsCurveNetworkLoop(std::string name);
     void removeCurveNetworkLoop(std::string name);
 
     /*
@@ -55,10 +55,11 @@ class SketchTool {
     void addSketchPoint(glm::dvec3 p);
 
     // Find basis points.
+    //  - If extendedSearch is true, extend the sketched area.
     //  - Cast all points of the point cloud onto the screen plane.
     //  - Judge inside/outside of the sketch.
     //  - Check whether the normal and the camera direction are faced each other.
-    void findBasisPoints();
+    void findBasisPoints(bool extendedSearch);
 
     // Check the inside/outside of the polygon.
     //  1.  Draw a half-line parallel to the x-axis from a point.
@@ -82,10 +83,13 @@ class SketchTool {
     PointCloud *pointCloud;   // Registered point cloud
     double      averageDepth; // Average depth of selected points
 
+    double      screenDist;    // Distance between screen and camera position
     glm::dvec3  cameraOrig;   // Camera position
     glm::dvec3  cameraDir;    // Camera direction
     Plane       screen;       // Plane on nearClip
 
-    std::vector<glm::dvec3>   sketchPoints;     // Sketched points on the camera screen
-    std::vector<int>          basisPointsIndex;  // The indices of selected basis points
+    std::vector<glm::dvec3>   sketchPoints;       // Sketched points on the camera screen
+    std::vector<int>          basisPointsIndex;   // The indices of selected basis points
+
+    void extendSketchedArea();
 };

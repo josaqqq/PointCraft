@@ -16,21 +16,27 @@
 
 // Initialize screen information
 void SketchTool::initSketch() {
-  double nearClip = polyscope::view::nearClipRatio*polyscope::state::lengthScale * ScreenOffset;
+  screenDist = polyscope::view::nearClipRatio*polyscope::state::lengthScale * ScreenOffset;
   cameraOrig = polyscope::view::getCameraWorldPosition();
   cameraDir = polyscope::view::screenCoordsToWorldRay(
     glm::vec2(polyscope::view::windowWidth/2, polyscope::view::windowHeight/2)
   );
-  glm::dvec3 screenOrig = cameraOrig + nearClip*cameraDir;
+  glm::dvec3 screenOrig = cameraOrig + screenDist*cameraDir;
 
-  // Plane on nearClip
+  // Plane on screenDist
   screen = Plane(screenOrig, cameraDir);
 }
 
 // Reset all member variables.
 void SketchTool::resetSketch() {
   *currentMode = 0;
+
   averageDepth = 0.0;
+
+  screenDist = 0.0;
+  cameraOrig = glm::dvec3(0.0, 0.0, 0.0);
+  cameraDir = glm::dvec3(0.0, 0.0, 0.0);
+  screen = Plane();
 
   sketchPoints.clear();
   basisPointsIndex.clear();
@@ -105,7 +111,7 @@ void SketchTool::removeCurveNetworkLine(std::string name) {
 // Register/Remove curve network loop with name.
 // Be aware that the curve network with 
 // the same name is overwritten
-void SketchTool::registerSketchAsCurveNetworkLoop(std::string name) {
+void SketchTool::registerSketchPointsAsCurveNetworkLoop(std::string name) {
   std::vector<std::vector<double>> sketch;
   for (int i = 0; i < sketchPoints.size(); i++) {
     sketch.push_back({
@@ -133,10 +139,14 @@ void SketchTool::addSketchPoint(glm::dvec3 p) {
 }
 
 // Find basis points.
+//  - If extendedSearch is true, extend the sketched area.
 //  - Cast all points of the point cloud onto the screen plane.
 //  - Judge inside/outside of the sketch.
 //  - Check whether the normal and the camera direction are faced each other.
-void SketchTool::findBasisPoints() {
+void SketchTool::findBasisPoints(bool extendedSearch) {
+  // If extendedSearch is true, extend the sketched area.
+  extendSketchedArea();
+
   // Cast all points of the point cloud onto the screen plane.
   std::vector<glm::dvec3> pointsCastedOntoScreen;
   for (int i = 0; i < pointCloud->Vertices.rows(); i++) {
@@ -241,4 +251,28 @@ std::vector<glm::dvec3>* SketchTool::getSketchPoints() {
 }
 std::vector<int>* SketchTool::getBasisPointsIndex() {
   return &basisPointsIndex;
+}
+
+void SketchTool::extendSketchedArea() {
+  // Calculate gravity point
+  glm::dvec3 gravityPoint = glm::dvec3(0.0, 0.0, 0.0);
+  for (glm::dvec3 p: sketchPoints) {
+    gravityPoint += p;
+  }
+  gravityPoint /= static_cast<double>(sketchPoints.size());
+
+  // Calculate averageDistance casted onto screen
+  double objectDist = glm::length(cameraOrig);
+  double castedAverageDist = pointCloud->getAverageDistance()*screenDist/objectDist;
+
+  // Extend sketched area
+  registerSketchPointsAsCurveNetworkLine("sketch");
+  for (int i = 0; i < sketchPoints.size(); i++) {
+    glm::dvec3 p = sketchPoints[i];
+
+    // Double the average distance, because the user 
+    // should sketch with reference to the boundary of pseudo surface.
+    sketchPoints[i] = p + 2.0*castedAverageDist*glm::normalize(p - gravityPoint);
+  }
+  registerSketchPointsAsCurveNetworkLine("extended sketch");
 }

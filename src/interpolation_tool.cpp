@@ -39,10 +39,11 @@ void InterpolationTool::draggingEvent() {
 
 void InterpolationTool::releasedEvent() {
   // Find basis points.
+  //  - If extendedSearch is true, extend the sketched area.
   //  - Cast all points of the point cloud onto the screen plane.
   //  - Judge inside/outside of the sketch.
   //  - Check whether the normal and the camera direction are faced each other.
-  findBasisPoints();
+  findBasisPoints(true);
   if (getBasisPointsIndex()->size() == 0) {
     std::cout << "WARNING: No basis point was found." << std::endl;
     removeCurveNetworkLine(SketchPrefix);
