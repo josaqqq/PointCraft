@@ -91,5 +91,9 @@ class SketchTool {
     std::vector<glm::dvec3>   sketchPoints;       // Sketched points on the camera screen
     std::vector<int>          basisPointsIndex;   // The indices of selected basis points
 
+    // Extend sketched area by averageDistance casted onto the screen.
     void extendSketchedArea();
+
+    // Cast averageDist onto the screen
+    double calcCastedAverageDist();
 };
