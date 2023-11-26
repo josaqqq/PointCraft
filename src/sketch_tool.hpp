@@ -57,16 +57,25 @@ class SketchTool {
     // Find basis points.
     //  - If extendedSearch is true, extend the sketched area.
     //  - Cast all points of the point cloud onto the screen plane.
-    //  - Judge inside/outside of the sketch.
-    //  - Check whether the normal and the camera direction are faced each other.
+    //  - Check the conditions below.
+    //    1. Judge inside/outside of the sketch.
+    //    2. Check the normal direction of the point.
+    //    3. Check the nearest neighbors' distances from cameraOrig.
     void findBasisPoints(bool extendedSearch);
 
-    // Check the inside/outside of the polygon.
+    // Check whether (x, y) is inside or outside of the sketch.
     //  1.  Draw a half-line parallel to the x-axis from a point.
     //  2.  Determine that if there are an odd number of intersections
     //      between this half-line and the polygon, it is inside, and if 
     //      there are an even number, it is outside.
     bool insideSketch(double x, double y);
+
+    // Check whether (x, y) is inside or outside of the mappedBasisConvexHull.
+    //  1.  Draw a half-line parallel to the x-axis from a point.
+    //  2.  Determine that if there are an odd number of intersections
+    //      between this half-line and the polygon, it is inside, and if 
+    //      there are an even number, it is outside.
+    bool insideBasisConvexHull(double x, double y);
 
     // Return the pointer to member variables.
     PointCloud*               getPointCloud();
@@ -88,12 +97,28 @@ class SketchTool {
     glm::dvec3  cameraDir;    // Camera direction
     Plane       screen;       // Plane on nearClip
 
-    std::vector<glm::dvec3>   sketchPoints;       // Sketched points on the camera screen
-    std::vector<int>          basisPointsIndex;   // The indices of selected basis points
+    std::vector<glm::dvec3>   sketchPoints;           // Sketched points on the camera screen
+    std::vector<int>          basisPointsIndex;       // The indices of selected basis points
+    std::vector<glm::dvec2>   mappedBasisConvexHull;  // Convex hull of the basis points mapped onto screen
 
     // Extend sketched area by averageDistance casted onto the screen.
     void extendSketchedArea();
 
-    // Cast averageDist onto the screen
+    // Shrink basisConvexHull to remove the selected points near the boundary.
+    void shrinkBasisConvexHull();
+
+    // Calculate averageDistance casted onto the screen
     double calcCastedAverageDist();
+
+    // Calculate CCW value
+    //  - ccw > 0.0: left turn
+    //  - ccw < 0.0: right turn
+    //  - ccw == 0.0: parallel
+    double calcCCW(glm::dvec2 p, glm::dvec2 a, glm::dvec2 b);
+
+    // Calculate the convex hull of basisPoints
+    void calcBasisConvexHull();
+
+    // Return whether half-line from (x, y) crosses u-v.
+    bool crossLines(double x, double y, glm::dvec2 u, glm::dvec2 v);
 };

@@ -41,8 +41,10 @@ void InterpolationTool::releasedEvent() {
   // Find basis points.
   //  - If extendedSearch is true, extend the sketched area.
   //  - Cast all points of the point cloud onto the screen plane.
-  //  - Judge inside/outside of the sketch.
-  //  - Check whether the normal and the camera direction are faced each other.
+  //  - Check the conditions below.
+  //    1. Judge inside/outside of the sketch.
+  //    2. Check the normal direction of the point.
+  //    3. Check the nearest neighbors' distances from cameraOrig.
   findBasisPoints(true);
   if (getBasisPointsIndex()->size() == 0) {
     std::cout << "WARNING: No basis point was found." << std::endl;
@@ -55,7 +57,6 @@ void InterpolationTool::releasedEvent() {
   registerBasisPointsAsPointCloud("Basis Points");
 
   // Calculate approximate surface with Poisson Surface Reconstruction.
-  // Calculate approximate surface with Poisson Surface Reconstruction
   int basisPointsSize = getBasisPointsIndex()->size();
   Eigen::MatrixXd psrPoints(basisPointsSize, 3);
   Eigen::MatrixXd psrNormals(basisPointsSize, 3);
@@ -70,7 +71,6 @@ void InterpolationTool::releasedEvent() {
     psrNormals(i, 1) = getPointCloud()->Normals(idx, 1);
     psrNormals(i, 2) = getPointCloud()->Normals(idx, 2);
   }
-
   std::tie(psrPoints, psrFaces) = poissonReconstruct(
     "Interpolation: PSR",
     getPointCloud()->getAverageDistance(),
@@ -86,8 +86,8 @@ void InterpolationTool::releasedEvent() {
 
   // Filter the reconstructed surface
   //  - Cast reconstructed surface onto the screen plane.
-  //  - Filter the points inside of the sketch
-  //  - Uniform density
+  //  - Filter only the points inside of the sketch.
+  //  - Uniform the density of interpolated points.
   Eigen::MatrixXd newV, newN;
   std::tie(newV, newN) = filterSurfacePoints(psrPoints, psrFaces);
   if (newV.rows() == 0) {
@@ -130,8 +130,8 @@ void InterpolationTool::renderInterpolatedPoints(
 
 // Filter the reconstructed surface
 //  - Cast reconstructed surface onto the screen plane.
-//  - Filter the points inside of the sketch
-//  - Uniform density
+//  - Filter only the points inside of the sketch and the convex hull of basisPoints.
+//  - Uniform the density of interpolated points.
 std::pair<Eigen::MatrixXd, Eigen::MatrixXd> InterpolationTool::filterSurfacePoints(
   Eigen::MatrixXd &surfacePoints,
   Eigen::MatrixXi &surfaceFaces
@@ -183,21 +183,21 @@ std::pair<Eigen::MatrixXd, Eigen::MatrixXd> InterpolationTool::filterSurfacePoin
     }
   }
 
-  // Filter the points inside of the sketch
+  // Filter only the points inside of the sketch and the convex hull of basisPoints
   std::vector<int> insideSketchPointIndex;
   for (int i = 0; i < pointsCastedOntoScreen.size(); i++) {
     glm::dvec3 p = pointsCastedOntoScreen[i];
 
-    if (insideSketch(p.x, p.y)) {
+    if (insideSketch(p.x, p.y) && insideBasisConvexHull(p.x, p.y)) {
       insideSketchPointIndex.push_back(i);
     }
   }
 
-  // Uniform density
+  // Uniform the density of interpolated points.
   // TODO: Implement here later...
 
   // Register the vertex and the normal,
-  // if the normal and the camera direction are faced each other.
+  // The normal and the camera direction must be faced each other.
   std::vector<int> insideSketchPointIndexBuffer;
   for (int i = 0; i < insideSketchPointIndex.size(); i++) {
     int idx = insideSketchPointIndex[i];

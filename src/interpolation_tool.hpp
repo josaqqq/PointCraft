@@ -22,8 +22,8 @@ class InterpolationTool : public SketchTool {
 
     // Filter the reconstructed surface
     //  - Cast reconstructed surface onto the screen plane.
-    //  - Filter the points inside of the sketch
-    //  - Uniform density
+    //  - Filter only the points inside of the sketch.
+    //  - Uniform the density of interpolated points.
     std::pair<Eigen::MatrixXd, Eigen::MatrixXd> filterSurfacePoints(
       Eigen::MatrixXd &surfacePoints,
       Eigen::MatrixXi &surfaceFaces
