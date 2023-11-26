@@ -69,7 +69,7 @@ int main(int argc, char **argv) {
   int currentPointCloudNormal;
   int currentSurfaceMode;
   PointCloud pointCloud(args::get(inFile));
-  InterpolationTool interpolationTool(&pointCloud, &currentMode);
+  InterpolationTool interpolationTool(&currentMode, &pointCloud);
   modeSelector = ModeSelector(
     &currentMode, 
     &currentPointCloud,

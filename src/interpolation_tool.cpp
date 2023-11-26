@@ -3,6 +3,8 @@
 #include "polyscope/point_cloud.h"
 #include "polyscope/view.h"
 
+#include <map>
+
 #include "constants.hpp"
 #include "interpolation_tool.hpp"
 #include "rbf.hpp"
@@ -36,21 +38,22 @@ void InterpolationTool::draggingEvent() {
 }
 
 void InterpolationTool::releasedEvent() {
-  // Discretize the bounded area.
-  discretizeSketchPoints();
-
-  // Find basis points
+  // Find basis points.
+  //  - Cast all points of the point cloud onto the screen plane.
+  //  - Judge inside/outside of the sketch.
+  //  - Check whether the normal and the camera direction are faced each other.
   findBasisPoints();
   if (getBasisPointsIndex()->size() == 0) {
+    std::cout << "WARNING: No basis point was found." << std::endl;
     removeCurveNetworkLine(SketchPrefix);
     resetSketch();
     return;
   }
 
   // Register calculated points.
-  // registerDiscretizedPointsAsPontCloud("Discretized Points");
   registerBasisPointsAsPointCloud("Basis Points");
 
+  // Calculate approximate surface with Poisson Surface Reconstruction.
   // Calculate approximate surface with Poisson Surface Reconstruction
   int basisPointsSize = getBasisPointsIndex()->size();
   Eigen::MatrixXd psrPoints(basisPointsSize, 3);
@@ -74,38 +77,26 @@ void InterpolationTool::releasedEvent() {
     psrNormals  
   );
   if (psrPoints.rows() == 0) {
+    std::cout << "WARNING: No mesh was reconstructed with Poisson Surface Reconstruction." << std::endl;
     removeCurveNetworkLine(SketchPrefix);
     resetSketch();
     return;
   }
 
-  // Cast rays to reconstructed surface
-  std::vector<Hit> meshHits;
-  glm::dvec3 cameraOrig = polyscope::view::getCameraWorldPosition();
-  for (int i = 0; i < getDiscretizedPoints()->size(); i++) {
-    glm::dvec3 discretizedPoint = (*getDiscretizedPoints())[i];
-    
-    // Cast a ray to reconstructed surface
-    Ray ray(cameraOrig, discretizedPoint);
-    Hit hitInfo = ray.meshIntersection(psrPoints, psrFaces, getPointCloud());
-    if (hitInfo.hit) meshHits.push_back(hitInfo);
+  // Filter the reconstructed surface
+  //  - Cast reconstructed surface onto the screen plane.
+  //  - Filter the points inside of the sketch
+  //  - Uniform density
+  Eigen::MatrixXd newV, newN;
+  std::tie(newV, newN) = filterSurfacePoints(psrPoints, psrFaces);
+  if (newV.rows() == 0) {
+    std::cout << "WARNING: No surface point was selected after filtering method." << std::endl;
+    removeCurveNetworkLine(SketchPrefix);
+    resetSketch();
+    return;
   }
 
-  // Add the interpolated points
-  Eigen::MatrixXd newV(meshHits.size(), 3);
-  Eigen::MatrixXd newN(meshHits.size(), 3);
-  for (int i = 0; i < meshHits.size(); i++) {
-    Hit hitInfo = meshHits[i];
-
-    newV.row(i) << 
-      hitInfo.pos.x,
-      hitInfo.pos.y,
-      hitInfo.pos.z;
-    newN.row(i) << 
-      hitInfo.normal.x,
-      hitInfo.normal.y,
-      hitInfo.normal.z;
-  }
+  // Add the interpolated points.
   getPointCloud()->addPoints(newV, newN);
 
   // Register Interpolated Points as point cloud
@@ -114,9 +105,11 @@ void InterpolationTool::releasedEvent() {
   // Remove sketch as curve network (LINE)
   removeCurveNetworkLine(SketchPrefix);
 
+  // Reset all member variables.
   resetSketch();
 }
 
+// Register new vertices and normals as point cloud
 void InterpolationTool::renderInterpolatedPoints(
   Eigen::MatrixXd &newV, 
   Eigen::MatrixXd &newN
@@ -131,4 +124,102 @@ void InterpolationTool::renderInterpolatedPoints(
   interpolatedVectorQuantity->setVectorRadius(NormalRadius * 1.1);
   interpolatedVectorQuantity->setEnabled(NormalEnabled);
   interpolatedVectorQuantity->setMaterial(NormalMaterial);
+}
+
+// Filter the reconstructed surface
+//  - Cast reconstructed surface onto the screen plane.
+//  - Filter the points inside of the sketch
+//  - Uniform density
+std::pair<Eigen::MatrixXd, Eigen::MatrixXd> InterpolationTool::filterSurfacePoints(
+  Eigen::MatrixXd &surfacePoints,
+  Eigen::MatrixXi &surfaceFaces
+) {
+  // Preprocessing: Calculate the points' average normals 
+  std::map<int, glm::dvec3> indexToNormalSum;
+  std::map<int, int>        indexToAdjacentCount;
+  for (int i = 0; i < surfaceFaces.rows(); i++) {
+    // Calculate the normal of the triangle
+    glm::dvec3 u = glm::dvec3(
+      surfacePoints(surfaceFaces(i, 0), 0), 
+      surfacePoints(surfaceFaces(i, 0), 1), 
+      surfacePoints(surfaceFaces(i, 0), 2)
+    );
+    glm::dvec3 v = glm::dvec3(
+      surfacePoints(surfaceFaces(i, 1), 0), 
+      surfacePoints(surfaceFaces(i, 1), 1), 
+      surfacePoints(surfaceFaces(i, 1), 2)
+    );
+    glm::dvec3 w = glm::dvec3(
+      surfacePoints(surfaceFaces(i, 2), 0), 
+      surfacePoints(surfaceFaces(i, 2), 1), 
+      surfacePoints(surfaceFaces(i, 2), 2)
+    );
+
+    glm::dvec3 n = glm::normalize(glm::cross(v - u, w - u));
+    for (int j = 0; j < 3; j++) {
+      int vertexIdx = surfaceFaces(i, j);
+      indexToNormalSum[vertexIdx] += n;
+      indexToAdjacentCount[vertexIdx]++;
+    }
+  }
+
+  // Cast reconstructed surface onto the screen plane
+  std::vector<glm::dvec3> pointsCastedOntoScreen;
+  for (int i = 0; i < surfacePoints.rows(); i++) {
+    glm::dvec3 p = glm::dvec3(
+      surfacePoints(i, 0),
+      surfacePoints(i, 1),
+      surfacePoints(i, 2)
+    );
+    
+    // Cast a ray from p to cameraOrig onto screen.
+    Ray ray(p, getCameraOrig());
+    Hit hitInfo = ray.castPointToPlane(getScreen());
+    if (hitInfo.hit) {
+      glm::dvec3 castedP = getScreen()->mapCoordinates(hitInfo.pos);
+      pointsCastedOntoScreen.push_back(castedP);
+    }
+  }
+
+  // Filter the points inside of the sketch
+  std::vector<int> insideSketchPointIndex;
+  for (int i = 0; i < pointsCastedOntoScreen.size(); i++) {
+    glm::dvec3 p = pointsCastedOntoScreen[i];
+
+    if (insideSketch(p.x, p.y)) {
+      insideSketchPointIndex.push_back(i);
+    }
+  }
+
+  // Uniform density
+  // TODO: Implement here later...
+
+  // Register the vertex and the normal,
+  // if the normal and the camera direction are faced each other.
+  std::vector<int> insideSketchPointIndexBuffer;
+  for (int i = 0; i < insideSketchPointIndex.size(); i++) {
+    int idx = insideSketchPointIndex[i];
+    glm::dvec3 normal = indexToNormalSum[idx]/(double)indexToAdjacentCount[idx];
+    if (glm::dot(getCameraDir(), normal) < 0.0) insideSketchPointIndexBuffer.push_back(idx);
+  }
+  insideSketchPointIndex = insideSketchPointIndexBuffer;
+  
+  int newPointsSize = insideSketchPointIndex.size();
+  Eigen::MatrixXd newV(newPointsSize, 3);
+  Eigen::MatrixXd newN(newPointsSize, 3);
+  for (int i = 0; i < newPointsSize; i++) {
+    int idx = insideSketchPointIndex[i];
+    glm::dvec3 normal = indexToNormalSum[idx]/(double)indexToAdjacentCount[idx];
+
+    newV.row(i) <<
+      surfacePoints(idx, 0),
+      surfacePoints(idx, 1),
+      surfacePoints(idx, 2);
+    newN.row(i) << 
+      normal.x,
+      normal.y,
+      normal.z;
+  }
+
+  return { newV, newN };
 }

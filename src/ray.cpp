@@ -222,7 +222,7 @@ Hit Ray::castPointToPlane(Plane* plane) {
   double depth = std::abs(plane->mapCoordinates(cameraOrig).z);
   double t = depth/glm::dot(rayDir, cameraDir);
 
-  hitInfo.hit = true;
+  hitInfo.hit = true; // must hit
   hitInfo.pos = cameraOrig + t*rayDir;
   hitInfo.normal = -cameraDir;
 

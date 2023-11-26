@@ -17,8 +17,8 @@
 // Initialize screen information
 void SketchTool::initSketch() {
   double nearClip = polyscope::view::nearClipRatio*polyscope::state::lengthScale * ScreenOffset;
-  glm::dvec3 cameraOrig = polyscope::view::getCameraWorldPosition();
-  glm::dvec3 cameraDir = polyscope::view::screenCoordsToWorldRay(
+  cameraOrig = polyscope::view::getCameraWorldPosition();
+  cameraDir = polyscope::view::screenCoordsToWorldRay(
     glm::vec2(polyscope::view::windowWidth/2, polyscope::view::windowHeight/2)
   );
   glm::dvec3 screenOrig = cameraOrig + nearClip*cameraDir;
@@ -34,32 +34,11 @@ void SketchTool::resetSketch() {
 
   sketchPoints.clear();
   basisPointsIndex.clear();
-  discretizedPoints.clear();
 }
 
 /*
   Viewer functions
 */
-
-// Register/Remove point cloud with name.
-// Be aware that the point cloud with 
-// the same name is overwritten.
-void SketchTool::registerDiscretizedPointsAsPontCloud(std::string name) {
-  // Show discretizedPoints
-
-  std::vector<std::vector<double>> points;
-  for (int i = 0; i < discretizedPoints.size(); i++) {
-    points.push_back({
-      discretizedPoints[i].x,
-      discretizedPoints[i].y,
-      discretizedPoints[i].z,
-    });
-  }
-
-  polyscope::PointCloud* patchCloud = polyscope::registerPointCloud(name, points);
-  patchCloud->setPointColor(DiscretizedPointColor);
-  patchCloud->setPointRadius(DiscretizedPointRadius);
-}
 void SketchTool::registerBasisPointsAsPointCloud(std::string name) {
   // Show basisPoints
 
@@ -148,83 +127,53 @@ void SketchTool::removeCurveNetworkLoop(std::string name) {
   Geometry functions
 */
 
-// Add the specified point to sketchPoints
+// Cast the specified point to screen.
 void SketchTool::addSketchPoint(glm::dvec3 p) {
   sketchPoints.push_back(p);
 }
 
-// Discretize the basis and update discretizedPoints.
-void SketchTool::discretizeSketchPoints() {
-  const int polygonSize = sketchPoints.size();
-
-  // Comput the search basis.
-  const double INF = 100000.0;
-  double min_x = INF, max_x = -INF;
-  double min_y = INF, max_y = -INF;
-  for (int i = 0; i < polygonSize; i++) {
-    glm::dvec3 mappedSketchPoint = screen.mapCoordinates(sketchPoints[i]);
-
-    min_x = std::min(min_x, mappedSketchPoint.x);
-    max_x = std::max(max_x, mappedSketchPoint.x);
-    min_y = std::min(min_y, mappedSketchPoint.y);
-    max_y = std::max(max_y, mappedSketchPoint.y);
-  }
-
-  double gridArea = (max_x - min_x)*(max_y - min_y) / PatchSize;
-  double gridEdge = sqrt(gridArea);
-
-  for (double x = min_x; x < max_x; x += gridEdge) {
-    for (double y = min_y; y < max_y; y += gridEdge) {
-      if (!insidePolygon(x, y, polygonSize)) continue;
-      discretizedPoints.push_back(
-        screen.unmapCoordinates(glm::dvec3(x, y, 0.0))
-      );
-    }
-  }
-}
-
-// Select the basis points the user selected
-// and update sketchPoints.
+// Find basis points.
+//  - Cast all points of the point cloud onto the screen plane.
+//  - Judge inside/outside of the sketch.
+//  - Check whether the normal and the camera direction are faced each other.
 void SketchTool::findBasisPoints() {
-  std::unordered_set<int> selectedPointsIndexSet;
+  // Cast all points of the point cloud onto the screen plane.
+  std::vector<glm::dvec3> pointsCastedOntoScreen;
+  for (int i = 0; i < pointCloud->Vertices.rows(); i++) {
+    glm::dvec3 p = glm::dvec3(
+      pointCloud->Vertices(i, 0),
+      pointCloud->Vertices(i, 1),
+      pointCloud->Vertices(i, 2)
+    );
 
-  // Cast a ray from discretized points to point cloud.
-  glm::dvec3 cameraOrig = polyscope::view::getCameraWorldPosition();
-  for (int i = 0; i < discretizedPoints.size(); i++) {
-    Ray ray(cameraOrig, discretizedPoints[i]);
-    std::vector<Hit> hitsInfo = ray.searchNeighborPoints(pointCloud->getAverageDistance(), pointCloud);
-    for (Hit hitInfo: hitsInfo) {
-      if (hitInfo.hit) selectedPointsIndexSet.insert(hitInfo.index);
+    // Cast a ray from p to cameraOrig onto screen.
+    Ray ray(p, cameraOrig);
+    Hit hitInfo = ray.castPointToPlane(&screen);
+    if (hitInfo.hit) {
+      glm::dvec3 castedP = screen.mapCoordinates(hitInfo.pos);
+      pointsCastedOntoScreen.push_back(castedP);
     }
   }
 
-  // std::set<int> -> std::vector<int>
-  std::vector<int> selectedPointsIndex;
-  for (int idx: selectedPointsIndexSet) selectedPointsIndex.push_back(idx);
+  // Judge inside/outside of the sketch
+  // and check the normal of the points.
+  std::vector<int> candidatePointsIndex;
+  for (int i = 0; i < pointsCastedOntoScreen.size(); i++) {
+    glm::dvec3 p = pointsCastedOntoScreen[i];
+    glm::dvec3 n = glm::dvec3(
+      pointCloud->Normals(i, 0),
+      pointCloud->Normals(i, 1),
+      pointCloud->Normals(i, 2)
+    );
+
+    if (insideSketch(p.x, p.y) && glm::dot(cameraDir, n) < 0.0) {
+      candidatePointsIndex.push_back(i);
+    }
+  }
 
   // Depth detection with DBSCAN
-  Clustering clustering(&selectedPointsIndex, pointCloud, &screen);
+  Clustering clustering(&candidatePointsIndex, pointCloud, &screen);
   basisPointsIndex = clustering.executeDBSCAN(DBSCAN_SearchRange*pointCloud->getAverageDistance(), DBSCAN_MinPoints);
-}
-
-// Return the pointer to member variables.
-PointCloud* SketchTool::getPointCloud() {
-  return pointCloud;
-}
-double SketchTool::getAverageDepth() {
-  return averageDepth;
-}
-Plane* SketchTool::getScreen() {
-  return &screen;
-}
-std::vector<glm::dvec3>* SketchTool::getSketchPoints() {
-  return &sketchPoints;
-}
-std::vector<int>* SketchTool::getBasisPointsIndex() {
-  return &basisPointsIndex;
-}
-std::vector<glm::dvec3>* SketchTool::getDiscretizedPoints() {
-  return &discretizedPoints;
 }
 
 // Check the inside/outside of the polygon.
@@ -232,13 +181,14 @@ std::vector<glm::dvec3>* SketchTool::getDiscretizedPoints() {
 //  2.  Determine that if there are an odd number of intersections
 //      between this half-line and the polygon, it is inside, and if 
 //      there are an even number, it is outside.
-bool SketchTool::insidePolygon(double x, double y, const int polygonSiz) {
+bool SketchTool::insideSketch(double x, double y) {
   const double EPS = 1e-5; 
+  const int sketchPointsSize = sketchPoints.size();
 
   int crossCount = 0;
-  for (int i = 0; i < polygonSiz; i++) {
+  for (int i = 0; i < sketchPointsSize; i++) {
     glm::dvec3 mappedU = screen.mapCoordinates(sketchPoints[i]);
-    glm::dvec3 mappedV = screen.mapCoordinates(sketchPoints[(i + 1) % polygonSiz]);
+    glm::dvec3 mappedV = screen.mapCoordinates(sketchPoints[(i + 1) % sketchPointsSize]);
 
     glm::dvec2 u = glm::dvec2(mappedU.x, mappedU.y);
     glm::dvec2 v = glm::dvec2(mappedV.x, mappedV.y);
@@ -268,4 +218,27 @@ bool SketchTool::insidePolygon(double x, double y, const int polygonSiz) {
 
   if (crossCount% 2 == 0) return false;
   else return true;
+}
+
+// Return the pointer to member variables.
+PointCloud* SketchTool::getPointCloud() {
+  return pointCloud;
+}
+double SketchTool::getAverageDepth() {
+  return averageDepth;
+}
+glm::dvec3 SketchTool::getCameraOrig() {
+  return cameraOrig;
+}
+glm::dvec3 SketchTool::getCameraDir() {
+  return cameraDir;
+}
+Plane* SketchTool::getScreen() {
+  return &screen;
+}
+std::vector<glm::dvec3>* SketchTool::getSketchPoints() {
+  return &sketchPoints;
+}
+std::vector<int>* SketchTool::getBasisPointsIndex() {
+  return &basisPointsIndex;
 }

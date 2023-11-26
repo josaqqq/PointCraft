@@ -251,8 +251,8 @@ void greedyProjection(
 
   // Output results
   std::cout << "\nFinished Greedy Projection Triangulation!" << std::endl;
-  std::cout << "Vertex num:\t" << meshVertices->points.size() << std::endl;
-  std::cout << "Face num:\t" << mesh.polygons.size() << std::endl;
+  std::cout << "\tVertex num\t->\t" << meshVertices->points.size() << std::endl;
+  std::cout << "\tFace num\t->\t" << mesh.polygons.size() << std::endl;
 
   // Register mesh
   polyscope::SurfaceMesh *surfaceMesh = polyscope::registerSurfaceMesh(name, meshV, meshF);
