@@ -71,6 +71,7 @@ void visualizeCluster(
   // Register point cloud
   polyscope::PointCloud* depthCloud = polyscope::registerPointCloud(DBSCAN_Name, labelPoints);
   depthCloud->setPointRadius(PointRadius);
+  depthCloud->setEnabled(DBSCAN_Enabled);
   
   polyscope::PointCloudColorQuantity* depthColor = depthCloud->addColorQuantity("label color", labelColors);
   depthColor->setEnabled(true);

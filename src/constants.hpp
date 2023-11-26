@@ -14,6 +14,7 @@ const double ScreenOffset = 10.0;
 const std::string PointName = "Point Cloud";
 const glm::dvec3 PointColor = { 1.000, 1.000, 1.000 };
 const double PointRadius = 0.002;
+const bool  PointEnabled = false;
 
 const std::string NormalName = "normal vector";
 const glm::dvec3 NormalColor =  { 1.000, 1.000, 1.000 };
@@ -43,6 +44,7 @@ const double DiscretizedPointRadius = 0.0025;
 
 const glm::dvec3 BasisPointColor = { 0.000, 1.000, 0.000 };
 const double BasisPointRadius = 0.0025;
+const bool BasisPointEnabled = false;
 
 const std::string TracePrefix = "Trace: ";
 const std::string CastPrefix = "Cast: ";
@@ -61,6 +63,7 @@ const std::string PoissonName = "Poisson Surface Reconstruction";
 const int PoissonMaxDepth = 5;
 const glm::dvec3 PoissonColor = { 0.155, 0.186, 0.790 };
 const std::string PoissonMaterial = "normal";
+const bool PoissonEnabled = false;
 
 //
 // Radial Basis Functions
@@ -91,6 +94,7 @@ const bool GreedyProjNormalConsistency = false;
 
 const glm::dvec3 GreedyProjColor = { 0.155, 0.186, 0.790 };
 const std::string GreedyProjMaterial = "normal";
+const bool GreedyProjEnabled = false;
 
 //
 // Pseudo Surface
@@ -98,10 +102,12 @@ const std::string GreedyProjMaterial = "normal";
 const std::string PseudoSurfaceName = "Pseudo Surface";
 const glm::dvec3 PseudoSurfaceColor = { 0.155, 0.186, 0.790 };
 const std::string PseudoSurfaceMaterial = "normal";
+const bool PseudoSurfaceEnabled = false;
 
 //
 // Clustering
 //
 const std::string DBSCAN_Name = "DBSCAN Labeling";
+const bool DBSCAN_Enabled = false;
 const double DBSCAN_SearchRange = 1.0;
 const int DBSCAN_MinPoints = 1;

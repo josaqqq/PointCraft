@@ -84,6 +84,7 @@ void PointCloud::updatePointCloud() {
   pointCloud = polyscope::registerPointCloud(PointName, Vertices);
   pointCloud->setPointColor(PointColor);
   pointCloud->setPointRadius(PointRadius);
+  pointCloud->setEnabled(PointEnabled);
 
   // Register Normals
   vectorQuantity = pointCloud->addVectorQuantity(NormalName, Normals);

@@ -55,7 +55,6 @@ std::pair<Eigen::MatrixXd, Eigen::MatrixXi> poissonReconstruct(
     max_z = std::max(max_z, vertices(i, 2));
   }
   // Grid the bounding box with voxels ((averageDistance/2.0)^3)
-
   double voxelEdge = averageDistance / 2.0;
   int voxelNum = ((max_x - min_x)*(max_y - min_y)*(max_z - min_z))/(voxelEdge*voxelEdge*voxelEdge);
 
@@ -104,6 +103,7 @@ std::pair<Eigen::MatrixXd, Eigen::MatrixXi> poissonReconstruct(
   polyscope::SurfaceMesh *surfaceMesh = polyscope::registerSurfaceMesh(name, meshV, meshF);
   surfaceMesh->setSurfaceColor(PoissonColor);
   surfaceMesh->setMaterial(PoissonMaterial);
+  surfaceMesh->setEnabled(PoissonEnabled);
 
   // Output results
   std::cout << "\nFinished Poisson Surface Reconstruction!"                   << std::endl;
@@ -175,6 +175,7 @@ std::pair<Eigen::MatrixXd, Eigen::MatrixXd> mlsSmoothing(
   polyscope::PointCloud *mlsPoints = polyscope::registerPointCloud(name, Vertices);
   mlsPoints->setPointColor(PointColor);
   mlsPoints->setPointRadius(PointRadius);
+  mlsPoints->setEnabled(PointEnabled);
 
   polyscope::PointCloudVectorQuantity *mlsVectorQuantity = mlsPoints->addVectorQuantity(NormalName, Normals);
   mlsVectorQuantity->setVectorColor(NormalColor);
@@ -258,6 +259,7 @@ void greedyProjection(
   polyscope::SurfaceMesh *surfaceMesh = polyscope::registerSurfaceMesh(name, meshV, meshF);
   surfaceMesh->setSurfaceColor(GreedyProjColor);
   surfaceMesh->setMaterial(GreedyProjMaterial);
+  surfaceMesh->setEnabled(GreedyProjEnabled);
 }
 
 // Show hexagons for each vertex as a pseudo surface.

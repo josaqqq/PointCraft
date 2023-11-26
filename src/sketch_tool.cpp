@@ -68,6 +68,7 @@ void SketchTool::registerBasisPointsAsPointCloud(std::string name) {
   polyscope::PointCloud* patchCloud = polyscope::registerPointCloud(name, points);
   patchCloud->setPointColor(BasisPointColor);
   patchCloud->setPointRadius(BasisPointRadius);
+  patchCloud->setEnabled(BasisPointEnabled);
 
   polyscope::PointCloudVectorQuantity* patchVectorQuantity = patchCloud->addVectorQuantity(NormalName, normals);
   patchVectorQuantity->setVectorColor(BasisPointColor);
@@ -266,7 +267,6 @@ void SketchTool::extendSketchedArea() {
   double castedAverageDist = pointCloud->getAverageDistance()*screenDist/objectDist;
 
   // Extend sketched area
-  registerSketchPointsAsCurveNetworkLine("sketch");
   for (int i = 0; i < sketchPoints.size(); i++) {
     glm::dvec3 p = sketchPoints[i];
 
@@ -274,5 +274,4 @@ void SketchTool::extendSketchedArea() {
     // should sketch with reference to the boundary of pseudo surface.
     sketchPoints[i] = p + 2.0*castedAverageDist*glm::normalize(p - gravityPoint);
   }
-  registerSketchPointsAsCurveNetworkLine("extended sketch");
 }

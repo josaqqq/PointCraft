@@ -118,6 +118,7 @@ void InterpolationTool::renderInterpolatedPoints(
   polyscope::PointCloud* interpolatedCloud = polyscope::registerPointCloud("Interpolated Points", newV);
   interpolatedCloud->setPointColor(glm::dvec3(1.0, 0.0, 0.0));
   interpolatedCloud->setPointRadius(BasisPointRadius);
+  interpolatedCloud->setEnabled(BasisPointEnabled);
 
   polyscope::PointCloudVectorQuantity* interpolatedVectorQuantity = interpolatedCloud->addVectorQuantity(NormalName, newN);
   interpolatedVectorQuantity->setVectorColor(glm::dvec3(1.0, 0.0, 0.0));
