@@ -20,9 +20,22 @@ std::vector<int> Clustering::executeClustering(double eps, int minPoints) {
   // Calculate three orthogonal bases
   executePCA();
 
+  // Add camera direction
+  glm::dvec3 cameraDir = polyscope::view::screenCoordsToWorldRay(
+    glm::vec2(polyscope::view::windowWidth/2, polyscope::view::windowHeight/2)
+  );
+  orthogonalBases.push_back(cameraDir);
+
+  // orthogonalBases must be directed to the camera direction
+  for (int i = 0; i < orthogonalBases.size(); i++) {
+    if (glm::dot(cameraDir, orthogonalBases[i]) < 0.0) {
+      orthogonalBases[i] *= -1.0;
+    }
+  }
+
   // Execute DBSCAN for each basis
   std::vector<int> selectedCluster;
-  for (int i = 0; i < 3; i++) {
+  for (int i = 0; i < orthogonalBases.size(); i++) {
     selectedCluster = executeDBSCAN(eps, minPoints, i);
   }
 
@@ -48,9 +61,6 @@ void Clustering::executePCA() {
   std::cout << "Eigenvectors:\n" << eigenvectors << std::endl;
 
   // Register orthogonal
-  glm::dvec3 cameraDir = polyscope::view::screenCoordsToWorldRay(
-    glm::vec2(polyscope::view::windowWidth/2, polyscope::view::windowHeight/2)
-  );
   orthogonalBases.resize(3);
   for (int i = 0; i < 3; i++) { 
     orthogonalBases[i] = glm::dvec3(
@@ -58,9 +68,6 @@ void Clustering::executePCA() {
       eigenvectors(1, i),
       eigenvectors(2, i)
     );
-
-    // orthogonalBases must face the camera direction
-    if (glm::dot(cameraDir, orthogonalBases[i]) < 0.0) orthogonalBases[i] *= -1.0;
   }
 }
 
@@ -144,7 +151,7 @@ std::vector<int> Clustering::executeDBSCAN(double eps, int minPoints, int basisI
   double minDepth = 1e5;
   for (std::pair<int, double> i: labelToDepth) {
     double averageDepth = i.second / labelToCount[i.first];
-    if (std::abs(averageDepth) < minDepth) {
+    if (averageDepth < minDepth) {
       minDepthLabel = i.first;
       minDepth = averageDepth;
     }
