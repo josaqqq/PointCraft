@@ -13,73 +13,60 @@
 #include "cluster.hpp"
 #include "constants.hpp"
 
-void visualizeCluster(
-  PointCloud *pointCloud,
-  std::vector<int> &pointsIndex,
-  std::vector<int> &labels,
-  double eps
-) {
-  // Remove previous point cloud.
-  polyscope::removePointCloud(DBSCAN_Name);
+// Execute clustering
+//  - eps: Clustering search distance
+//  - minPoints: Number of points required to make a point a core point
+std::vector<int> Clustering::executeClustering(double eps, int minPoints) {
+  // Calculate three orthogonal bases
+  executePCA();
 
-  int pointSize = pointsIndex.size();
-
-  // Define label map
-  std::map<int, std::vector<int>> labelToIndices;
-  std::map<int, glm::dvec3>       labelToColors;
-  for (int i = 0; i < pointSize; i++) {
-    int label = labels[i];
-
-    if (labelToIndices.count(label) == 0) {
-      labelToColors[label] = glm::dvec3(
-        polyscope::randomUnit(),
-        polyscope::randomUnit(),
-        polyscope::randomUnit()
-      );
-    }
-    labelToIndices[label].push_back(pointsIndex[i]);
+  // Execute DBSCAN for each basis
+  std::vector<int> selectedCluster;
+  for (int i = 0; i < 3; i++) {
+    selectedCluster = executeDBSCAN(eps, minPoints, i);
   }
 
-  // Camera parameters
-  const glm::dvec3 cameraOrig = polyscope::view::getCameraWorldPosition();
-  const glm::dvec3 cameraDir  = polyscope::view::screenCoordsToWorldRay(glm::vec2(polyscope::view::windowWidth/2, polyscope::view::windowHeight/2));
+  return selectedCluster;
+}
 
-  // Register point and color information
-  std::vector<std::vector<double>> labelPoints;
-  std::vector<std::vector<double>> labelColors;
-  for (auto i: labelToIndices) {
-    int label = i.first;
+// Calculate three orthogonal bases
+void Clustering::executePCA() {
+  // Centering the data
+  Eigen::VectorXd mean = pointCloud->Vertices.colwise().mean();
+  Eigen::MatrixXd centered = pointCloud->Vertices.rowwise() - mean.transpose();
 
-    for (int idx: i.second) {
-      // point and point casted on camera line.
-      glm::dvec3 p = glm::dvec3(
-        pointCloud->Vertices(idx, 0),
-        pointCloud->Vertices(idx, 1),
-        pointCloud->Vertices(idx, 2)
-      );
-      glm::dvec3 castedP = cameraOrig + glm::dot(cameraDir, p - cameraOrig)*cameraDir;
+  // Compute covariance matrix
+  Eigen::MatrixXd cov = (centered.adjoint() * centered) / double(pointCloud->Vertices.rows() - 1);
 
-      labelPoints.push_back({ p.x, p.y, p.z });
-      labelPoints.push_back({ castedP.x, castedP.y, castedP.z });
-      
-      glm::dvec3 col = labelToColors[label];
-      labelColors.push_back({ col.x, col.y, col.z });
-      labelColors.push_back({ col.x, col.y, col.z });
-    }
+  // Compute eigenvalues and eigenvectors of the cov
+  Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> eigensolver(cov);
+  Eigen::VectorXd eigenvalues = eigensolver.eigenvalues();
+  Eigen::MatrixXd eigenvectors = eigensolver.eigenvectors();
+
+  // Print solved values
+  std::cout << "\nEigenvalues:\n" << eigenvalues << std::endl;
+  std::cout << "Eigenvectors:\n" << eigenvectors << std::endl;
+
+  // Register orthogonal
+  glm::dvec3 cameraDir = polyscope::view::screenCoordsToWorldRay(
+    glm::vec2(polyscope::view::windowWidth/2, polyscope::view::windowHeight/2)
+  );
+  orthogonalBases.resize(3);
+  for (int i = 0; i < 3; i++) { 
+    orthogonalBases[i] = glm::dvec3(
+      eigenvectors(0, i),
+      eigenvectors(1, i),
+      eigenvectors(2, i)
+    );
+
+    // orthogonalBases must face the camera direction
+    if (glm::dot(cameraDir, orthogonalBases[i]) < 0.0) orthogonalBases[i] *= -1.0;
   }
-
-  // Register point cloud
-  polyscope::PointCloud* depthCloud = polyscope::registerPointCloud(DBSCAN_Name, labelPoints);
-  depthCloud->setPointRadius(PointRadius);
-  depthCloud->setEnabled(DBSCAN_Enabled);
-  
-  polyscope::PointCloudColorQuantity* depthColor = depthCloud->addColorQuantity("label color", labelColors);
-  depthColor->setEnabled(true);
 }
 
 // Execute DBSCAN and return selected basis points
 // implemented referencing https://en.wikipedia.org/wiki/DBSCAN
-std::vector<int> Clustering::executeDBSCAN(double eps, int minPoints) {
+std::vector<int> Clustering::executeDBSCAN(double eps, int minPoints, int basisIndex) {
   // Initialize points information
   int pointSize = pointsIndex->size();
   std::vector<double> depths(pointSize);
@@ -92,7 +79,7 @@ std::vector<int> Clustering::executeDBSCAN(double eps, int minPoints) {
       pointCloud->Vertices(idx, 1),
       pointCloud->Vertices(idx, 2)
     );
-    depths[i] = plane->mapCoordinates(p).z;
+    depths[i] = glm::dot(orthogonalBases[basisIndex], p);
   }
 
   std::vector<int> labels(pointSize, -1);
@@ -169,12 +156,67 @@ std::vector<int> Clustering::executeDBSCAN(double eps, int minPoints) {
   }
 
   // Visualize the depth of points with labels.
-  visualizeCluster(
-    pointCloud,
-    *pointsIndex,
-    labels, 
-    eps
-  );
+  visualizeCluster(basisIndex, *pointsIndex, labels);
 
   return basisPointsIndex;
+}
+
+void Clustering::visualizeCluster(
+  int basisIndex,
+  std::vector<int> &pointsIndex,
+  std::vector<int> &labels
+) {
+  // Remove previous point cloud.
+  polyscope::removePointCloud(DBSCAN_Name);
+
+  int pointSize = pointsIndex.size();
+
+  // Define label map
+  std::map<int, std::vector<int>> labelToIndices;
+  std::map<int, glm::dvec3>       labelToColors;
+  for (int i = 0; i < pointSize; i++) {
+    int label = labels[i];
+
+    if (labelToIndices.count(label) == 0) {
+      labelToColors[label] = glm::dvec3(
+        polyscope::randomUnit(),
+        polyscope::randomUnit(),
+        polyscope::randomUnit()
+      );
+    }
+    labelToIndices[label].push_back(pointsIndex[i]);
+  }
+
+  // Register point and color information
+  std::vector<std::vector<double>> labelPoints;
+  std::vector<std::vector<double>> labelColors;
+  for (auto i: labelToIndices) {
+    int label = i.first;
+
+    for (int idx: i.second) {
+      // point and point casted on camera line.
+      glm::dvec3 p = glm::dvec3(
+        pointCloud->Vertices(idx, 0),
+        pointCloud->Vertices(idx, 1),
+        pointCloud->Vertices(idx, 2)
+      );
+      glm::dvec3 basis = orthogonalBases[basisIndex];
+      glm::dvec3 castedP = glm::dot(basis, p)*basis;
+
+      labelPoints.push_back({ p.x, p.y, p.z });
+      labelPoints.push_back({ castedP.x, castedP.y, castedP.z });
+      
+      glm::dvec3 col = labelToColors[label];
+      labelColors.push_back({ col.x, col.y, col.z });
+      labelColors.push_back({ col.x, col.y, col.z });
+    }
+  }
+
+  // Register point cloud
+  polyscope::PointCloud* depthCloud = polyscope::registerPointCloud(DBSCAN_Name + std::to_string(basisIndex), labelPoints);
+  depthCloud->setPointRadius(PointRadius);
+  depthCloud->setEnabled(DBSCAN_Enabled);
+  
+  polyscope::PointCloudColorQuantity* depthColor = depthCloud->addColorQuantity("label color", labelColors);
+  depthColor->setEnabled(true);
 }

@@ -8,14 +8,30 @@
 
 class Clustering {
   public:
-    Clustering(std::vector<int> *pointsIndex, PointCloud *pointCloud, Plane *plane) 
-    : pointsIndex(pointsIndex), pointCloud(pointCloud), plane(plane) {}
+    Clustering(std::vector<int> *pointsIndex, PointCloud *pointCloud) 
+    : pointsIndex(pointsIndex), pointCloud(pointCloud) {}
 
-    // Execute DBSCAN and return selected basis points's index
-    std::vector<int> executeDBSCAN(double eps, int minPoints);
+    // Execute clustering
+    //  - eps: Clustering search distance
+    //  - minPoints: Number of points required to make a point a core point
+    std::vector<int> executeClustering(double eps, int minPoints);
 
   private:
     std::vector<int> *pointsIndex;
     PointCloud       *pointCloud;
-    Plane            *plane;
+
+    // Calculated three orthogonal bases with PCA
+    std::vector<glm::dvec3> orthogonalBases;
+
+    // Calculate three orthogonal bases
+    void executePCA();
+
+    // Execute DBSCAN and return selected basis points's index
+    std::vector<int> executeDBSCAN(double eps, int minPoints, int basisIndex);
+
+    void visualizeCluster(
+      int basisIndex,
+      std::vector<int> &pointsIndex,
+      std::vector<int> &labesl
+    );
 };

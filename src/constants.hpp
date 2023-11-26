@@ -107,7 +107,7 @@ const bool PseudoSurfaceEnabled = false;
 //
 // Clustering
 //
-const std::string DBSCAN_Name = "DBSCAN Labeling";
+const std::string DBSCAN_Name = "DBSCAN Labeling: ";
 const bool DBSCAN_Enabled = false;
 const double DBSCAN_SearchRange = 1.0;
 const int DBSCAN_MinPoints = 1;

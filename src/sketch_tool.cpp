@@ -183,8 +183,11 @@ void SketchTool::findBasisPoints(bool extendedSearch) {
   }
 
   // Depth detection with DBSCAN
-  Clustering clustering(&candidatePointsIndex, pointCloud, &screen);
-  basisPointsIndex = clustering.executeDBSCAN(DBSCAN_SearchRange*pointCloud->getAverageDistance(), DBSCAN_MinPoints);
+  Clustering clustering(&candidatePointsIndex, pointCloud);
+  basisPointsIndex = clustering.executeClustering(
+    DBSCAN_SearchRange*pointCloud->getAverageDistance(),
+    DBSCAN_MinPoints
+  );
 }
 
 // Check the inside/outside of the polygon.
