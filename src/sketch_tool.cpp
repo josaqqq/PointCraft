@@ -225,20 +225,22 @@ void SketchTool::findBasisPoints(bool extendedSearch) {
     // Check whether a nearest neighbor is closer to cameraOrig.
     bool hasCloserNeighbor = false;
     for (int j = 0; j < hitPointCount; j++) {
+      int hitPointIdx = hitPointIndices[j];
       glm::dvec3 q = glm::dvec3(
-        pointCloud->Vertices(hitPointIndices[j], 0),
-        pointCloud->Vertices(hitPointIndices[j], 1),
-        pointCloud->Vertices(hitPointIndices[j], 2)
+        pointCloud->Vertices(hitPointIdx, 0),
+        pointCloud->Vertices(hitPointIdx, 1),
+        pointCloud->Vertices(hitPointIdx, 2)
       );
       glm::dvec3 qn = glm::dvec3(
-        pointCloud->Normals(hitPointIndices[j], 0),
-        pointCloud->Normals(hitPointIndices[j], 1),
-        pointCloud->Normals(hitPointIndices[j], 2)
+        pointCloud->Normals(hitPointIdx, 0),
+        pointCloud->Normals(hitPointIdx, 1),
+        pointCloud->Normals(hitPointIdx, 2)
       );
 
       if (glm::dot(cameraDir, qn) >= 0.0) continue;
       if (glm::length(q - cameraOrig) < glm::length(p - cameraOrig)) {
         hasCloserNeighbor = true;
+        break;
       }
     }
     if (hasCloserNeighbor) {
@@ -250,7 +252,7 @@ void SketchTool::findBasisPoints(bool extendedSearch) {
   }
 
   // Register points that has closer nearest neighbors as point cloud.
-  polyscope::PointCloud* hasCloserNeighborCloud = polyscope::registerPointCloud("HasCloserNeighbor", hasCloserNeighborPoints);
+  polyscope::PointCloud* hasCloserNeighborCloud = polyscope::registerPointCloud("HasCloserNeighbor(basis)", hasCloserNeighborPoints);
   hasCloserNeighborCloud->setPointRadius(BasisPointRadius);
   hasCloserNeighborCloud->setEnabled(BasisPointEnabled);
 
@@ -317,6 +319,14 @@ bool SketchTool::insideBasisConvexHull(double x, double y) {
   else return true;
 }
 
+// Calculate averageDistance casted onto the screen
+double SketchTool::calcCastedAverageDist() {
+  double objectDist = glm::length(cameraOrig);
+  double castedAverageDist = pointCloud->getAverageDistance()*screenDist/objectDist;
+
+  return castedAverageDist;
+}
+
 // Return the pointer to member variables.
 PointCloud* SketchTool::getPointCloud() {
   return pointCloud;
@@ -354,8 +364,8 @@ void SketchTool::extendSketchedArea() {
   for (int i = 0; i < sketchPoints.size(); i++) {
     glm::dvec3 p = sketchPoints[i];
 
-    // Double the average distance, because the user 
-    // should sketch with reference to the boundary of pseudo surface.
+    // ATTENTION: Double the average distance, because the user 
+    //            should sketch with reference to the boundary of pseudo surface.
     sketchPoints[i] = p + 2.0*castedAverageDist*glm::normalize(p - gravityPoint);
   }
 }
@@ -387,14 +397,6 @@ void SketchTool::shrinkBasisConvexHull() {
   // polyscope::CurveNetwork* basisConvexNetwork = polyscope::registerCurveNetworkLoop("Shrinked Basis Convex Hull", unmappedBasisConvexHull);
   // basisConvexNetwork->setRadius(0.00020);
   // basisConvexNetwork->setEnabled(BasisPointEnabled);
-}
-
-// Calculate averageDistance casted onto the screen
-double SketchTool::calcCastedAverageDist() {
-  double objectDist = glm::length(cameraOrig);
-  double castedAverageDist = pointCloud->getAverageDistance()*screenDist/objectDist;
-
-  return castedAverageDist;
 }
 
 // Calculate CCW value

@@ -77,6 +77,9 @@ class SketchTool {
     //      there are an even number, it is outside.
     bool insideBasisConvexHull(double x, double y);
 
+    // Calculate averageDistance casted onto the screen
+    double calcCastedAverageDist();
+
     // Return the pointer to member variables.
     PointCloud*               getPointCloud();
     double                    getAverageDepth();
@@ -106,9 +109,6 @@ class SketchTool {
 
     // Shrink basisConvexHull to remove the selected points near the boundary.
     void shrinkBasisConvexHull();
-
-    // Calculate averageDistance casted onto the screen
-    double calcCastedAverageDist();
 
     // Calculate CCW value
     //  - ccw > 0.0: left turn

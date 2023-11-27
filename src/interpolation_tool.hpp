@@ -20,10 +20,14 @@ class InterpolationTool : public SketchTool {
       Eigen::MatrixXd &newN
     );
 
+
     // Filter the reconstructed surface
-    //  - Cast reconstructed surface onto the screen plane.
-    //  - Filter only the points inside of the sketch.
-    //  - Uniform the density of interpolated points.
+    //  - Cast reconstructed surface and basisPoints onto the screen plane.
+    //  - Construct octree for the casted surface points and basisPoints.
+    //  - Check the conditions below
+    //    1. Judge inside/outside of the sketch and the convex hull of basisPoints.
+    //    2. Check the normal direction of the point.
+    //    3. Check the nearest neighbors' distances from cameraOrig
     std::pair<Eigen::MatrixXd, Eigen::MatrixXd> filterSurfacePoints(
       Eigen::MatrixXd &surfacePoints,
       Eigen::MatrixXi &surfaceFaces

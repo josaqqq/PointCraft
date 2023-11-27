@@ -84,10 +84,14 @@ void InterpolationTool::releasedEvent() {
     return;
   }
 
+
   // Filter the reconstructed surface
   //  - Cast reconstructed surface onto the screen plane.
-  //  - Filter only the points inside of the sketch.
-  //  - Uniform the density of interpolated points.
+  //  - Construct octree for the casted surface points.
+  //  - Check the conditions below
+  //    1. Judge inside/outside of the sketch and the convex hull of basisPoints.
+  //    2. Check the normal direction of the point.
+  //    3. Check the nearest neighbors' distances from cameraOrig
   Eigen::MatrixXd newV, newN;
   std::tie(newV, newN) = filterSurfacePoints(psrPoints, psrFaces);
   if (newV.rows() == 0) {
@@ -129,17 +133,25 @@ void InterpolationTool::renderInterpolatedPoints(
 }
 
 // Filter the reconstructed surface
-//  - Cast reconstructed surface onto the screen plane.
-//  - Filter only the points inside of the sketch and the convex hull of basisPoints.
-//  - Uniform the density of interpolated points.
+//  - Cast reconstructed surface and basisPoints onto the screen plane.
+//  - Construct octree for the casted surface points and basisPoints.
+//  - Check the conditions below
+//    1. Judge inside/outside of the sketch and the convex hull of basisPoints.
+//    2. Check the normal direction of the point.
+//    3. Check the nearest neighbors' distances from cameraOrig
 std::pair<Eigen::MatrixXd, Eigen::MatrixXd> InterpolationTool::filterSurfacePoints(
   Eigen::MatrixXd &surfacePoints,
   Eigen::MatrixXi &surfaceFaces
 ) {
+  const int surfacePointsSize = surfacePoints.rows();
+  const int surfaceFacesSize = surfaceFaces.rows();
+  const int basisPointsSize = getBasisPointsIndex()->size();
+
   // Preprocessing: Calculate the points' average normals 
   std::map<int, glm::dvec3> indexToNormalSum;
   std::map<int, int>        indexToAdjacentCount;
-  for (int i = 0; i < surfaceFaces.rows(); i++) {
+  // Normals of surfacePoints
+  for (int i = 0; i < surfaceFacesSize; i++) {
     // Calculate the normal of the triangle
     glm::dvec3 u = glm::dvec3(
       surfacePoints(surfaceFaces(i, 0), 0), 
@@ -164,48 +176,123 @@ std::pair<Eigen::MatrixXd, Eigen::MatrixXd> InterpolationTool::filterSurfacePoin
       indexToAdjacentCount[vertexIdx]++;
     }
   }
+  // Normals of basisPoints
+  for (int i = 0; i < basisPointsSize; i++) {
+    int vertexIdx = surfacePointsSize + i;
+    int pointCloudIdx = (*getBasisPointsIndex())[i];
+    indexToNormalSum[vertexIdx] += glm::dvec3(
+      getPointCloud()->Normals(pointCloudIdx, 0),
+      getPointCloud()->Normals(pointCloudIdx, 1),
+      getPointCloud()->Normals(pointCloudIdx, 2)
+    );
+    indexToAdjacentCount[vertexIdx] = 1;
+  }
 
-  // Cast reconstructed surface onto the screen plane
+  // Cast reconstructed surface and basisPoints onto the screen plane.
+  std::vector<glm::dvec3> pointsInWorldCoord;
   std::vector<glm::dvec3> pointsCastedOntoScreen;
-  for (int i = 0; i < surfacePoints.rows(); i++) {
+  // Cast surface points onto screen
+  for (int i = 0; i < surfacePointsSize; i++) {
     glm::dvec3 p = glm::dvec3(
       surfacePoints(i, 0),
       surfacePoints(i, 1),
       surfacePoints(i, 2)
     );
+    pointsInWorldCoord.push_back(p);
     
     // Cast a ray from p to cameraOrig onto screen.
     Ray ray(p, getCameraOrig());
     Hit hitInfo = ray.castPointToPlane(getScreen());
-    if (hitInfo.hit) {
-      glm::dvec3 castedP = getScreen()->mapCoordinates(hitInfo.pos);
-      pointsCastedOntoScreen.push_back(castedP);
-    }
+    assert(hitInfo.hit == true);
+    glm::dvec3 castedP = getScreen()->mapCoordinates(hitInfo.pos);
+    pointsCastedOntoScreen.push_back(castedP);
+  }
+  // Cast basis points onto screen
+  for (int i = 0; i < basisPointsSize; i++) {
+    int pointCloudIdx = (*getBasisPointsIndex())[i];
+    glm::dvec3 p = glm::dvec3(
+      getPointCloud()->Vertices(pointCloudIdx, 0),
+      getPointCloud()->Vertices(pointCloudIdx, 1),
+      getPointCloud()->Vertices(pointCloudIdx, 2)
+    );
+    pointsInWorldCoord.push_back(p);
+
+    // Cast a ray from p to cameraOrig onto screen.
+    Ray ray(p, getCameraOrig());
+    Hit hitInfo = ray.castPointToPlane(getScreen());
+    assert(hitInfo.hit == true);
+    glm::dvec3 castedP = getScreen()->mapCoordinates(hitInfo.pos);
+    pointsCastedOntoScreen.push_back(castedP);
   }
 
-  // Filter only the points inside of the sketch and the convex hull of basisPoints
+
+  // Construct octree for the casted surface points and basis Points
+  pcl::PointCloud<pcl::PointXYZ>::Ptr castedSurfaceCloud(new pcl::PointCloud<pcl::PointXYZ>);
+  int octreeSize = surfacePointsSize + basisPointsSize;
+  castedSurfaceCloud->points.resize(octreeSize);
+  for (int i = 0; i < octreeSize; i++) {
+    castedSurfaceCloud->points[i].x = pointsCastedOntoScreen[i].x;
+    castedSurfaceCloud->points[i].y = pointsCastedOntoScreen[i].y;
+    castedSurfaceCloud->points[i].z = pointsCastedOntoScreen[i].z;
+  }
+  pcl::octree::OctreePointCloudSearch<pcl::PointXYZ> octree(OctreeResolution);
+  octree.setInputCloud(castedSurfaceCloud);
+  octree.addPointsFromInputCloud();
+
+  //  Check the conditions below
+  //    1. Judge inside/outside of the sketch and the convex hull of basisPoints.
+  //    2. Check the normal direction of the point.
+  //    3. Check the nearest neighbors' distances from cameraOrig
   std::vector<int> insideSketchPointIndex;
-  for (int i = 0; i < pointsCastedOntoScreen.size(); i++) {
+  std::vector<std::vector<double>> hasCloserNeighborPoints;
+  for (int i = 0; i < surfacePointsSize; i++) {
+    glm::dvec3 p = pointsInWorldCoord[i];
     glm::dvec3 castedP = pointsCastedOntoScreen[i];
+    glm::dvec3 pn = indexToNormalSum[i]/(double)indexToAdjacentCount[i];
 
-    if (insideSketch(castedP.x, castedP.y) && insideBasisConvexHull(castedP.x, castedP.y)) {
-      insideSketchPointIndex.push_back(i);
+    // 1. Judge inside/outside of the sketch and the convex hull of basisPoints.
+    if (!insideSketch(castedP.x, castedP.y)) continue;
+    if (!insideBasisConvexHull(castedP.x, castedP.y)) continue;
+
+    // 2. Check the normal direction of the point.
+    if (glm::dot(getCameraDir(), pn) >= 0.0) continue;
+
+    // 3. Check the nearest neighbors' distances from cameraOrig
+    double castedAverageDist = calcCastedAverageDist();
+    std::vector<int>    hitPointIndices;
+    std::vector<float>  hitPointDistances;
+    int hitPointCount = octree.radiusSearch(
+      pcl::PointXYZ(castedP.x, castedP.y, castedP.z),
+      castedAverageDist,
+      hitPointIndices,
+      hitPointDistances
+    );
+
+    bool hasCloserNeighbor = false;;
+    for (int j = 0; j < hitPointCount; j++) {
+      int hitPointIdx = hitPointIndices[j];
+      glm::dvec3 q = pointsInWorldCoord[hitPointIdx];
+      glm::dvec3 qn = indexToNormalSum[hitPointIdx]/(double)indexToAdjacentCount[hitPointIdx];
+
+      if (glm::dot(getCameraDir(), qn) >= 0.0) continue;
+      if (glm::length(q - getCameraOrig()) < glm::length(p - getCameraOrig())) {
+        hasCloserNeighbor = true;
+        break;
+      }
     }
+    if (hasCloserNeighbor) {
+      hasCloserNeighborPoints.push_back({ p.x, p.y, p.z });
+      continue; 
+    }
+
+    insideSketchPointIndex.push_back(i);
   }
 
-  // Uniform the density of interpolated points.
-  // TODO: Implement here later...
+  // Register points that has closer nearest neighbors as point cloud.
+  polyscope::PointCloud* hasCloserNeighborCloud = polyscope::registerPointCloud("HasCloserNeighbor(surface)", hasCloserNeighborPoints);
+  hasCloserNeighborCloud->setPointRadius(BasisPointRadius);
+  hasCloserNeighborCloud->setEnabled(BasisPointEnabled);  
 
-  // Register the vertex and the normal,
-  // The normal and the camera direction must be faced each other.
-  std::vector<int> insideSketchPointIndexBuffer;
-  for (int i = 0; i < insideSketchPointIndex.size(); i++) {
-    int idx = insideSketchPointIndex[i];
-    glm::dvec3 normal = indexToNormalSum[idx]/(double)indexToAdjacentCount[idx];
-    if (glm::dot(getCameraDir(), normal) < 0.0) insideSketchPointIndexBuffer.push_back(idx);
-  }
-  insideSketchPointIndex = insideSketchPointIndexBuffer;
-  
   int newPointsSize = insideSketchPointIndex.size();
   Eigen::MatrixXd newV(newPointsSize, 3);
   Eigen::MatrixXd newN(newPointsSize, 3);
