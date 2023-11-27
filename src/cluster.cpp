@@ -17,8 +17,8 @@
 //  - eps: Clustering search distance
 //  - minPoints: Number of points required to make a point a core point
 std::vector<int> Clustering::executeClustering(double eps, int minPoints) {
-  // Calculate three orthogonal bases
-  executePCA();
+  // // Calculate three orthogonal bases
+  // executePCA();
 
   // Add camera direction
   glm::dvec3 cameraDir = polyscope::view::screenCoordsToWorldRay(

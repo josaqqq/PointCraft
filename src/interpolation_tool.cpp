@@ -186,9 +186,9 @@ std::pair<Eigen::MatrixXd, Eigen::MatrixXd> InterpolationTool::filterSurfacePoin
   // Filter only the points inside of the sketch and the convex hull of basisPoints
   std::vector<int> insideSketchPointIndex;
   for (int i = 0; i < pointsCastedOntoScreen.size(); i++) {
-    glm::dvec3 p = pointsCastedOntoScreen[i];
+    glm::dvec3 castedP = pointsCastedOntoScreen[i];
 
-    if (insideSketch(p.x, p.y) && insideBasisConvexHull(p.x, p.y)) {
+    if (insideSketch(castedP.x, castedP.y) && insideBasisConvexHull(castedP.x, castedP.y)) {
       insideSketchPointIndex.push_back(i);
     }
   }
