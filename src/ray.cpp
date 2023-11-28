@@ -156,8 +156,6 @@ Hit Ray::meshIntersection(Eigen::MatrixXd &meshV, Eigen::MatrixXi &meshF, PointC
 // The search range is within the range
 // of the searchRadius.
 std::vector<Hit> Ray::searchNeighborPoints(double searchRadius, PointCloud *pointCloud) {
-  searchRadius *= polyscope::state::lengthScale;
-
   // Return value
   std::vector<Hit> hitsInfo;
 

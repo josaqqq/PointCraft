@@ -8,8 +8,11 @@
 
 class Clustering {
   public:
-    Clustering(std::vector<int> *pointsIndex, PointCloud *pointCloud) 
-    : pointsIndex(pointsIndex), pointCloud(pointCloud) {}
+    Clustering(
+      std::vector<int> *pointsIndex, 
+      std::vector<glm::dvec3> *points, 
+      std::string name
+    ) : pointsIndex(pointsIndex), points(points), name(name) {}
 
     // Execute clustering
     //  - eps: Clustering search distance
@@ -17,14 +20,12 @@ class Clustering {
     std::vector<int> executeClustering(double eps, int minPoints);
 
   private:
-    std::vector<int> *pointsIndex;
-    PointCloud       *pointCloud;
+    std::vector<int>        *pointsIndex;
+    std::vector<glm::dvec3> *points;
+    std::string             name;
 
     // Calculated three orthogonal bases with PCA
     std::vector<glm::dvec3> orthogonalBases;
-
-    // Calculate three orthogonal bases
-    void executePCA();
 
     // Execute DBSCAN and return selected basis points's index
     std::vector<int> executeDBSCAN(double eps, int minPoints, int basisIndex);
@@ -32,6 +33,6 @@ class Clustering {
     void visualizeCluster(
       int basisIndex,
       std::vector<int> &pointsIndex,
-      std::vector<int> &labesl
+      std::vector<int> &labels
     );
 };

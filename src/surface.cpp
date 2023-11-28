@@ -26,8 +26,6 @@ std::pair<Eigen::MatrixXd, Eigen::MatrixXi> poissonReconstruct(
   Eigen::MatrixXd &vertices,
   Eigen::MatrixXd &normals
 ) {
-  averageDistance *= polyscope::state::lengthScale;
-
   // Init point cloud
   pcl::PointCloud<pcl::PointNormal>::Ptr inputCloud(new pcl::PointCloud<pcl::PointNormal>);
   inputCloud->points.resize(vertices.rows());
@@ -100,10 +98,10 @@ std::pair<Eigen::MatrixXd, Eigen::MatrixXi> poissonReconstruct(
   }
 
   // Register mesh
-  polyscope::SurfaceMesh *surfaceMesh = polyscope::registerSurfaceMesh(name, meshV, meshF);
-  surfaceMesh->setSurfaceColor(PoissonColor);
-  surfaceMesh->setMaterial(PoissonMaterial);
-  surfaceMesh->setEnabled(PoissonEnabled);
+  polyscope::SurfaceMesh *poissonMesh = polyscope::registerSurfaceMesh(name, meshV, meshF);
+  poissonMesh->setSurfaceColor(PoissonColor);
+  poissonMesh->setMaterial(PoissonMaterial);
+  poissonMesh->setEnabled(PoissonEnabled);
 
   // Output results
   std::cout << "\nFinished Poisson Surface Reconstruction!"                   << std::endl;
@@ -256,10 +254,10 @@ void greedyProjection(
   std::cout << "\tFace num\t->\t" << mesh.polygons.size() << std::endl;
 
   // Register mesh
-  polyscope::SurfaceMesh *surfaceMesh = polyscope::registerSurfaceMesh(name, meshV, meshF);
-  surfaceMesh->setSurfaceColor(GreedyProjColor);
-  surfaceMesh->setMaterial(GreedyProjMaterial);
-  surfaceMesh->setEnabled(GreedyProjEnabled);
+  polyscope::SurfaceMesh *greedyMesh = polyscope::registerSurfaceMesh(name, meshV, meshF);
+  greedyMesh->setSurfaceColor(GreedyProjColor);
+  greedyMesh->setMaterial(GreedyProjMaterial);
+  greedyMesh->setEnabled(GreedyProjEnabled);
 }
 
 // Show hexagons for each vertex as a pseudo surface.
@@ -269,8 +267,6 @@ void pseudoSurface(
   Eigen::MatrixXd &vertices,
   Eigen::MatrixXd &normals
 ) {
-  averageDistance *= polyscope::state::lengthScale;
-
   int N = vertices.rows();
   Eigen::MatrixXd meshV(N*7, 3);
   Eigen::MatrixXd meshF(N*6, 3);
@@ -289,7 +285,7 @@ void pseudoSurface(
     meshV.row(i) << o.x, o.y, o.z;
     
     // Register vertex point
-    glm::dvec4 hex = glm::dvec4(averageDistance/2.0, 0.0, 0.0, 0.0);
+    glm::dvec4 hex = glm::dvec4(averageDistance, 0.0, 0.0, 0.0);
     for (int j = 0; j < 6; j++) {
       glm::dvec3 hexInWorld = plane.unmapCoordinates(glm::dvec3(hex.x, hex.y, hex.z));
       meshV.row((j + 1)*N + i) << hexInWorld.x, hexInWorld.y, hexInWorld.z;
@@ -303,7 +299,7 @@ void pseudoSurface(
   }
 
   // Register mesh
-  polyscope::SurfaceMesh *surfaceMesh = polyscope::registerSurfaceMesh(name, meshV, meshF);
-  surfaceMesh->setSurfaceColor(PseudoSurfaceColor);
-  surfaceMesh->setMaterial(PseudoSurfaceMaterial);
+  polyscope::SurfaceMesh *pseudoSurface = polyscope::registerSurfaceMesh(name, meshV, meshF);
+  pseudoSurface->setSurfaceColor(PseudoSurfaceColor);
+  pseudoSurface->setMaterial(PseudoSurfaceMaterial);
 }

@@ -52,16 +52,20 @@ int main(int argc, char **argv) {
   }
 
   // Options
-  polyscope::options::autocenterStructures = false;
-  polyscope::options::autoscaleStructures = false;
   polyscope::view::windowWidth = WindowWidth;
   polyscope::view::windowHeight = WindowHeight;
+  polyscope::view::bgColor = BackgroundColor;
+
+  polyscope::state::lengthScale = 1.0;
+
+  polyscope::options::autocenterStructures = false;
+  polyscope::options::autoscaleStructures = false;
+  polyscope::options::automaticallyComputeSceneExtents = false;
+  polyscope::options::groundPlaneMode = polyscope::GroundPlaneMode::None;
+  // polyscope::options::buildDefaultGuiPanels = false;
 
   // Initialize polyscope
   polyscope::init();
-  polyscope::options::groundPlaneMode = polyscope::GroundPlaneMode::None;
-  // polyscope::options::buildDefaultGuiPanels = false;
-  polyscope::view::bgColor = BackgroundColor;
 
   // Initialize classes
   int currentMode;

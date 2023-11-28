@@ -9,6 +9,7 @@
 #include "interpolation_tool.hpp"
 #include "rbf.hpp"
 #include "surface.hpp"
+#include "cluster.hpp"
 
 bool InterpolationTool::drawSketch() {
   if (ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
@@ -38,13 +39,7 @@ void InterpolationTool::draggingEvent() {
 }
 
 void InterpolationTool::releasedEvent() {
-  // Find basis points.
-  //  - If extendedSearch is true, extend the sketched area.
-  //  - Cast all points of the point cloud onto the screen plane.
-  //  - Check the conditions below.
-  //    1. Judge inside/outside of the sketch.
-  //    2. Check the normal direction of the point.
-  //    3. Check the nearest neighbors' distances from cameraOrig.
+  // Find basis points for the surface reconstruction.
   findBasisPoints(true);
   if (getBasisPointsIndex()->size() == 0) {
     std::cout << "WARNING: No basis point was found." << std::endl;
@@ -86,12 +81,6 @@ void InterpolationTool::releasedEvent() {
 
 
   // Filter the reconstructed surface
-  //  - Cast reconstructed surface onto the screen plane.
-  //  - Construct octree for the casted surface points.
-  //  - Check the conditions below
-  //    1. Judge inside/outside of the sketch and the convex hull of basisPoints.
-  //    2. Check the normal direction of the point.
-  //    3. Check the nearest neighbors' distances from cameraOrig
   Eigen::MatrixXd newV, newN;
   std::tie(newV, newN) = filterSurfacePoints(psrPoints, psrFaces);
   if (newV.rows() == 0) {
@@ -135,10 +124,10 @@ void InterpolationTool::renderInterpolatedPoints(
 // Filter the reconstructed surface
 //  - Cast reconstructed surface and basisPoints onto the screen plane.
 //  - Construct octree for the casted surface points and basisPoints.
-//  - Check the conditions below
-//    1. Judge inside/outside of the sketch and the convex hull of basisPoints.
-//    2. Check the normal direction of the point.
-//    3. Check the nearest neighbors' distances from cameraOrig
+//  - Search for a candidate point for each discretized grid.
+//    - Only points that their normals are directed to cameraOrig.
+//    - If the candidate point is one of basisPoints, then skip it.
+//  - Detect depth with DBSCAN
 std::pair<Eigen::MatrixXd, Eigen::MatrixXd> InterpolationTool::filterSurfacePoints(
   Eigen::MatrixXd &surfacePoints,
   Eigen::MatrixXi &surfaceFaces
@@ -176,20 +165,10 @@ std::pair<Eigen::MatrixXd, Eigen::MatrixXd> InterpolationTool::filterSurfacePoin
       indexToAdjacentCount[vertexIdx]++;
     }
   }
-  // Normals of basisPoints
-  for (int i = 0; i < basisPointsSize; i++) {
-    int vertexIdx = surfacePointsSize + i;
-    int pointCloudIdx = (*getBasisPointsIndex())[i];
-    indexToNormalSum[vertexIdx] += glm::dvec3(
-      getPointCloud()->Normals(pointCloudIdx, 0),
-      getPointCloud()->Normals(pointCloudIdx, 1),
-      getPointCloud()->Normals(pointCloudIdx, 2)
-    );
-    indexToAdjacentCount[vertexIdx] = 1;
-  }
 
   // Cast reconstructed surface and basisPoints onto the screen plane.
   std::vector<glm::dvec3> pointsInWorldCoord;
+  std::vector<glm::dvec3> normalsInWorldCoord;
   std::vector<glm::dvec3> pointsCastedOntoScreen;
   // Cast surface points onto screen
   for (int i = 0; i < surfacePointsSize; i++) {
@@ -198,14 +177,16 @@ std::pair<Eigen::MatrixXd, Eigen::MatrixXd> InterpolationTool::filterSurfacePoin
       surfacePoints(i, 1),
       surfacePoints(i, 2)
     );
-    pointsInWorldCoord.push_back(p);
+    glm::dvec3 pn = indexToNormalSum[i]/(double)indexToAdjacentCount[i];
     
     // Cast a ray from p to cameraOrig onto screen.
     Ray ray(p, getCameraOrig());
     Hit hitInfo = ray.castPointToPlane(getScreen());
     assert(hitInfo.hit == true);
-    glm::dvec3 castedP = getScreen()->mapCoordinates(hitInfo.pos);
-    pointsCastedOntoScreen.push_back(castedP);
+
+    pointsInWorldCoord.push_back(p);
+    normalsInWorldCoord.push_back(pn);
+    pointsCastedOntoScreen.push_back(getScreen()->mapCoordinates(hitInfo.pos));
   }
   // Cast basis points onto screen
   for (int i = 0; i < basisPointsSize; i++) {
@@ -215,16 +196,21 @@ std::pair<Eigen::MatrixXd, Eigen::MatrixXd> InterpolationTool::filterSurfacePoin
       getPointCloud()->Vertices(pointCloudIdx, 1),
       getPointCloud()->Vertices(pointCloudIdx, 2)
     );
-    pointsInWorldCoord.push_back(p);
+    glm::dvec3 pn = glm::dvec3(
+      getPointCloud()->Normals(pointCloudIdx, 0),
+      getPointCloud()->Normals(pointCloudIdx, 1),
+      getPointCloud()->Normals(pointCloudIdx, 2)
+    );
 
     // Cast a ray from p to cameraOrig onto screen.
     Ray ray(p, getCameraOrig());
     Hit hitInfo = ray.castPointToPlane(getScreen());
     assert(hitInfo.hit == true);
-    glm::dvec3 castedP = getScreen()->mapCoordinates(hitInfo.pos);
-    pointsCastedOntoScreen.push_back(castedP);
-  }
 
+    pointsInWorldCoord.push_back(p);
+    normalsInWorldCoord.push_back(pn);
+    pointsCastedOntoScreen.push_back(getScreen()->mapCoordinates(hitInfo.pos));
+  }
 
   // Construct octree for the casted surface points and basis Points
   pcl::PointCloud<pcl::PointXYZ>::Ptr castedSurfaceCloud(new pcl::PointCloud<pcl::PointXYZ>);
@@ -239,75 +225,99 @@ std::pair<Eigen::MatrixXd, Eigen::MatrixXd> InterpolationTool::filterSurfacePoin
   octree.setInputCloud(castedSurfaceCloud);
   octree.addPointsFromInputCloud();
 
-  //  Check the conditions below
-  //    1. Judge inside/outside of the sketch and the convex hull of basisPoints.
-  //    2. Check the normal direction of the point.
-  //    3. Check the nearest neighbors' distances from cameraOrig
-  std::vector<int> insideSketchPointIndex;
+  // Search for a candidate point for each discretized grid.
+  const double INF = 1e5;
+  double min_x = INF, max_x = -INF;
+  double min_y = INF, max_y = -INF;
+  for (int i = 0; i < octreeSize; i++) {
+    glm::dvec3 mapped_p = pointsCastedOntoScreen[i];
+
+    min_x = std::min(min_x, mapped_p.x);
+    max_x = std::max(max_x, mapped_p.x);
+    min_y = std::min(min_y, mapped_p.y);
+    max_y = std::max(max_y, mapped_p.y);
+  }
+
+  const double castedAverageDist = calcCastedAverageDist();
+  std::vector<int> candidatePointsIndex;
   std::vector<std::vector<double>> hasCloserNeighborPoints;
-  for (int i = 0; i < surfacePointsSize; i++) {
-    glm::dvec3 p = pointsInWorldCoord[i];
-    glm::dvec3 castedP = pointsCastedOntoScreen[i];
-    glm::dvec3 pn = indexToNormalSum[i]/(double)indexToAdjacentCount[i];
+  for (double x = min_x; x < max_x; x += castedAverageDist*2.0) {
+    for (double y = min_y; y < max_y; y += castedAverageDist*2.0) {
+      if (!insideSketch(x, y)) continue;
+      if (!insideBasisConvexHull(x, y)) continue;
 
-    // 1. Judge inside/outside of the sketch and the convex hull of basisPoints.
-    if (!insideSketch(castedP.x, castedP.y)) continue;
-    if (!insideBasisConvexHull(castedP.x, castedP.y)) continue;
+      // Search for nearest neighbors with octree
+      std::vector<int>    hitPointIndices;
+      std::vector<float>  hitPointDistances;
+      int hitPointCount = octree.radiusSearch(
+        pcl::PointXYZ(x, y, 0.0),
+        castedAverageDist,
+        hitPointIndices,
+        hitPointDistances
+      );
 
-    // 2. Check the normal direction of the point.
-    if (glm::dot(getCameraDir(), pn) >= 0.0) continue;
+      // Get the index of the min depth point 
+      double minDepth = 1e5;
+      int minDepthIdx = -1;
+      for (int i = 0; i < hitPointCount; i++) {
+        int hitPointIdx = hitPointIndices[i];
+        glm::dvec3 p = pointsInWorldCoord[hitPointIdx];
+        glm::dvec3 pn = normalsInWorldCoord[hitPointIdx];
 
-    // 3. Check the nearest neighbors' distances from cameraOrig
-    double castedAverageDist = calcCastedAverageDist();
-    std::vector<int>    hitPointIndices;
-    std::vector<float>  hitPointDistances;
-    int hitPointCount = octree.radiusSearch(
-      pcl::PointXYZ(castedP.x, castedP.y, castedP.z),
-      castedAverageDist,
-      hitPointIndices,
-      hitPointDistances
-    );
+        // Discard points that their normals are directed to cameraOrig.
+        if (glm::dot(pn, getCameraDir()) >= 0.0) continue;
 
-    bool hasCloserNeighbor = false;;
-    for (int j = 0; j < hitPointCount; j++) {
-      int hitPointIdx = hitPointIndices[j];
-      glm::dvec3 q = pointsInWorldCoord[hitPointIdx];
-      glm::dvec3 qn = indexToNormalSum[hitPointIdx]/(double)indexToAdjacentCount[hitPointIdx];
+        double curDepth = glm::length(p - getCameraOrig());
+        if (curDepth < minDepth) {
+          minDepth = curDepth;
+          minDepthIdx = hitPointIdx;
+        }
+      }
 
-      if (glm::dot(getCameraDir(), qn) >= 0.0) continue;
-      if (glm::length(q - getCameraOrig()) < glm::length(p - getCameraOrig())) {
-        hasCloserNeighbor = true;
-        break;
+      // Discard points that is one of basisPoints.
+      if (minDepthIdx >= surfacePointsSize) continue;
+
+      // Update the buffer vectors
+      for (int i = 0; i < hitPointCount; i++) {
+        int hitPointIdx = hitPointIndices[i];
+        if (hitPointIdx == minDepthIdx) {
+          candidatePointsIndex.push_back(hitPointIdx);
+        } else {
+          glm::dvec3 pn = normalsInWorldCoord[hitPointIdx];
+          if (glm::dot(pn, getCameraDir()) >= 0.0) continue;
+
+          hasCloserNeighborPoints.push_back({
+            pointsInWorldCoord[hitPointIdx].x,
+            pointsInWorldCoord[hitPointIdx].y,
+            pointsInWorldCoord[hitPointIdx].z
+          });
+        }
       }
     }
-    if (hasCloserNeighbor) {
-      hasCloserNeighborPoints.push_back({ p.x, p.y, p.z });
-      continue; 
-    }
-
-    insideSketchPointIndex.push_back(i);
   }
 
   // Register points that has closer nearest neighbors as point cloud.
   polyscope::PointCloud* hasCloserNeighborCloud = polyscope::registerPointCloud("HasCloserNeighbor(surface)", hasCloserNeighborPoints);
   hasCloserNeighborCloud->setPointRadius(BasisPointRadius);
-  hasCloserNeighborCloud->setEnabled(BasisPointEnabled);  
+  hasCloserNeighborCloud->setEnabled(BasisPointEnabled);
 
-  int newPointsSize = insideSketchPointIndex.size();
+  // Detect depth with DBSCAN
+  Clustering clustering(&candidatePointsIndex, &pointsInWorldCoord, "surface");
+  std::vector<int> interpolatedPointsIndex = clustering.executeClustering(
+    DBSCAN_SearchRange*getPointCloud()->getAverageDistance(),
+    DBSCAN_MinPoints
+  );
+
+  int newPointsSize = interpolatedPointsIndex.size();
   Eigen::MatrixXd newV(newPointsSize, 3);
   Eigen::MatrixXd newN(newPointsSize, 3);
   for (int i = 0; i < newPointsSize; i++) {
-    int idx = insideSketchPointIndex[i];
-    glm::dvec3 normal = indexToNormalSum[idx]/(double)indexToAdjacentCount[idx];
+    int idx = interpolatedPointsIndex[i];
+    glm::dvec3 p = pointsInWorldCoord[idx];
+    glm::dvec3 pn = normalsInWorldCoord[idx];
 
-    newV.row(i) <<
-      surfacePoints(idx, 0),
-      surfacePoints(idx, 1),
-      surfacePoints(idx, 2);
-    newN.row(i) << 
-      normal.x,
-      normal.y,
-      normal.z;
+    newV.row(i) << p.x, p.y, p.z;
+    newN.row(i) << pn.x, pn.y, pn.z;
   }
 
   return { newV, newN };

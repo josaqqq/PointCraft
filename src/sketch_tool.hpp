@@ -56,11 +56,11 @@ class SketchTool {
 
     // Find basis points.
     //  - If extendedSearch is true, extend the sketched area.
-    //  - Cast all points of the point cloud onto the screen plane.
-    //  - Check the conditions below.
-    //    1. Judge inside/outside of the sketch.
-    //    2. Check the normal direction of the point.
-    //    3. Check the nearest neighbors' distances from cameraOrig.
+    //  - Cast points of the point cloud onto the screen plane.
+    //  - Construct octree for the casted surface points
+    //  - Search for a candidate point for each discretized grid.
+    //    - Only points that their normals are directed to cameraOrig
+    //  - Detect depth with DBSCAN
     void findBasisPoints(bool extendedSearch);
 
     // Check whether (x, y) is inside or outside of the sketch.
@@ -88,6 +88,7 @@ class SketchTool {
     Plane*                    getScreen();
     std::vector<glm::dvec3>*  getSketchPoints();
     std::vector<int>*         getBasisPointsIndex();
+    std::vector<glm::dvec2>*  getMappedBasisConvexHull();
 
   private:
     int *currentMode;         // Current selected Mode
@@ -106,9 +107,6 @@ class SketchTool {
 
     // Extend sketched area by averageDistance casted onto the screen.
     void extendSketchedArea();
-
-    // Shrink basisConvexHull to remove the selected points near the boundary.
-    void shrinkBasisConvexHull();
 
     // Calculate CCW value
     //  - ccw > 0.0: left turn
