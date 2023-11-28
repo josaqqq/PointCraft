@@ -8,8 +8,15 @@
 #include "constants.hpp"
 
 void ModeSelector::enableModeSelection(ImGuiIO &io) {
+  // Undo/Redo
+  ImGui::Text("Undo/Redo:");
+  ImGui::Text("   "); ImGui::SameLine();
+  if (ImGui::Button("<< Undo")) pointCloud->executeUndo();
+  ImGui::SameLine();
+  if (ImGui::Button("Redo >>")) pointCloud->executeRedo();
+
   // Tool Selection
-  ImGui::Text("Tool Selection:");
+  ImGui::Text("\nTool Selection:");
   ImGui::Text("   "); ImGui::SameLine();
   if (ImGui::Button("Reset Tool")) {
     *currentMode = MODE_NONE;

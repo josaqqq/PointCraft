@@ -20,15 +20,20 @@ class PointCloud {
     void setPointCloudNormalEnabled(bool flag);
 
     // Update point cloud
-    //   - update octree
-    //   - render points and normals
-    void updatePointCloud();
+    //    - update environments
+    //    - update octree
+    //    - render points and normals
+    void updatePointCloud(bool clearPostEnv);
 
     // Add vertices from the positions and normals
     void addPoints(Eigen::MatrixXd newV, Eigen::MatrixXd newN);
 
     // Delete vertices by referencing the vertex indices
     void deletePoints(std::vector<int> &indices);
+
+    // Execute Undo/Redo
+    void executeUndo();
+    void executeRedo();
 
     // Return the pointer to member variables
     double getAverageDistance();
@@ -48,6 +53,9 @@ class PointCloud {
 
     double averageDistance;       // Average Distance between a point and the nearest neighbor
     double boundingSphereRadius;  // Radius of bounding sphere of point cloud
+
+    std::stack<std::pair<Eigen::MatrixXd, Eigen::MatrixXd>> prevEnvironments;
+    std::stack<std::pair<Eigen::MatrixXd, Eigen::MatrixXd>> postEnvironments;
 
     pcl::octree::OctreePointCloudSearch<pcl::PointXYZ> octree;
 

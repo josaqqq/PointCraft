@@ -57,9 +57,10 @@ PointCloud::PointCloud(std::string filename) : octree(OctreeResolution) {
   scalePointCloud();
 
   // Update point cloud
-  //   - update octree
-  //   - render points and normals
-  updatePointCloud();
+  //    - update environments
+  //    - update octree
+  //    - render points and normals
+  updatePointCloud(false);
 } 
 
 // Enable or Disable the point cloud and normals
@@ -71,9 +72,14 @@ void PointCloud::setPointCloudNormalEnabled(bool flag) {
 }
 
 // Update point cloud
-//   - update octree
-//   - render points and normals
-void PointCloud::updatePointCloud() {
+//    - update environments
+//    - update octree
+//    - render points and normals
+void PointCloud::updatePointCloud(bool clearPostEnv) {
+  // Push new environment
+  prevEnvironments.push({ Vertices, Normals });
+  if (clearPostEnv) postEnvironments = std::stack<std::pair<Eigen::MatrixXd, Eigen::MatrixXd>>();
+
   // Update Octree
   updateOctree();
 
@@ -93,13 +99,6 @@ void PointCloud::updatePointCloud() {
   vectorQuantity->setVectorRadius(NormalRadius);
   vectorQuantity->setEnabled(NormalEnabled);
   vectorQuantity->setMaterial(NormalMaterial);
-
-  // // Register Scalar Quantity
-  // std::vector<double> scalarValues(Vertices.rows());
-  // for (int i = 0; i < Vertices.rows(); i++) scalarValues[i] = Vertices(i, 2);
-  // scalarQuantity = pointCloud->addScalarQuantity(ScalarName, scalarValues);
-  // scalarQuantity->setColorMap(ScalarColorMap);
-  // scalarQuantity->setEnabled(ScalarEnabled);
 
   std::cout << "Point Cloud Data:"                                << std::endl;
   std::cout << "\tVertex num\t\t->\t"       << Vertices.rows()    << std::endl;
@@ -121,9 +120,10 @@ void PointCloud::addPoints(Eigen::MatrixXd newV, Eigen::MatrixXd newN) {
   Normals = concatN;
 
   // Update point cloud
-  //   - update octree
-  //   - render points and normals
-  updatePointCloud();
+  //    - update environments
+  //    - update octree
+  //    - render points and normals
+  updatePointCloud(true);
 }
 
 // Delete vertices by referencing the vertex indices
@@ -158,9 +158,47 @@ void PointCloud::deletePoints(std::vector<int> &indices) {
   Normals = newN;
 
   // Update point cloud
+  //    - update environments
   //    - update octree
   //    - render points and normals
-  updatePointCloud();
+  updatePointCloud(true);
+}
+
+// Execute Undo/Redo
+void PointCloud::executeUndo() {
+  if (prevEnvironments.size() < 2) return;
+
+  // Undo
+  std::pair<Eigen::MatrixXd, Eigen::MatrixXd> currentEnv = prevEnvironments.top();
+  prevEnvironments.pop();
+  postEnvironments.push(currentEnv);
+
+  std::pair<Eigen::MatrixXd, Eigen::MatrixXd> newEnv = prevEnvironments.top();
+  prevEnvironments.pop();
+  Vertices = newEnv.first;
+  Normals = newEnv.second;
+
+  // Update point cloud
+  //    - update environments
+  //    - update octree
+  //    - render points and normals
+  updatePointCloud(false); 
+}
+void PointCloud::executeRedo() {
+  if (postEnvironments.size() < 1) return;
+
+  // Redo
+  std::pair<Eigen::MatrixXd, Eigen::MatrixXd> newEnv = postEnvironments.top();
+  postEnvironments.pop();
+  
+  Vertices = newEnv.first;
+  Normals = newEnv.second;
+
+  // Update point cloud
+  //    - update environments
+  //    - update octree
+  //    - render points and normals
+  updatePointCloud(false);
 }
 
 // Return the pointer to member variables
