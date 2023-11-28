@@ -110,7 +110,7 @@ void PointCloud::updatePointCloud() {
   pseudoSurface(PseudoSurfaceName, averageDistance, Vertices, Normals);
 }
 
-// Add points with information of the position and the normal.
+// Add vertices from the positions and normals
 void PointCloud::addPoints(Eigen::MatrixXd newV, Eigen::MatrixXd newN) {
   Eigen::MatrixXd concatV = Eigen::MatrixXd::Zero(Vertices.rows() + newV.rows(), Vertices.cols());
   concatV << Vertices, newV;
@@ -123,6 +123,43 @@ void PointCloud::addPoints(Eigen::MatrixXd newV, Eigen::MatrixXd newN) {
   // Update point cloud
   //   - update octree
   //   - render points and normals
+  updatePointCloud();
+}
+
+// Delete vertices by referencing the vertex indices
+void PointCloud::deletePoints(std::vector<int> &indices) {
+  // Sort indices for the comparison with current vertices information
+  sort(indices.begin(), indices.end());
+
+  const int curSize = Vertices.rows();
+  const int newSize = Vertices.rows() - indices.size();
+
+  Eigen::MatrixXd newV(newSize, 3);
+  Eigen::MatrixXd newN(newSize, 3);
+
+  int curIdx = 0;
+  std::vector<int>::iterator itr = indices.begin();
+  for (int i = 0; i < curSize; i++) {
+    if (itr != indices.end() && i == *itr) {
+      itr++;
+    } else {
+      newV.row(curIdx) << 
+        Vertices(i, 0),
+        Vertices(i, 1),
+        Vertices(i, 2);
+      newN.row(curIdx) << 
+        Normals(i, 0),
+        Normals(i, 1),
+        Normals(i, 2);
+      curIdx++;
+    }
+  }
+  Vertices = newV;
+  Normals = newN;
+
+  // Update point cloud
+  //    - update octree
+  //    - render points and normals
   updatePointCloud();
 }
 

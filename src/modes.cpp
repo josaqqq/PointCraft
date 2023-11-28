@@ -19,6 +19,11 @@ void ModeSelector::enableModeSelection(ImGuiIO &io) {
     *currentMode = MODE_INTERPOLATION;
     interpolationTool->initSketch();
   }
+  ImGui::Text("   "); ImGui::SameLine();
+  if (ImGui::Button("Delete Tool")) {
+    *currentMode = MODE_DELETE;
+    deleteTool->initSketch();
+  }
 
   switch (*currentMode) {
     case MODE_NONE:
@@ -30,39 +35,11 @@ void ModeSelector::enableModeSelection(ImGuiIO &io) {
       polyscope::view::moveScale = 0.0;
       if (interpolationTool->drawSketch()) *currentSurfaceMode = SURFACE_MODE_PSEUDO;
       break;
+    case MODE_DELETE:
+      ImGui::Text("   Selected Tool: Delete Tool");
+      polyscope::view::moveScale = 0.0;
+      if (deleteTool->drawSketch()) *currentSurfaceMode = SURFACE_MODE_PSEUDO;
   }
-
-  // Point Cloud Visualization
-  // ImGui::Text("Point Cloud Visualization");
-  // ImGui::Text("   "); ImGui::SameLine();
-  // ImGui::RadioButton("Hide", currentPointCloud, MODE_HIDE);
-  // ImGui::Text("   "); ImGui::SameLine();
-  // ImGui::RadioButton("Show", currentPointCloud, MODE_SHOW);
-
-  // switch (*currentPointCloud) {
-  //   case MODE_HIDE:
-  //     pointCloud->setPointCloudEnabled(false);
-  //     break;
-  //   case MODE_SHOW:
-  //     pointCloud->setPointCloudEnabled(true);
-  //     break;
-  // }
-
-  // Point Cloud Normal Visualization
-  // ImGui::Text("Normal Visualization");
-  // ImGui::Text("   "); ImGui::SameLine();
-  // ImGui::RadioButton("Hide", currentPointCloudNormal, MODE_HIDE);
-  // ImGui::Text("   "); ImGui::SameLine();
-  // ImGui::RadioButton("Show", currentPointCloudNormal, MODE_SHOW);
-
-  // switch (*currentPointCloudNormal) {
-  //   case MODE_HIDE:
-  //     pointCloud->setPointCloudNormalEnabled(false);
-  //     break;
-  //   case MODE_SHOW:
-  //     pointCloud->setPointCloudNormalEnabled(true);
-  //     break;
-  // }
 
   // Surface Reconstruction
   ImGui::Text("\nSurface Reconstruction");

@@ -5,10 +5,12 @@
 #include "point_cloud.hpp"
 #include "sketch_tool.hpp"
 #include "interpolation_tool.hpp"
+#include "delete_tool.hpp"
 
 enum Mode {
   MODE_NONE,
   MODE_INTERPOLATION,
+  MODE_DELETE,
 };
 
 enum VisualizationMode {
@@ -28,23 +30,19 @@ struct ModeSelector {
     ModeSelector() {}
     ModeSelector(
       int *currentMode,
-      int *currentPointCloud,
-      int *currentPointCloudNormal,
       int *currentSurfaceMode,
       PointCloud *pointCloud,
-      InterpolationTool *interpolationTool
+      InterpolationTool *interpolationTool,
+      DeleteTool *deleteTool
     ) 
     : currentMode(currentMode),
-      currentPointCloud(currentPointCloud),
-      currentPointCloudNormal(currentPointCloudNormal),
       currentSurfaceMode(currentSurfaceMode),
       pointCloud(pointCloud), 
-      interpolationTool(interpolationTool) 
+      interpolationTool(interpolationTool),
+      deleteTool(deleteTool)
     { 
       // Initialize current modes.
       *currentMode = MODE_NONE;
-      *currentPointCloud = MODE_SHOW;
-      *currentPointCloudNormal = MODE_SHOW;
       *currentSurfaceMode = SURFACE_MODE_PSEUDO;
     }
 
@@ -54,12 +52,9 @@ struct ModeSelector {
   
   private:
     int *currentMode;
-    int *currentPointCloud;
-    int *currentPointCloudNormal;
     int *currentSurfaceMode;
 
-    PointCloud *pointCloud;
+    PointCloud        *pointCloud;
     InterpolationTool *interpolationTool;
-    // SmoothingTool *smoothingTool;
-    // DeleteTool *deleteTool;
+    DeleteTool        *deleteTool;
 };

@@ -69,18 +69,16 @@ int main(int argc, char **argv) {
 
   // Initialize classes
   int currentMode;
-  int currentPointCloud;
-  int currentPointCloudNormal;
   int currentSurfaceMode;
   PointCloud pointCloud(args::get(inFile));
   InterpolationTool interpolationTool(&currentMode, &pointCloud);
+  DeleteTool        deleteTool(&currentMode, &pointCloud);
   modeSelector = ModeSelector(
     &currentMode, 
-    &currentPointCloud,
-    &currentPointCloudNormal,
     &currentSurfaceMode, 
     &pointCloud, 
-    &interpolationTool
+    &interpolationTool,
+    &deleteTool
   );
 
   // Reconstruct Surfaces

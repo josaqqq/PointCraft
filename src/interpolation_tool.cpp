@@ -90,15 +90,15 @@ void InterpolationTool::releasedEvent() {
     return;
   }
 
-  // Add the interpolated points.
-  getPointCloud()->addPoints(newV, newN);
-
   // Register Interpolated Points as point cloud
   renderInterpolatedPoints(newV, newN);
 
   // Remove sketch as curve network (LINE)
   removeCurveNetworkLine(SketchPrefix);
 
+  // Add the interpolated points.
+  getPointCloud()->addPoints(newV, newN);
+  
   // Reset all member variables.
   resetSketch();
 }

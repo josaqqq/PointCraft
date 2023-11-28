@@ -63,6 +63,13 @@ class SketchTool {
     //  - Detect depth with DBSCAN
     void findBasisPoints(bool extendedSearch);
 
+    // Find all basis points inside the sketch
+    //  - If extendedSearch is true, extend the sketched area.
+    //  - Cast points of the point cloud onto the screen plane.
+    //  - Judge inside/outside of the sketch.
+    //  - Detect depth with DBSCAN.
+    void findAllBasisPoints(bool extendedSearch);
+
     // Check whether (x, y) is inside or outside of the sketch.
     //  1.  Draw a half-line parallel to the x-axis from a point.
     //  2.  Determine that if there are an odd number of intersections
@@ -82,7 +89,6 @@ class SketchTool {
 
     // Return the pointer to member variables.
     PointCloud*               getPointCloud();
-    double                    getAverageDepth();
     glm::dvec3                getCameraOrig();
     glm::dvec3                getCameraDir();
     Plane*                    getScreen();
@@ -94,7 +100,6 @@ class SketchTool {
     int *currentMode;         // Current selected Mode
 
     PointCloud *pointCloud;   // Registered point cloud
-    double      averageDepth; // Average depth of selected points
 
     double      screenDist;    // Distance between screen and camera position
     glm::dvec3  cameraOrig;   // Camera position

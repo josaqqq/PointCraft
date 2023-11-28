@@ -1,18 +1,18 @@
 #pragma once
 
 #include "polyscope/point_cloud.h"
-
-#include <Eigen/Dense>
-#include <string>
-
 #include <pcl/octree/octree_search.h>
+#include <Eigen/Dense>
+
+#include <string>
+#include <stack>
 
 class PointCloud {
   public:
     PointCloud(std::string filename);
     ~PointCloud() {}
 
-    Eigen::MatrixXd Vertices;    // double matrix of vertex positions
+    Eigen::MatrixXd Vertices;   // double matrix of vertex positions
     Eigen::MatrixXd Normals;    // double matrix of corner normals
 
     // Enable or Disable the point cloud and normals
@@ -24,8 +24,11 @@ class PointCloud {
     //   - render points and normals
     void updatePointCloud();
 
-    // Add points with information of the position and the normal.
+    // Add vertices from the positions and normals
     void addPoints(Eigen::MatrixXd newV, Eigen::MatrixXd newN);
+
+    // Delete vertices by referencing the vertex indices
+    void deletePoints(std::vector<int> &indices);
 
     // Return the pointer to member variables
     double getAverageDistance();

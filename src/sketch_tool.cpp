@@ -35,8 +35,6 @@ void SketchTool::initSketch() {
 void SketchTool::resetSketch() {
   *currentMode = 0;
 
-  averageDepth = 0.0;
-
   screenDist = 0.0;
   cameraOrig = glm::dvec3(0.0, 0.0, 0.0);
   cameraDir = glm::dvec3(0.0, 0.0, 0.0);
@@ -274,6 +272,52 @@ void SketchTool::findBasisPoints(bool extendedSearch) {
   );
 }
 
+
+// Find all basis points inside the sketch
+//  - If extendedSearch is true, extend the sketched area.
+//  - Cast points of the point cloud onto the screen plane.
+//  - Judge inside/outside of the sketch.
+//  - Detect depth with DBSCAN.
+void SketchTool::findAllBasisPoints(bool extendedSearch) {
+  if (extendedSearch) extendSketchedArea();
+
+  // Cast points of the point cloud onto the screen plane.
+  std::vector<glm::dvec3> pointsInWorldCoord;
+  std::vector<glm::dvec3> pointsMappedOntoScreen;
+  for (int i = 0; i < pointCloud->Vertices.rows(); i++) {
+    glm::dvec3 p = glm::dvec3(
+      pointCloud->Vertices(i, 0),
+      pointCloud->Vertices(i, 1),
+      pointCloud->Vertices(i, 2)
+    );
+
+    // Cast a ray from p to cameraOrig onto screen.
+    Ray ray(p, cameraOrig);
+    Hit hitInfo = ray.castPointToPlane(&screen);
+    assert(hitInfo.hit == true);
+
+    pointsInWorldCoord.push_back(p);
+    pointsMappedOntoScreen.push_back(screen.mapCoordinates(hitInfo.pos));
+  }
+  const int castedPointSize = pointsMappedOntoScreen.size();
+
+  // Judge inside/outside of the sketch
+  std::vector<int> candidatePointsIndex;
+  for (int i = 0; i < castedPointSize; i++) {
+    glm::dvec3 mapped_p = pointsMappedOntoScreen[i];
+    if (!insideSketch(mapped_p.x, mapped_p.y)) continue;
+
+    candidatePointsIndex.push_back(i);
+  }
+
+  // Depth detection with DBSCAN
+  Clustering clustering(&candidatePointsIndex, &pointsInWorldCoord, "basis");
+  basisPointsIndex = clustering.executeClustering(
+    DBSCAN_SearchRange*pointCloud->getAverageDistance(),
+    DBSCAN_MinPoints
+  );
+}
+
 // Check whether (x, y) is inside or outside of the sketch.
 //  1.  Draw a half-line parallel to the x-axis from a point.
 //  2.  Determine that if there are an odd number of intersections
@@ -339,9 +383,6 @@ double SketchTool::calcCastedAverageDist() {
 // Return the pointer to member variables.
 PointCloud* SketchTool::getPointCloud() {
   return pointCloud;
-}
-double SketchTool::getAverageDepth() {
-  return averageDepth;
 }
 glm::dvec3 SketchTool::getCameraOrig() {
   return cameraOrig;

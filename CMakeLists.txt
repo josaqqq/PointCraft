@@ -83,6 +83,7 @@ add_executable(
     src/point_cloud.cpp
     src/sketch_tool.cpp
     src/interpolation_tool.cpp
+    src/delete_tool.cpp
     src/rbf.cpp
 )
 
