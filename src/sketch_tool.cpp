@@ -70,13 +70,13 @@ void SketchTool::registerBasisPointsAsPointCloud(std::string name) {
 
   polyscope::PointCloud* patchCloud = polyscope::registerPointCloud(name, points);
   patchCloud->setPointColor(BasisPointColor);
-  patchCloud->setPointRadius(BasisPointRadius);
-  patchCloud->setEnabled(BasisPointEnabled);
+  patchCloud->setPointRadius(pointCloud->getAverageDistance()/2.0);
+  patchCloud->setEnabled(false);
 
   polyscope::PointCloudVectorQuantity* patchVectorQuantity = patchCloud->addVectorQuantity(NormalName, normals);
   patchVectorQuantity->setVectorColor(BasisPointColor);
-  patchVectorQuantity->setVectorLengthScale(NormalLength);
-  patchVectorQuantity->setVectorRadius(NormalRadius * 1.1);
+  patchVectorQuantity->setVectorLengthScale(pointCloud->getAverageDistance());
+  patchVectorQuantity->setVectorRadius(pointCloud->getAverageDistance()/10.0);
   patchVectorQuantity->setEnabled(NormalEnabled);
   patchVectorQuantity->setMaterial(NormalMaterial);
 }
@@ -262,7 +262,7 @@ void SketchTool::findBasisPoints(bool extendedSearch) {
   // Register points that has closer nearest neighbors as point cloud.
   polyscope::PointCloud* hasCloserNeighborCloud = polyscope::registerPointCloud("HasCloserNeighbor(basis)", hasCloserNeighborPoints);
   hasCloserNeighborCloud->setPointRadius(BasisPointRadius);
-  hasCloserNeighborCloud->setEnabled(BasisPointEnabled);
+  hasCloserNeighborCloud->setEnabled(false);
 
   // Depth detection with DBSCAN
   Clustering clustering(&candidatePointsIndex, &pointsInWorldCoord, "basis");

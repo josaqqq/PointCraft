@@ -110,7 +110,7 @@ void InterpolationTool::renderInterpolatedPoints(
   polyscope::PointCloud* interpolatedCloud = polyscope::registerPointCloud("Interpolated Points", newV);
   interpolatedCloud->setPointColor(glm::dvec3(1.0, 0.0, 0.0));
   interpolatedCloud->setPointRadius(BasisPointRadius);
-  interpolatedCloud->setEnabled(BasisPointEnabled);
+  interpolatedCloud->setEnabled(false);
 
   polyscope::PointCloudVectorQuantity* interpolatedVectorQuantity = interpolatedCloud->addVectorQuantity(NormalName, newN);
   interpolatedVectorQuantity->setVectorColor(glm::dvec3(1.0, 0.0, 0.0));
@@ -298,7 +298,7 @@ std::pair<Eigen::MatrixXd, Eigen::MatrixXd> InterpolationTool::filterSurfacePoin
   // Register points that has closer nearest neighbors as point cloud.
   polyscope::PointCloud* hasCloserNeighborCloud = polyscope::registerPointCloud("HasCloserNeighbor(surface)", hasCloserNeighborPoints);
   hasCloserNeighborCloud->setPointRadius(BasisPointRadius);
-  hasCloserNeighborCloud->setEnabled(BasisPointEnabled);
+  hasCloserNeighborCloud->setEnabled(false);
 
   // Detect depth with DBSCAN
   Clustering clustering(&candidatePointsIndex, &pointsInWorldCoord, "surface");

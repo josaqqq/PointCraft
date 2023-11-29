@@ -44,7 +44,8 @@ const double DiscretizedPointRadius = 0.0025;
 
 const glm::dvec3 BasisPointColor = { 0.000, 1.000, 0.000 };
 const double BasisPointRadius = 0.0025;
-const bool BasisPointEnabled = false;
+const double BasisNormalLength = 0.05;
+const double BasisNormalRadius = 0.003;
 
 const std::string TracePrefix = "Trace: ";
 const std::string CastPrefix = "Cast: ";
