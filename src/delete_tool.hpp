@@ -8,7 +8,7 @@ class DeleteTool: public SketchTool {
     : SketchTool(currentMode, pointCloud) {}
     ~DeleteTool() {}
 
-    bool drawSketch() override;
+    void launchToolOperation() override;
 
   private:
     void draggingEvent();

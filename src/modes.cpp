@@ -39,13 +39,14 @@ void ModeSelector::enableModeSelection(ImGuiIO &io) {
       break;
     case MODE_INTERPOLATION:
       ImGui::Text("   Selected Tool: Interpolation Tool");
-      polyscope::view::moveScale = 0.0;
-      if (interpolationTool->drawSketch()) *currentSurfaceMode = SURFACE_MODE_PSEUDO;
+      interpolationTool->launchToolOperation();
+      *currentSurfaceMode = SURFACE_MODE_PSEUDO;
       break;
     case MODE_DELETE:
       ImGui::Text("   Selected Tool: Delete Tool");
-      polyscope::view::moveScale = 0.0;
-      if (deleteTool->drawSketch()) *currentSurfaceMode = SURFACE_MODE_PSEUDO;
+      deleteTool->launchToolOperation();
+      *currentSurfaceMode = SURFACE_MODE_PSEUDO;
+      break;
   }
 
   // Surface Reconstruction

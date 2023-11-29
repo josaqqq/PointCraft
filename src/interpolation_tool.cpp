@@ -11,16 +11,14 @@
 #include "surface.hpp"
 #include "cluster.hpp"
 
-bool InterpolationTool::drawSketch() {
+void InterpolationTool::launchToolOperation() {
+  polyscope::view::moveScale = 0.0;
+
   if (ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
     draggingEvent();
-    return false;
-  } else if (ImGui::IsMouseReleased(ImGuiMouseButton_Left) && getSketchPoints()->size() > 0) {
+  } else {
     releasedEvent();
-    return true;
   }
-
-  return false;
 }
 
 void InterpolationTool::draggingEvent() {
@@ -39,6 +37,8 @@ void InterpolationTool::draggingEvent() {
 }
 
 void InterpolationTool::releasedEvent() {
+  if (getSketchPoints()->size() == 0) return;
+
   // Find basis points for the surface reconstruction.
   findBasisPoints(true);
   if (getBasisPointsIndex()->size() == 0) {
@@ -78,7 +78,6 @@ void InterpolationTool::releasedEvent() {
     resetSketch();
     return;
   }
-
 
   // Filter the reconstructed surface
   Eigen::MatrixXd newV, newN;

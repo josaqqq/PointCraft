@@ -1,16 +1,16 @@
+#include "polyscope/view.h"
+
 #include "delete_tool.hpp"
 #include "constants.hpp"
 
-bool DeleteTool::drawSketch() {
+void DeleteTool::launchToolOperation() {
+  polyscope::view::moveScale = 0.0;
+
   if (ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
     draggingEvent();
-    return false;
-  } else if (ImGui::IsMouseReleased(ImGuiMouseButton_Left) && getSketchPoints()->size() > 0) {
+  } else {
     releasedEvent();
-    return true;
   }
-
-  return false;
 }
 
 void DeleteTool::draggingEvent() {
@@ -29,6 +29,8 @@ void DeleteTool::draggingEvent() {
 }
 
 void DeleteTool::releasedEvent() {
+  if (getSketchPoints()->size() == 0) return;
+
   // Find basis points for the surface reconstruction.
   findAllBasisPoints(false);
   if (getBasisPointsIndex()->size() == 0) {

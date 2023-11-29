@@ -8,7 +8,7 @@ class InterpolationTool : public SketchTool {
     : SketchTool(currentMode, pointCloud) {}
     ~InterpolationTool() {}
 
-    bool drawSketch() override;
+    void launchToolOperation() override;
 
   private:
     void draggingEvent();

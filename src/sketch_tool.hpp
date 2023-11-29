@@ -22,8 +22,8 @@ class SketchTool {
     // Reset all member variables.
     void resetSketch();
 
-    // Draw sketch according to the selected mode.
-    virtual bool drawSketch() { return false; };
+    // Run the tool 
+    virtual void launchToolOperation() {};
 
     /*
       Viewer functions
