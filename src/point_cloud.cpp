@@ -53,6 +53,10 @@ PointCloud::PointCloud(std::string filename) : octree(OctreeResolution) {
     // TODO: We need to estimate points' normals here
   }
 
+  // Initialize member variables
+  averageDistance = 0.0;
+  boundingSphereRadius = 0.0;
+
   // Update scaling
   scalePointCloud();
 
@@ -84,7 +88,7 @@ void PointCloud::updatePointCloud(bool clearPostEnv) {
   updateOctree();
 
   // Calculate average distance between the nearest points.
-  averageDistance = calcAverageDistance();
+  if (averageDistance == 0.0) averageDistance = calcAverageDistance();
 
   // Register Points
   pointCloud = polyscope::registerPointCloud(PointName, Vertices);
@@ -259,7 +263,7 @@ void PointCloud::updateOctree() {
 // Calculate average distance between the nearest points.
 double PointCloud::calcAverageDistance() {
   const int K = 2;
-  double averageDistance = 0.0;
+  averageDistance = 0.0;
   
   for (int i = 0; i < Vertices.rows(); i++) {
     // Search for the nearest neighbor.
