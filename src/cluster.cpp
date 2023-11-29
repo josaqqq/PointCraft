@@ -16,7 +16,10 @@
 // Execute clustering
 //  - eps: Clustering search distance
 //  - minPoints: Number of points required to make a point a core point
-std::vector<int> Clustering::executeClustering(double eps, int minPoints) {
+std::vector<int> Clustering::executeClustering(double eps, int minPoints, ClusteringMode mode) {
+  // Set ClusteringMode
+  clusteringMode = mode;
+
   // Add camera direction
   glm::dvec3 cameraDir = polyscope::view::screenCoordsToWorldRay(
     glm::vec2(polyscope::view::windowWidth/2, polyscope::view::windowHeight/2)
@@ -111,19 +114,35 @@ std::vector<int> Clustering::executeDBSCAN(double eps, int minPoints, int basisI
     labelToDepth[labels[i]] += depths[i];
   }
 
-  int minDepthLabel = -1;
+
+  int selectedLabel = -1;
+  int maxSize = 0;
   double minDepth = 1e5;
-  for (std::pair<int, double> i: labelToDepth) {
-    double averageDepth = i.second / labelToCount[i.first];
-    if (averageDepth < minDepth) {
-      minDepthLabel = i.first;
-      minDepth = averageDepth;
-    }
+  double averageDepth;
+  switch (clusteringMode) {
+    case CLUSTER_MAX_SIZE:
+      for (std::pair<int, int> i: labelToCount) {
+        if (i.second > maxSize) {
+          selectedLabel = i.first;
+          maxSize = i.second;
+        }
+      }
+      break;
+    case CLUSTER_MIN_DEPTH:
+      for (std::pair<int, double> i: labelToDepth) {
+        double averageDepth = i.second / labelToCount[i.first];
+        if (averageDepth < minDepth) {
+          selectedLabel = i.first;
+          minDepth = averageDepth;
+        }
+      }
+      break;
   }
+
 
   std::vector<int> basisPointsIndex;
   for (int i = 0; i < pointSize; i++) {
-    if (labels[i] == minDepthLabel) basisPointsIndex.push_back((*pointsIndex)[i]);
+    if (labels[i] == selectedLabel) basisPointsIndex.push_back((*pointsIndex)[i]);
   }
 
   // Visualize the depth of points with labels.

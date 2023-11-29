@@ -6,6 +6,11 @@
 #include "point_cloud.hpp"
 #include "plane.hpp"
 
+enum ClusteringMode {
+  CLUSTER_MAX_SIZE,
+  CLUSTER_MIN_DEPTH,
+};
+
 class Clustering {
   public:
     Clustering(
@@ -17,9 +22,11 @@ class Clustering {
     // Execute clustering
     //  - eps: Clustering search distance
     //  - minPoints: Number of points required to make a point a core point
-    std::vector<int> executeClustering(double eps, int minPoints);
+    std::vector<int> executeClustering(double eps, int minPoints, ClusteringMode mode);
 
   private:
+    ClusteringMode          clusteringMode;
+
     std::vector<int>        *pointsIndex;
     std::vector<glm::dvec3> *points;
     std::string             name;

@@ -268,7 +268,8 @@ void SketchTool::findBasisPoints(bool extendedSearch) {
   Clustering clustering(&candidatePointsIndex, &pointsInWorldCoord, "basis");
   basisPointsIndex = clustering.executeClustering(
     DBSCAN_SearchRange*pointCloud->getAverageDistance(),
-    DBSCAN_MinPoints
+    DBSCAN_MinPoints,
+    CLUSTER_MAX_SIZE
   );
 }
 
@@ -314,7 +315,8 @@ void SketchTool::findAllBasisPoints(bool extendedSearch) {
   Clustering clustering(&candidatePointsIndex, &pointsInWorldCoord, "basis");
   basisPointsIndex = clustering.executeClustering(
     DBSCAN_SearchRange*pointCloud->getAverageDistance(),
-    DBSCAN_MinPoints
+    DBSCAN_MinPoints,
+    CLUSTER_MIN_DEPTH
   );
 }
 

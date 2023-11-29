@@ -304,7 +304,8 @@ std::pair<Eigen::MatrixXd, Eigen::MatrixXd> InterpolationTool::filterSurfacePoin
   Clustering clustering(&candidatePointsIndex, &pointsInWorldCoord, "surface");
   std::vector<int> interpolatedPointsIndex = clustering.executeClustering(
     DBSCAN_SearchRange*getPointCloud()->getAverageDistance(),
-    DBSCAN_MinPoints
+    DBSCAN_MinPoints,
+    CLUSTER_MIN_DEPTH
   );
 
   int newPointsSize = interpolatedPointsIndex.size();
