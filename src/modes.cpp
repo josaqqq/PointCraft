@@ -27,6 +27,11 @@ void ModeSelector::enableModeSelection(ImGuiIO &io) {
     interpolationTool->initSketch();
   }
   ImGui::Text("   "); ImGui::SameLine();
+  if (ImGui::Button("MLS Spray Tool")) {
+    *currentMode = MODE_MLS_SPRAY;
+    mlsSprayTool->initSketch();
+  }
+  ImGui::Text("   "); ImGui::SameLine();
   if (ImGui::Button("Delete Tool")) {
     *currentMode = MODE_DELETE;
     deleteTool->initSketch();
@@ -40,6 +45,11 @@ void ModeSelector::enableModeSelection(ImGuiIO &io) {
     case MODE_INTERPOLATION:
       ImGui::Text("   Selected Tool: Interpolation Tool");
       interpolationTool->launchToolOperation();
+      *currentSurfaceMode = SURFACE_MODE_PSEUDO;
+      break;
+    case MODE_MLS_SPRAY:
+      ImGui::Text("   Selected Tool: MLS Spray Tool");
+      mlsSprayTool->launchToolOperation();
       *currentSurfaceMode = SURFACE_MODE_PSEUDO;
       break;
     case MODE_DELETE:

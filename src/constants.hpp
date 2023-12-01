@@ -51,6 +51,9 @@ const std::string TracePrefix = "Trace: ";
 const std::string CastPrefix = "Cast: ";
 const std::string SketchPrefix = "Sketch: ";
 
+const int MLS_SprayK = 10;
+const int MLS_SpraySize = 10;
+
 //
 //  Curve Network
 //

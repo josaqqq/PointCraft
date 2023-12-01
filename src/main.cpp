@@ -70,14 +70,21 @@ int main(int argc, char **argv) {
   // Initialize classes
   int currentMode;
   int currentSurfaceMode;
+
   PointCloud pointCloud(args::get(inFile));
+  
   InterpolationTool interpolationTool(&currentMode, &pointCloud);
+  MLSSprayTool      mlsSprayTool(&currentMode, &pointCloud);
   DeleteTool        deleteTool(&currentMode, &pointCloud);
+
   modeSelector = ModeSelector(
     &currentMode, 
     &currentSurfaceMode, 
+
     &pointCloud, 
+    
     &interpolationTool,
+    &mlsSprayTool,
     &deleteTool
   );
 
