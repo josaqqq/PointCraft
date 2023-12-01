@@ -19,24 +19,20 @@
 #include "plane.hpp"
 #include "constants.hpp"
 
-// Reconstruct surface with vertex and normal infromation
-std::pair<Eigen::MatrixXd, Eigen::MatrixXi> poissonReconstruct(
-  std::string name,
-  double averageDistance,
-  Eigen::MatrixXd &vertices,
-  Eigen::MatrixXd &normals
-) {
+// Reconstruct new surface with Vertices and Normals and return them.
+//  - averageDistance: used to decide the resolution of Poisson Surface Reconstruction
+std::pair<Eigen::MatrixXd, Eigen::MatrixXi> Surface::reconstructPoissonSurface(double averageDistance) {
   // Init point cloud
   pcl::PointCloud<pcl::PointNormal>::Ptr inputCloud(new pcl::PointCloud<pcl::PointNormal>);
-  inputCloud->points.resize(vertices.rows());
-  for (int i = 0; i < vertices.rows(); i++) {
-    inputCloud->points[i].x = vertices(i, 0);
-    inputCloud->points[i].y = vertices(i, 1);
-    inputCloud->points[i].z = vertices(i, 2);
+  inputCloud->points.resize(Vertices->rows());
+  for (int i = 0; i < Vertices->rows(); i++) {
+    inputCloud->points[i].x = (*Vertices)(i, 0);
+    inputCloud->points[i].y = (*Vertices)(i, 1);
+    inputCloud->points[i].z = (*Vertices)(i, 2);
 
-    inputCloud->points[i].normal_x = normals(i, 0);
-    inputCloud->points[i].normal_y = normals(i, 1);
-    inputCloud->points[i].normal_z = normals(i, 2);
+    inputCloud->points[i].normal_x = (*Normals)(i, 0);
+    inputCloud->points[i].normal_y = (*Normals)(i, 1);
+    inputCloud->points[i].normal_z = (*Normals)(i, 2);
   }
 
   // Calculate bounding box size
@@ -44,13 +40,13 @@ std::pair<Eigen::MatrixXd, Eigen::MatrixXi> poissonReconstruct(
   double min_x = INF, max_x = -INF;
   double min_y = INF, max_y = -INF;
   double min_z = INF, max_z = -INF;
-  for (int i = 0; i < vertices.rows(); i++) {
-    min_x = std::min(min_x, vertices(i, 0));
-    max_x = std::max(max_x, vertices(i, 0));
-    min_y = std::min(min_y, vertices(i, 1));
-    max_y = std::max(max_y, vertices(i, 1));
-    min_z = std::min(min_z, vertices(i, 2));
-    max_z = std::max(max_z, vertices(i, 2));
+  for (int i = 0; i < Vertices->rows(); i++) {
+    min_x = std::min(min_x, (*Vertices)(i, 0));
+    max_x = std::max(max_x, (*Vertices)(i, 0));
+    min_y = std::min(min_y, (*Vertices)(i, 1));
+    max_y = std::max(max_y, (*Vertices)(i, 1));
+    min_z = std::min(min_z, (*Vertices)(i, 2));
+    max_z = std::max(max_z, (*Vertices)(i, 2));
   }
   // Grid the bounding box with voxels ((averageDistance/2.0)^3)
   double voxelEdge = averageDistance / 2.0;
@@ -98,7 +94,7 @@ std::pair<Eigen::MatrixXd, Eigen::MatrixXi> poissonReconstruct(
   }
 
   // Register mesh
-  polyscope::SurfaceMesh *poissonMesh = polyscope::registerSurfaceMesh(name, meshV, meshF);
+  polyscope::SurfaceMesh *poissonMesh = polyscope::registerSurfaceMesh(Name, meshV, meshF);
   poissonMesh->setSurfaceColor(PoissonColor);
   poissonMesh->setMaterial(PoissonMaterial);
   poissonMesh->setEnabled(PoissonEnabled);
@@ -109,8 +105,8 @@ std::pair<Eigen::MatrixXd, Eigen::MatrixXi> poissonReconstruct(
   std::cout << "\tMax Depth\t->\t"            << maxDepth                     << std::endl;
   std::cout << "\tVertex num\t->\t"           << meshVertices->points.size()  << std::endl;
   std::cout << "\tFace num\t->\t"             << mesh.polygons.size()         << std::endl;
-  std::cout << "\tInput Vertices Size\t->\t"  << vertices.rows()              << std::endl;
-  std::cout << "\tInput Normals Size\t->\t"   << normals.rows()               << std::endl;
+  std::cout << "\tInput Vertices Size\t->\t"  << Vertices->rows()             << std::endl;
+  std::cout << "\tInput Normals Size\t->\t"   << Normals->rows()              << std::endl;
   std::cout << "\tOutput Vertices Size\t->\t" << meshV.rows()                 << std::endl;
   std::cout << "\tOutput Faces Size\t->\t"    << meshF.rows()                 << std::endl;
   std::cout                                                                   << std::endl;
@@ -118,18 +114,18 @@ std::pair<Eigen::MatrixXd, Eigen::MatrixXi> poissonReconstruct(
   return { meshV, meshF };
 }
 
-// Smoothing vertices with MLS
-std::pair<Eigen::MatrixXd, Eigen::MatrixXd> mlsSmoothing(
-  std::string name,
-  Eigen::MatrixXd &vertices
-) {
+// Compute approximate surface using Vertices and Normals.
+// Then project points randomly onto the surface and return the projected points.
+//  - averageDistance:  the range of the randomly added points.
+//  - pointSize:        the size of randomly added points.
+std::pair<Eigen::MatrixXd, Eigen::MatrixXd> Surface::projectMLSSurface(double averageDistance, int pointSize) {
   // Init point cloud
   pcl::PointCloud<pcl::PointXYZ>::Ptr inputCloud(new pcl::PointCloud<pcl::PointXYZ>);
-  inputCloud->points.resize(vertices.rows());
-  for (int i = 0; i < vertices.rows(); i++) {
-    inputCloud->points[i].x = vertices(i, 0);
-    inputCloud->points[i].y = vertices(i, 1);
-    inputCloud->points[i].z = vertices(i, 2);
+  inputCloud->points.resize(Vertices->rows());
+  for (int i = 0; i < Vertices->rows(); i++) {
+    inputCloud->points[i].x = (*Vertices)(i, 0);
+    inputCloud->points[i].y = (*Vertices)(i, 1);
+    inputCloud->points[i].z = (*Vertices)(i, 2);
   } 
 
   // Create a KD-Tree 
@@ -148,126 +144,46 @@ std::pair<Eigen::MatrixXd, Eigen::MatrixXd> mlsSmoothing(
   pcl::PointCloud<pcl::PointNormal>::Ptr outputCloud(new pcl::PointCloud<pcl::PointNormal>);
   mls.process(*outputCloud);
 
-  Eigen::MatrixXd Vertices(outputCloud->size(), 3);
-  Eigen::MatrixXd Normals(outputCloud->size(), 3);
+  Eigen::MatrixXd newV(outputCloud->size(), 3);
+  Eigen::MatrixXd newN(outputCloud->size(), 3);
   glm::dvec3 averageNormal = glm::dvec3(0.0, 0.0, 0.0);
   for (int i = 0; i < outputCloud->size(); i++) {
-    Vertices.row(i) << 
+    newV.row(i) << 
       outputCloud->points[i].x,
       outputCloud->points[i].y,
       outputCloud->points[i].z;
     
-    Normals.row(i) <<
+    newN.row(i) <<
       outputCloud->points[i].normal_x,
       outputCloud->points[i].normal_y,
       outputCloud->points[i].normal_z;
     
-    averageNormal += glm::dvec3(Normals(i, 0), Normals(i, 1), Normals(i, 2));
+    averageNormal += glm::dvec3(newN(i, 0), newN(i, 1), newN(i, 2));
   }
   averageNormal /= (double)outputCloud->size();
   
   // If the averageNormal is the same direction with cameraDir, flip the normals
   const glm::dvec3 cameraDir  = polyscope::view::screenCoordsToWorldRay(glm::vec2(polyscope::view::windowWidth/2, polyscope::view::windowHeight/2));
-  if (glm::dot(averageNormal, cameraDir) > 0) Normals *= -1;
+  if (glm::dot(averageNormal, cameraDir) > 0) newN *= -1;
 
-  polyscope::PointCloud *mlsPoints = polyscope::registerPointCloud(name, Vertices);
+  polyscope::PointCloud *mlsPoints = polyscope::registerPointCloud(Name, newV);
   mlsPoints->setPointColor(PointColor);
   mlsPoints->setPointRadius(PointRadius);
   mlsPoints->setEnabled(PointEnabled);
 
-  polyscope::PointCloudVectorQuantity *mlsVectorQuantity = mlsPoints->addVectorQuantity(NormalName, Normals);
+  polyscope::PointCloudVectorQuantity *mlsVectorQuantity = mlsPoints->addVectorQuantity(NormalName, newN);
   mlsVectorQuantity->setVectorColor(NormalColor);
   mlsVectorQuantity->setVectorLengthScale(NormalLength);
   mlsVectorQuantity->setVectorRadius(NormalRadius);
   mlsVectorQuantity->setEnabled(NormalEnabled);
 
-  return { Vertices, Normals };
-}
-
-void greedyProjection(
-  std::string name,
-  Eigen::MatrixXd &vertices,
-  Eigen::MatrixXd &normals
-) {
-  // Init point cloud
-  pcl::PointCloud<pcl::PointNormal>::Ptr inputCloud(new pcl::PointCloud<pcl::PointNormal>);
-  inputCloud->points.resize(vertices.rows());
-  for (int i = 0; i < vertices.rows(); i++) {
-    inputCloud->points[i].x = vertices(i, 0);
-    inputCloud->points[i].y = vertices(i, 1);
-    inputCloud->points[i].z = vertices(i, 2);
-    
-    inputCloud->points[i].normal_x = normals(i, 0);
-    inputCloud->points[i].normal_y = normals(i, 1);
-    inputCloud->points[i].normal_z = normals(i, 2);
-  }
-
-  // Initialize kd-tree
-  pcl::search::KdTree<pcl::PointNormal>::Ptr kdTree(new pcl::search::KdTree<pcl::PointNormal>);
-  kdTree->setInputCloud(inputCloud);
-
-  // Initialize greedy projection object
-  pcl::GreedyProjectionTriangulation<pcl::PointNormal> gpt;
-  gpt.setInputCloud(inputCloud);
-  gpt.setSearchMethod(kdTree);
-
-  // Set parameters
-  gpt.setSearchRadius(GreedyProjSearchRadius);
-  gpt.setMu(GreedyProjMu);
-  gpt.setMaximumNearestNeighbors(GreedyProjMaxNN);
-  gpt.setMaximumSurfaceAngle(GreedyProjMaxSurfaceAngle);
-  gpt.setMinimumAngle(GreedyProjMinAngle);
-  gpt.setMaximumAngle(GreedyProjMaxAngle);
-  gpt.setNormalConsistency(GreedyProjNormalConsistency);
-
-  // Reconstruct surface
-  pcl::PolygonMesh mesh;
-  gpt.reconstruct(mesh);
-
-  // Extract vertex information
-  pcl::PointCloud<pcl::PointXYZ>::Ptr meshVertices(new pcl::PointCloud<pcl::PointXYZ>);
-  pcl::fromPCLPointCloud2(mesh.cloud, *meshVertices);
-  Eigen::MatrixXd meshV(meshVertices->size(), 3);
-
-  for (int i = 0; i < meshVertices->size(); i++) {
-    meshV.row(i) << 
-      meshVertices->points[i].x,
-      meshVertices->points[i].y,
-      meshVertices->points[i].z;
-  }
-
-  // Extract face information
-  std::vector<pcl::Vertices> meshFaces = mesh.polygons;
-  Eigen::MatrixXi meshF(meshFaces.size(), 3);
-
-  for (int i = 0; i < meshFaces.size(); i++) {
-    pcl::Vertices face = meshFaces[i];
-    assert(face.vertices.size() == 3);
-    for (int j = 0; j < face.vertices.size(); j++) {
-      meshF(i, j) = face.vertices[j];
-    }
-  }
-
-  // Output results
-  std::cout << "\nFinished Greedy Projection Triangulation!" << std::endl;
-  std::cout << "\tVertex num\t->\t" << meshVertices->points.size() << std::endl;
-  std::cout << "\tFace num\t->\t" << mesh.polygons.size() << std::endl;
-
-  // Register mesh
-  polyscope::SurfaceMesh *greedyMesh = polyscope::registerSurfaceMesh(name, meshV, meshF);
-  greedyMesh->setSurfaceColor(GreedyProjColor);
-  greedyMesh->setMaterial(GreedyProjMaterial);
-  greedyMesh->setEnabled(GreedyProjEnabled);
+  return { newV, newN };
 }
 
 // Show hexagons for each vertex as a pseudo surface.
-void pseudoSurface(
-  std::string name,
-  double averageDistance,
-  Eigen::MatrixXd &vertices,
-  Eigen::MatrixXd &normals
-) {
-  int N = vertices.rows();
+//  - averageDistance:  the radius of the shown hexagon.
+void Surface::showPseudoSurface(double averageDistance) {
+  int N = Vertices->rows();
   Eigen::MatrixXd meshV(N*7, 3);
   Eigen::MatrixXd meshF(N*6, 3);
 
@@ -278,8 +194,8 @@ void pseudoSurface(
 
   // Register each hexagon
   for (int i = 0; i < N; i++) {
-    glm::dvec3 o = glm::dvec3(vertices(i, 0), vertices(i, 1), vertices(i, 2));
-    glm::dvec3 n = glm::dvec3(normals(i, 0), normals(i, 1), normals(i, 2));
+    glm::dvec3 o = glm::dvec3((*Vertices)(i, 0), (*Vertices)(i, 1), (*Vertices)(i, 2));
+    glm::dvec3 n = glm::dvec3((*Normals)(i, 0), (*Normals)(i, 1), (*Normals)(i, 2));
 
     Plane plane(o, n);
     meshV.row(i) << o.x, o.y, o.z;
@@ -299,7 +215,7 @@ void pseudoSurface(
   }
 
   // Register mesh
-  polyscope::SurfaceMesh *pseudoSurface = polyscope::registerSurfaceMesh(name, meshV, meshF);
+  polyscope::SurfaceMesh *pseudoSurface = polyscope::registerSurfaceMesh(Name, meshV, meshF);
   pseudoSurface->setSurfaceColor(PseudoSurfaceColor);
   pseudoSurface->setMaterial(PseudoSurfaceMaterial);
 }

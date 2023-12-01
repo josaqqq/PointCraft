@@ -110,7 +110,8 @@ void PointCloud::updatePointCloud(bool clearPostEnv) {
   std::cout << "\tAverage Distance\t->\t"   << averageDistance    << std::endl;
 
   // Show Pseudo Surface
-  pseudoSurface(PseudoSurfaceName, averageDistance, Vertices, Normals);
+  Surface pseudoSurface(PseudoSurfaceName, &Vertices, &Normals);
+  pseudoSurface.showPseudoSurface(averageDistance);
 }
 
 // Add vertices from the positions and normals

@@ -82,8 +82,8 @@ int main(int argc, char **argv) {
   );
 
   // Reconstruct Surfaces
-  poissonReconstruct(PoissonName, pointCloud.getAverageDistance(), pointCloud.Vertices, pointCloud.Normals);
-  greedyProjection(GreedyProjName, pointCloud.Vertices, pointCloud.Normals);
+  Surface poissonSurface(PoissonName, &pointCloud.Vertices, &pointCloud.Normals);
+  poissonSurface.reconstructPoissonSurface(pointCloud.getAverageDistance());
 
   // Add the callback
   polyscope::state::userCallback = callback;

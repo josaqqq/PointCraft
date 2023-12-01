@@ -66,12 +66,8 @@ void InterpolationTool::releasedEvent() {
     psrNormals(i, 1) = getPointCloud()->Normals(idx, 1);
     psrNormals(i, 2) = getPointCloud()->Normals(idx, 2);
   }
-  std::tie(psrPoints, psrFaces) = poissonReconstruct(
-    "Interpolation: PSR",
-    getPointCloud()->getAverageDistance(),
-    psrPoints,
-    psrNormals  
-  );
+  Surface poissonSurface("Interpolation: PSR", &psrPoints, &psrNormals);
+  std::tie(psrPoints, psrFaces) = poissonSurface.reconstructPoissonSurface(getPointCloud()->getAverageDistance());
   if (psrPoints.rows() == 0) {
     std::cout << "WARNING: No mesh was reconstructed with Poisson Surface Reconstruction." << std::endl;
     removeCurveNetworkLine(SketchPrefix);

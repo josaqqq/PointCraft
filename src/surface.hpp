@@ -3,31 +3,30 @@
 #include <string>
 #include <Eigen/Dense>
 
-// Reconstruct surface with vertex and normal infromation.
-std::pair<Eigen::MatrixXd, Eigen::MatrixXi> poissonReconstruct(
-  std::string name,
-  double averageDistance,
-  Eigen::MatrixXd &vertices,
-  Eigen::MatrixXd &normals
-);
+class Surface {
+  public:
+    Surface(
+      std::string Name,
+      Eigen::MatrixXd *Vertices,
+      Eigen::MatrixXd *Normals
+    ) : Name(Name), Vertices(Vertices), Normals(Normals) {}
 
-// Smooth vertices with MLS.
-std::pair<Eigen::MatrixXd, Eigen::MatrixXd> mlsSmoothing(
-  std::string name,
-  Eigen::MatrixXd &vertices
-);
+    // Reconstruct new surface with Vertices and Normals.
+    //  - averageDistance: used to decide the resolution of Poisson Surface Reconstruction
+    std::pair<Eigen::MatrixXd, Eigen::MatrixXi> reconstructPoissonSurface(double averageDistance);
 
-// Triangulate point cloud greedily.
-void greedyProjection(
-  std::string name,
-  Eigen::MatrixXd &vertices,
-  Eigen::MatrixXd &normals
-);
+    // Compute approximate surface using Vertices and Normals.
+    // Then project points randomly onto the surface and return the projected points.
+    //  - averageDistance:  the range of the randomly added points.
+    //  - pointSize:        the size of randomly added points.
+    std::pair<Eigen::MatrixXd, Eigen::MatrixXd> projectMLSSurface(double averageDistance, int pointSize);
 
-// Show hexagons for each vertex as a pseudo surface.
-void pseudoSurface(
-  std::string name,
-  double averageDistance,
-  Eigen::MatrixXd &vertices,
-  Eigen::MatrixXd &normals
-);
+    // Show hexagons for each vertex as a pseudo surface.
+    //  - averageDistance:  the radius of the shown hexagon.
+    void showPseudoSurface(double averageDistance);
+
+  private:
+    std::string     Name;
+    Eigen::MatrixXd *Vertices;
+    Eigen::MatrixXd *Normals; 
+};
