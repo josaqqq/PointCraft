@@ -97,11 +97,11 @@ class SketchTool {
     std::vector<glm::dvec2>*  getMappedBasisConvexHull();
 
   private:
-    int *currentMode;         // Current selected Mode
+    int *currentMode;         // Current selected mode
 
     PointCloud *pointCloud;   // Registered point cloud
 
-    double      screenDist;    // Distance between screen and camera position
+    double      screenDist;   // Distance between screen and camera position
     glm::dvec3  cameraOrig;   // Camera position
     glm::dvec3  cameraDir;    // Camera direction
     Plane       screen;       // Plane on nearClip
