@@ -13,14 +13,11 @@ RBF::RBF(
 
   // initialize basisPoints
   basisPoints.resize(sampleSize);
+  std::vector<glm::dvec3> *verticesPtr = pointCloud->getVertices();
   for (int i = 0; i < sampleSize; i++) {
     int idx = (*basisPointsIndex)[i];
 
-    basisPoints[i] = glm::dvec3(
-      pointCloud->Vertices(idx, 0),
-      pointCloud->Vertices(idx, 1),
-      pointCloud->Vertices(idx, 2)
-    );
+    basisPoints[i] = (*verticesPtr)[idx];
   }
 
   // Calculate average depth from screen to basisPoints

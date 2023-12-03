@@ -16,8 +16,8 @@ class InterpolationTool : public SketchTool {
 
     // Register new vertices and normals as point cloud
     void renderInterpolatedPoints(
-      Eigen::MatrixXd &newV,
-      Eigen::MatrixXd &newN
+      std::vector<glm::dvec3> &newV,
+      std::vector<glm::dvec3> &newN
     );
 
     // Filter the reconstructed surface
@@ -27,8 +27,8 @@ class InterpolationTool : public SketchTool {
     //    - Only points that their normals are directed to cameraOrig.
     //    - If the candidate point is one of basisPoints, then skip it.
     //  - Detect depth with DBSCAN
-    std::pair<Eigen::MatrixXd, Eigen::MatrixXd> filterSurfacePoints(
-      Eigen::MatrixXd &surfacePoints,
-      Eigen::MatrixXi &surfaceFaces
+    std::pair<std::vector<glm::dvec3>, std::vector<glm::dvec3>> filterSurfacePoints(
+      std::vector<glm::dvec3> &surfacePoints,
+      std::vector<std::vector<size_t>> &surfaceFaces
     );
 };

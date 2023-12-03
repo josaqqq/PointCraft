@@ -22,7 +22,7 @@ class Clustering {
     // Execute clustering
     //  - eps: Clustering search distance
     //  - minPoints: Number of points required to make a point a core point
-    std::vector<int> executeClustering(double eps, int minPoints, ClusteringMode mode);
+    std::vector<int> executeClustering(double eps, size_t minPoints, ClusteringMode mode);
 
   private:
     ClusteringMode          clusteringMode;
@@ -35,7 +35,7 @@ class Clustering {
     std::vector<glm::dvec3> orthogonalBases;
 
     // Execute DBSCAN and return selected basis points's index
-    std::vector<int> executeDBSCAN(double eps, int minPoints, int basisIndex);
+    std::vector<int> executeDBSCAN(double eps, size_t minPoints, int basisIndex);
 
     void visualizeCluster(
       int basisIndex,

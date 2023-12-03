@@ -56,8 +56,8 @@ void MLSSprayTool::displayAddedPoints() {
 void MLSSprayTool::releasedEvent() {
   if (getSketchPoints()->size() == 0) return;
 
-  Eigen::MatrixXd newV;
-  Eigen::MatrixXd newN;
+  std::vector<glm::dvec3> newV;
+  std::vector<glm::dvec3> newN;
 
   // Add the interpolated points
   getPointCloud()->addPoints(newV, newN);
@@ -69,7 +69,7 @@ void MLSSprayTool::releasedEvent() {
 // Search pointCloud for nearest neighbors.
 //  - center: center of search range
 //  - K_size: the max number of nearest neighbors
-Eigen::MatrixXd MLSSprayTool::searchKNeighbors(glm::dvec3 center, int K_size) {
-  Eigen::MatrixXd dummy;
+std::vector<glm::dvec3> MLSSprayTool::searchKNeighbors(glm::dvec3 center, int K_size) {
+  std::vector<glm::dvec3> dummy;
   return dummy;
 }

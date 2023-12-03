@@ -16,7 +16,7 @@
 // Execute clustering
 //  - eps: Clustering search distance
 //  - minPoints: Number of points required to make a point a core point
-std::vector<int> Clustering::executeClustering(double eps, int minPoints, ClusteringMode mode) {
+std::vector<int> Clustering::executeClustering(double eps, size_t minPoints, ClusteringMode mode) {
   // Set ClusteringMode
   clusteringMode = mode;
 
@@ -27,7 +27,7 @@ std::vector<int> Clustering::executeClustering(double eps, int minPoints, Cluste
   orthogonalBases.push_back(cameraDir);
 
   // orthogonalBases must be directed to the camera direction
-  for (int i = 0; i < orthogonalBases.size(); i++) {
+  for (size_t i = 0; i < orthogonalBases.size(); i++) {
     if (glm::dot(cameraDir, orthogonalBases[i]) < 0.0) {
       orthogonalBases[i] *= -1.0;
     }
@@ -35,7 +35,7 @@ std::vector<int> Clustering::executeClustering(double eps, int minPoints, Cluste
 
   // Execute DBSCAN for each basis
   std::vector<int> selectedCluster;
-  for (int i = 0; i < orthogonalBases.size(); i++) {
+  for (size_t i = 0; i < orthogonalBases.size(); i++) {
     selectedCluster = executeDBSCAN(eps, minPoints, i);
   }
 
@@ -44,7 +44,7 @@ std::vector<int> Clustering::executeClustering(double eps, int minPoints, Cluste
 
 // Execute DBSCAN and return selected basis points
 // implemented referencing https://en.wikipedia.org/wiki/DBSCAN
-std::vector<int> Clustering::executeDBSCAN(double eps, int minPoints, int basisIndex) {
+std::vector<int> Clustering::executeDBSCAN(double eps, size_t minPoints, int basisIndex) {
   // Initialize points information
   int pointSize = pointsIndex->size();
   std::vector<double> depths(pointSize);
@@ -178,8 +178,8 @@ void Clustering::visualizeCluster(
   }
 
   // Register point and color information
-  std::vector<std::vector<double>> labelPoints;
-  std::vector<std::vector<double>> labelColors;
+  std::vector<glm::dvec3> labelPoints;
+  std::vector<glm::dvec3> labelColors;
   for (auto i: labelToIndices) {
     int label = i.first;
 
@@ -189,12 +189,12 @@ void Clustering::visualizeCluster(
       glm::dvec3 basis = orthogonalBases[basisIndex];
       glm::dvec3 casted_p = glm::dot(basis, p)*basis;
 
-      labelPoints.push_back({ p.x, p.y, p.z });
-      labelPoints.push_back({ casted_p.x, casted_p.y, casted_p.z });
-      
+      labelPoints.push_back(p);
+      labelPoints.push_back(casted_p);
+
       glm::dvec3 col = labelToColors[label];
-      labelColors.push_back({ col.x, col.y, col.z });
-      labelColors.push_back({ col.x, col.y, col.z });
+      labelColors.push_back(col);
+      labelColors.push_back(col);
     }
   }
 

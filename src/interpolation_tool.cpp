@@ -53,22 +53,20 @@ void InterpolationTool::releasedEvent() {
 
   // Calculate approximate surface with Poisson Surface Reconstruction.
   int basisPointsSize = getBasisPointsIndex()->size();
-  Eigen::MatrixXd psrPoints(basisPointsSize, 3);
-  Eigen::MatrixXd psrNormals(basisPointsSize, 3);
-  Eigen::MatrixXi psrFaces;
+  std::vector<glm::dvec3> psrPoints(basisPointsSize);
+  std::vector<glm::dvec3> psrNormals(basisPointsSize);
+  std::vector<std::vector<size_t>> psrFaces;
+
+  std::vector<glm::dvec3> *verticesPtr = getPointCloud()->getVertices();
+  std::vector<glm::dvec3> *normalsPtr = getPointCloud()->getNormals();
   for (int i = 0; i < basisPointsSize; i++) {
     int idx = (*getBasisPointsIndex())[i];
-    psrPoints(i, 0) = getPointCloud()->Vertices(idx, 0);
-    psrPoints(i, 1) = getPointCloud()->Vertices(idx, 1);
-    psrPoints(i, 2) = getPointCloud()->Vertices(idx, 2);
-
-    psrNormals(i, 0) = getPointCloud()->Normals(idx, 0);
-    psrNormals(i, 1) = getPointCloud()->Normals(idx, 1);
-    psrNormals(i, 2) = getPointCloud()->Normals(idx, 2);
+    psrPoints[i] = (*verticesPtr)[idx];
+    psrNormals[i] = (*normalsPtr)[idx];
   }
   Surface poissonSurface("Interpolation: PSR", &psrPoints, &psrNormals);
   std::tie(psrPoints, psrFaces) = poissonSurface.reconstructPoissonSurface(getPointCloud()->getAverageDistance());
-  if (psrPoints.rows() == 0) {
+  if (psrPoints.size() == 0) {
     std::cout << "WARNING: No mesh was reconstructed with Poisson Surface Reconstruction." << std::endl;
     removeCurveNetworkLine(SketchPrefix);
     resetSketch();
@@ -76,9 +74,9 @@ void InterpolationTool::releasedEvent() {
   }
 
   // Filter the reconstructed surface
-  Eigen::MatrixXd newV, newN;
+  std::vector<glm::dvec3> newV, newN;
   std::tie(newV, newN) = filterSurfacePoints(psrPoints, psrFaces);
-  if (newV.rows() == 0) {
+  if (newV.size() == 0) {
     std::cout << "WARNING: No surface point was selected after filtering method." << std::endl;
     removeCurveNetworkLine(SketchPrefix);
     resetSketch();
@@ -100,8 +98,8 @@ void InterpolationTool::releasedEvent() {
 
 // Register new vertices and normals as point cloud
 void InterpolationTool::renderInterpolatedPoints(
-  Eigen::MatrixXd &newV, 
-  Eigen::MatrixXd &newN
+  std::vector<glm::dvec3> &newV,
+  std::vector<glm::dvec3> &newN
 ) {
   polyscope::PointCloud* interpolatedCloud = polyscope::registerPointCloud("Interpolated Points", newV);
   interpolatedCloud->setPointColor(glm::dvec3(1.0, 0.0, 0.0));
@@ -123,12 +121,12 @@ void InterpolationTool::renderInterpolatedPoints(
 //    - Only points that their normals are directed to cameraOrig.
 //    - If the candidate point is one of basisPoints, then skip it.
 //  - Detect depth with DBSCAN
-std::pair<Eigen::MatrixXd, Eigen::MatrixXd> InterpolationTool::filterSurfacePoints(
-  Eigen::MatrixXd &surfacePoints,
-  Eigen::MatrixXi &surfaceFaces
+std::pair<std::vector<glm::dvec3>, std::vector<glm::dvec3>> InterpolationTool::filterSurfacePoints(
+  std::vector<glm::dvec3> &surfacePoints,
+  std::vector<std::vector<size_t>> &surfaceFaces
 ) {
-  const int surfacePointsSize = surfacePoints.rows();
-  const int surfaceFacesSize = surfaceFaces.rows();
+  const int surfacePointsSize = surfacePoints.size();
+  const int surfaceFacesSize = surfaceFaces.size();
   const int basisPointsSize = getBasisPointsIndex()->size();
 
   // Preprocessing: Calculate the points' average normals 
@@ -137,25 +135,13 @@ std::pair<Eigen::MatrixXd, Eigen::MatrixXd> InterpolationTool::filterSurfacePoin
   // Normals of surfacePoints
   for (int i = 0; i < surfaceFacesSize; i++) {
     // Calculate the normal of the triangle
-    glm::dvec3 u = glm::dvec3(
-      surfacePoints(surfaceFaces(i, 0), 0), 
-      surfacePoints(surfaceFaces(i, 0), 1), 
-      surfacePoints(surfaceFaces(i, 0), 2)
-    );
-    glm::dvec3 v = glm::dvec3(
-      surfacePoints(surfaceFaces(i, 1), 0), 
-      surfacePoints(surfaceFaces(i, 1), 1), 
-      surfacePoints(surfaceFaces(i, 1), 2)
-    );
-    glm::dvec3 w = glm::dvec3(
-      surfacePoints(surfaceFaces(i, 2), 0), 
-      surfacePoints(surfaceFaces(i, 2), 1), 
-      surfacePoints(surfaceFaces(i, 2), 2)
-    );
+    glm::dvec3 u = surfacePoints[surfaceFaces[i][0]];
+    glm::dvec3 v = surfacePoints[surfaceFaces[i][1]];
+    glm::dvec3 w = surfacePoints[surfaceFaces[i][2]];
 
     glm::dvec3 n = glm::normalize(glm::cross(v - u, w - u));
     for (int j = 0; j < 3; j++) {
-      int vertexIdx = surfaceFaces(i, j);
+      int vertexIdx = surfaceFaces[i][j];
       indexToNormalSum[vertexIdx] += n;
       indexToAdjacentCount[vertexIdx]++;
     }
@@ -167,11 +153,7 @@ std::pair<Eigen::MatrixXd, Eigen::MatrixXd> InterpolationTool::filterSurfacePoin
   std::vector<glm::dvec3> pointsCastedOntoScreen;
   // Cast surface points onto screen
   for (int i = 0; i < surfacePointsSize; i++) {
-    glm::dvec3 p = glm::dvec3(
-      surfacePoints(i, 0),
-      surfacePoints(i, 1),
-      surfacePoints(i, 2)
-    );
+    glm::dvec3 p = surfacePoints[i];
     glm::dvec3 pn = indexToNormalSum[i]/(double)indexToAdjacentCount[i];
     
     // Cast a ray from p to cameraOrig onto screen.
@@ -184,18 +166,12 @@ std::pair<Eigen::MatrixXd, Eigen::MatrixXd> InterpolationTool::filterSurfacePoin
     pointsCastedOntoScreen.push_back(getScreen()->mapCoordinates(hitInfo.pos));
   }
   // Cast basis points onto screen
+  std::vector<glm::dvec3> *verticesPtr = getPointCloud()->getVertices();
+  std::vector<glm::dvec3> *normalsPtr = getPointCloud()->getNormals();
   for (int i = 0; i < basisPointsSize; i++) {
     int pointCloudIdx = (*getBasisPointsIndex())[i];
-    glm::dvec3 p = glm::dvec3(
-      getPointCloud()->Vertices(pointCloudIdx, 0),
-      getPointCloud()->Vertices(pointCloudIdx, 1),
-      getPointCloud()->Vertices(pointCloudIdx, 2)
-    );
-    glm::dvec3 pn = glm::dvec3(
-      getPointCloud()->Normals(pointCloudIdx, 0),
-      getPointCloud()->Normals(pointCloudIdx, 1),
-      getPointCloud()->Normals(pointCloudIdx, 2)
-    );
+    glm::dvec3 p = (*verticesPtr)[pointCloudIdx];
+    glm::dvec3 pn = (*normalsPtr)[pointCloudIdx];
 
     // Cast a ray from p to cameraOrig onto screen.
     Ray ray(p, getCameraOrig());
@@ -235,7 +211,7 @@ std::pair<Eigen::MatrixXd, Eigen::MatrixXd> InterpolationTool::filterSurfacePoin
 
   const double castedAverageDist = calcCastedAverageDist();
   std::vector<int> candidatePointsIndex;
-  std::vector<std::vector<double>> hasCloserNeighborPoints;
+  std::vector<glm::dvec3> hasCloserNeighborPoints;
   for (double x = min_x; x < max_x; x += castedAverageDist*2.0) {
     for (double y = min_y; y < max_y; y += castedAverageDist*2.0) {
       if (!insideSketch(x, y)) continue;
@@ -281,11 +257,7 @@ std::pair<Eigen::MatrixXd, Eigen::MatrixXd> InterpolationTool::filterSurfacePoin
           glm::dvec3 pn = normalsInWorldCoord[hitPointIdx];
           if (glm::dot(pn, getCameraDir()) >= 0.0) continue;
 
-          hasCloserNeighborPoints.push_back({
-            pointsInWorldCoord[hitPointIdx].x,
-            pointsInWorldCoord[hitPointIdx].y,
-            pointsInWorldCoord[hitPointIdx].z
-          });
+          hasCloserNeighborPoints.push_back(pointsInWorldCoord[hitPointIdx]);
         }
       }
     }
@@ -305,15 +277,15 @@ std::pair<Eigen::MatrixXd, Eigen::MatrixXd> InterpolationTool::filterSurfacePoin
   );
 
   int newPointsSize = interpolatedPointsIndex.size();
-  Eigen::MatrixXd newV(newPointsSize, 3);
-  Eigen::MatrixXd newN(newPointsSize, 3);
+  std::vector<glm::dvec3> newV(newPointsSize);
+  std::vector<glm::dvec3> newN(newPointsSize);
   for (int i = 0; i < newPointsSize; i++) {
     int idx = interpolatedPointsIndex[i];
     glm::dvec3 p = pointsInWorldCoord[idx];
     glm::dvec3 pn = normalsInWorldCoord[idx];
 
-    newV.row(i) << p.x, p.y, p.z;
-    newN.row(i) << pn.x, pn.y, pn.z;
+    newV[i] = p;
+    newN[i] = pn;
   }
 
   return { newV, newN };

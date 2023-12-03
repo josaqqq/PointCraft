@@ -63,7 +63,7 @@ void ModeSelector::enableModeSelection(ImGuiIO &io) {
   ImGui::Text("\nSurface Reconstruction");
   ImGui::Text("   "); ImGui::SameLine();
   if (ImGui::Button("Reconstruct Poisson Surface")) {
-    Surface poissonSurface(PoissonName, &(pointCloud->Vertices), &(pointCloud->Normals));
+    Surface poissonSurface(PoissonName, pointCloud->getVertices(), pointCloud->getNormals());
     poissonSurface.reconstructPoissonSurface(pointCloud->getAverageDistance());
     *currentSurfaceMode = SURFACE_MODE_POISSON;
   }

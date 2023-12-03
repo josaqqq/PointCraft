@@ -19,14 +19,26 @@ PointCloud::PointCloud(std::string filename) : octree(OctreeResolution) {
   if (filename.length() < 3) exit(1);
   std::string fileFormat = filename.substr(filename.size() - 3);
 
+  Eigen::MatrixXd _V;      // double matrix of vertex positions
+  Eigen::MatrixXi _F;      // list of face indices into vertex positions
+  Eigen::MatrixXd _N;      // double matrix of corner normals
+  Eigen::MatrixXd _TC;     // double matrix of texture coordinates
+  Eigen::MatrixXi _FTC;    // list of face indices into vertex texture coordinates
+  Eigen::MatrixXi _FN;     // list of face indices into vertex normals
+
   if (fileFormat == "obj") {
     // Read .obj
-    Eigen::MatrixXi _F;  // list of face indices into vertex positions
-    Eigen::MatrixXd _TC;     // double matrix of texture coordinates
-    Eigen::MatrixXi _FTC;    // list of face indices into vertex texture coordinates
-    Eigen::MatrixXi _FN;     // list of face indices into vertex normals
-    igl::readOBJ(filename, Vertices, _TC, Normals, _F, _FTC, _FN);
-    if (Normals.rows() == 0) std::cerr << "ERROR: Please include normal information." << std::endl;
+    igl::readOBJ(filename, _V, _TC, _N, _F, _FTC, _FN);
+    if (_N.rows() == 0) std::cerr << "ERROR: Please include normal information." << std::endl;
+
+    // Initialize Vertices, Normals
+    assert(_V.rows() == _N.rows());
+    Vertices.resize(_V.rows());
+    Normals.resize(_N.rows());
+    for (long int i = 0; i < _V.rows(); i++) {
+      Vertices[i] = glm::dvec3(_V(i, 0), _V(i, 1), _V(i, 2));
+      Normals[i] = glm::dvec3(_N(i, 0), _N(i, 1), _N(i, 2));
+    }
   } else if (fileFormat == "pcd") {
     // Read .pcd
     pcl::PointCloud<pcl::PointNormal>::Ptr cloud(new pcl::PointCloud<pcl::PointNormal>);
@@ -35,19 +47,14 @@ PointCloud::PointCloud(std::string filename) : octree(OctreeResolution) {
       exit(1);
     }
 
-    // Extract vertices and normals
+    // Initialize Vertices, Normals
     int cloudSize = cloud->points.size();
-    Vertices = Eigen::MatrixXd(cloudSize, 3);
-    Normals = Eigen::MatrixXd(cloudSize, 3);
+    Vertices.resize(cloudSize);
+    Normals.resize(cloudSize);
     for (int i = 0; i < cloudSize; i++) {
-      Vertices.row(i) << 
-        cloud->points[i].x,
-        cloud->points[i].y,
-        cloud->points[i].z;
-      Normals.row(i) << 
-        cloud->points[i].normal_x,
-        cloud->points[i].normal_y,
-        cloud->points[i].normal_z;
+      auto p = cloud->points[i];
+      Vertices[i] = glm::dvec3(p.x, p.y, p.z);
+      Normals[i] = glm::dvec3(p.normal_x, p.normal_y, p.normal_z);
     }
 
     // TODO: We need to estimate points' normals here
@@ -82,7 +89,7 @@ void PointCloud::setPointCloudNormalEnabled(bool flag) {
 void PointCloud::updatePointCloud(bool clearPostEnv) {
   // Push new environment
   prevEnvironments.push({ Vertices, Normals });
-  if (clearPostEnv) postEnvironments = std::stack<std::pair<Eigen::MatrixXd, Eigen::MatrixXd>>();
+  if (clearPostEnv) postEnvironments = std::stack<std::pair<std::vector<glm::dvec3>, std::vector<glm::dvec3>>>();
 
   // Update Octree
   updateOctree();
@@ -105,8 +112,8 @@ void PointCloud::updatePointCloud(bool clearPostEnv) {
   vectorQuantity->setMaterial(NormalMaterial);
 
   std::cout << "Point Cloud Data:"                                << std::endl;
-  std::cout << "\tVertex num\t\t->\t"       << Vertices.rows()    << std::endl;
-  std::cout << "\tNormal num\t\t->\t"       << Normals.rows()     << std::endl;
+  std::cout << "\tVertex num\t\t->\t"       << Vertices.size()    << std::endl;
+  std::cout << "\tNormal num\t\t->\t"       << Normals.size()     << std::endl;
   std::cout << "\tAverage Distance\t->\t"   << averageDistance    << std::endl;
 
   // Show Pseudo Surface
@@ -115,14 +122,14 @@ void PointCloud::updatePointCloud(bool clearPostEnv) {
 }
 
 // Add vertices from the positions and normals
-void PointCloud::addPoints(Eigen::MatrixXd newV, Eigen::MatrixXd newN) {
-  Eigen::MatrixXd concatV = Eigen::MatrixXd::Zero(Vertices.rows() + newV.rows(), Vertices.cols());
-  concatV << Vertices, newV;
-  Vertices = concatV;
+void PointCloud::addPoints(std::vector<glm::dvec3> &newV, std::vector<glm::dvec3> &newN) {
+  assert(newV.size() == newN.size());
 
-  Eigen::MatrixXd concatN = Eigen::MatrixXd::Zero(Normals.rows() + newN.rows(), Normals.cols());
-  concatN << Normals, newN;
-  Normals = concatN;
+  int addedSize = newV.size();
+  for (int i = 0; i < addedSize; i++) {
+    Vertices.push_back(newV[i]);
+    Normals.push_back(newN[i]);
+  }
 
   // Update point cloud
   //    - update environments
@@ -133,32 +140,22 @@ void PointCloud::addPoints(Eigen::MatrixXd newV, Eigen::MatrixXd newN) {
 
 // Delete vertices by referencing the vertex indices
 void PointCloud::deletePoints(std::vector<int> &indices) {
-  // Sort indices for the comparison with current vertices information
-  sort(indices.begin(), indices.end());
+  const int curSize = Vertices.size();
+  const int newSize = Vertices.size() - indices.size();
 
-  const int curSize = Vertices.rows();
-  const int newSize = Vertices.rows() - indices.size();
+  std::vector<glm::dvec3> newV;
+  std::vector<glm::dvec3> newN;
 
-  Eigen::MatrixXd newV(newSize, 3);
-  Eigen::MatrixXd newN(newSize, 3);
-
-  int curIdx = 0;
   std::vector<int>::iterator itr = indices.begin();
   for (int i = 0; i < curSize; i++) {
     if (itr != indices.end() && i == *itr) {
       itr++;
     } else {
-      newV.row(curIdx) << 
-        Vertices(i, 0),
-        Vertices(i, 1),
-        Vertices(i, 2);
-      newN.row(curIdx) << 
-        Normals(i, 0),
-        Normals(i, 1),
-        Normals(i, 2);
-      curIdx++;
+      newV.push_back(Vertices[i]);
+      newN.push_back(Normals[i]);
     }
   }
+
   Vertices = newV;
   Normals = newN;
 
@@ -174,11 +171,11 @@ void PointCloud::executeUndo() {
   if (prevEnvironments.size() < 2) return;
 
   // Undo
-  std::pair<Eigen::MatrixXd, Eigen::MatrixXd> currentEnv = prevEnvironments.top();
+  std::pair<std::vector<glm::dvec3>, std::vector<glm::dvec3>> currentEnv = prevEnvironments.top();
   prevEnvironments.pop();
   postEnvironments.push(currentEnv);
 
-  std::pair<Eigen::MatrixXd, Eigen::MatrixXd> newEnv = prevEnvironments.top();
+  std::pair<std::vector<glm::dvec3>, std::vector<glm::dvec3>> newEnv = prevEnvironments.top();
   prevEnvironments.pop();
   Vertices = newEnv.first;
   Normals = newEnv.second;
@@ -193,7 +190,7 @@ void PointCloud::executeRedo() {
   if (postEnvironments.size() < 1) return;
 
   // Redo
-  std::pair<Eigen::MatrixXd, Eigen::MatrixXd> newEnv = postEnvironments.top();
+  std::pair<std::vector<glm::dvec3>, std::vector<glm::dvec3>> newEnv = postEnvironments.top();
   postEnvironments.pop();
   
   Vertices = newEnv.first;
@@ -207,6 +204,12 @@ void PointCloud::executeRedo() {
 }
 
 // Return the pointer to member variables
+std::vector<glm::dvec3>* PointCloud::getVertices() {
+  return &Vertices;
+}
+std::vector<glm::dvec3>* PointCloud::getNormals() {
+  return &Normals;
+}
 double PointCloud::getAverageDistance() {
   return averageDistance;
 }
@@ -220,28 +223,20 @@ pcl::octree::OctreePointCloudSearch<pcl::PointXYZ>* PointCloud::getOctree() {
 // Move points to set the gravity point to (0.0, 0.0, 0.0),
 // and then calculate bounding sphere radius.
 void PointCloud::scalePointCloud() {
-  double x = 0.0;
-  double y = 0.0;
-  double z = 0.0;
+  glm::dvec3 center;
 
-  for (int i = 0; i < Vertices.rows(); i++) {
-    x += Vertices(i, 0);
-    y += Vertices(i, 1);
-    z += Vertices(i, 2);
+  for (size_t i = 0; i < Vertices.size(); i++) {
+    center += Vertices[i];
   }
-  x /= static_cast<double>(Vertices.rows());
-  y /= static_cast<double>(Vertices.rows());
-  z /= static_cast<double>(Vertices.rows());
+  center /= static_cast<double>(Vertices.size());
 
   boundingSphereRadius = 0.0;
-  for (int i = 0; i < Vertices.rows(); i++) {
-    Vertices(i, 0) -= x;
-    Vertices(i, 1) -= y;
-    Vertices(i, 2) -= z;
+  for (size_t i = 0; i < Vertices.size(); i++) {
+    Vertices[i] -= center;
 
     boundingSphereRadius = std::max(
       boundingSphereRadius, 
-      glm::length(glm::dvec3(Vertices(i, 0), Vertices(i, 1), Vertices(i, 2)))
+      glm::length(Vertices[i])
     );
   }
 }
@@ -249,11 +244,11 @@ void PointCloud::scalePointCloud() {
 // Update registered vertices
 void PointCloud::updateOctree() {
   pcl::PointCloud<pcl::PointXYZ>::Ptr inputCloud(new pcl::PointCloud<pcl::PointXYZ>);
-  inputCloud->points.resize(Vertices.rows());
-  for (int i = 0; i < Vertices.rows(); i++) {
-    inputCloud->points[i].x = Vertices(i, 0);
-    inputCloud->points[i].y = Vertices(i, 1);
-    inputCloud->points[i].z = Vertices(i, 2);
+  inputCloud->points.resize(Vertices.size());
+  for (size_t i = 0; i < Vertices.size(); i++) {
+    inputCloud->points[i].x = Vertices[i].x;
+    inputCloud->points[i].y = Vertices[i].y;
+    inputCloud->points[i].z = Vertices[i].z;
   }
 
   octree.deleteTree();
@@ -266,12 +261,14 @@ double PointCloud::calcAverageDistance() {
   const int K = 2;
   averageDistance = 0.0;
   
-  for (int i = 0; i < Vertices.rows(); i++) {
+  for (size_t i = 0; i < Vertices.size(); i++) {
+    glm::dvec3 p = Vertices[i];
+
     // Search for the nearest neighbor.
     std::vector<int>    hitPointIndices;
     std::vector<float>  hitPointDistances;
     int hitPointCount = octree.nearestKSearch(
-      pcl::PointXYZ(Vertices(i, 0), Vertices(i, 1), Vertices(i, 2)),
+      pcl::PointXYZ(p.x, p.y, p.z),
       K,
       hitPointIndices,
       hitPointDistances
@@ -279,5 +276,5 @@ double PointCloud::calcAverageDistance() {
     if (hitPointCount > 1) averageDistance += sqrt(hitPointDistances[1]);
   }
 
-  return averageDistance / Vertices.rows();
+  return averageDistance / Vertices.size();
 }

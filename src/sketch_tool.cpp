@@ -51,21 +51,15 @@ void SketchTool::resetSketch() {
 void SketchTool::registerBasisPointsAsPointCloud(std::string name) {
   // Show basisPoints
 
-  std::vector<std::vector<double>> points;
-  std::vector<std::vector<double>> normals;
-  for (int i = 0; i < basisPointsIndex.size(); i++) {
-    int idx = basisPointsIndex[i];
+  std::vector<glm::dvec3> points;
+  std::vector<glm::dvec3> normals;
 
-    points.push_back({
-      pointCloud->Vertices(idx, 0),
-      pointCloud->Vertices(idx, 1),
-      pointCloud->Vertices(idx, 2)
-    });
-    normals.push_back({
-      pointCloud->Normals(idx, 0),
-      pointCloud->Normals(idx, 1),
-      pointCloud->Normals(idx, 2)
-    });
+  std::vector<glm::dvec3> *verticesPtr = pointCloud->getVertices();
+  std::vector<glm::dvec3> *normalsPtr = pointCloud->getNormals();
+  for (size_t i = 0; i < basisPointsIndex.size(); i++) {
+    int idx = basisPointsIndex[i];
+    points.push_back((*verticesPtr)[idx]);
+    normals.push_back((*normalsPtr)[idx]);
   }
 
   polyscope::PointCloud* patchCloud = polyscope::registerPointCloud(name, points);
@@ -88,20 +82,9 @@ void SketchTool::removePointCloud(std::string name) {
 // Be aware that the curve network with 
 // the same name is overwritten
 void SketchTool::registerSketchPointsAsCurveNetworkLine(std::string name) {
-  std::vector<std::vector<double>> sketch;
-  for (int i = 0; i < sketchPoints.size(); i++) {
-    sketch.push_back({
-      sketchPoints[i].x,
-      sketchPoints[i].y,
-      sketchPoints[i].z
-    });
-  }
+  std::vector<glm::dvec3> sketch = sketchPoints;
   if (sketchPoints.size() == 1) {
-    sketch.push_back({
-      sketchPoints[0].x,
-      sketchPoints[0].y,
-      sketchPoints[0].z
-    });
+    sketch.push_back(sketchPoints[0]);
   };
 
   polyscope::CurveNetwork* curveNetwork = polyscope::registerCurveNetworkLine(name, sketch);
@@ -116,16 +99,7 @@ void SketchTool::removeCurveNetworkLine(std::string name) {
 // Be aware that the curve network with 
 // the same name is overwritten
 void SketchTool::registerSketchPointsAsCurveNetworkLoop(std::string name) {
-  std::vector<std::vector<double>> sketch;
-  for (int i = 0; i < sketchPoints.size(); i++) {
-    sketch.push_back({
-      sketchPoints[i].x,
-      sketchPoints[i].y,
-      sketchPoints[i].z
-    });
-  }
-
-  polyscope::CurveNetwork* curveNetwork = polyscope::registerCurveNetworkLoop(name, sketch);
+  polyscope::CurveNetwork* curveNetwork = polyscope::registerCurveNetworkLoop(name, sketchPoints);
   curveNetwork->setColor(CurveNetworkColor);
   curveNetwork->setRadius(CurveNetworkRadius);
 }
@@ -153,29 +127,19 @@ void SketchTool::findBasisPoints(bool extendedSearch) {
   // If extendedSearch is true, extend the sketched area.
   if (extendedSearch) extendSketchedArea();
 
+  // Point cloud vertices and normals
+  std::vector<glm::dvec3> *verticesPtr = pointCloud->getVertices();
+  std::vector<glm::dvec3> *normalsPtr = pointCloud->getNormals();
+
   // Cast points of the point cloud onto the screen plane.
-  std::vector<glm::dvec3> pointsInWorldCoord;
-  std::vector<glm::dvec3> normalsInWorldCoord;
   std::vector<glm::dvec3> pointsMappedOntoScreen;
-  for (int i = 0; i < pointCloud->Vertices.rows(); i++) {
-    glm::dvec3 p = glm::dvec3(
-      pointCloud->Vertices(i, 0),
-      pointCloud->Vertices(i, 1),
-      pointCloud->Vertices(i, 2)
-    );
-    glm::dvec3 pn = glm::dvec3(
-      pointCloud->Normals(i, 0),
-      pointCloud->Normals(i, 1),
-      pointCloud->Normals(i, 2)
-    );
+  for (size_t i = 0; i < (*verticesPtr).size(); i++) {
+    glm::dvec3 p = (*verticesPtr)[i];
 
     // Cast a ray from p to cameraOrig onto screen.
     Ray ray(p, cameraOrig);
     Hit hitInfo = ray.castPointToPlane(&screen);
     assert(hitInfo.hit == true);
-
-    pointsInWorldCoord.push_back(p);
-    normalsInWorldCoord.push_back(pn);
     pointsMappedOntoScreen.push_back(screen.mapCoordinates(hitInfo.pos));
   }
   const int castedPointSize = pointsMappedOntoScreen.size();
@@ -196,7 +160,7 @@ void SketchTool::findBasisPoints(bool extendedSearch) {
   const double INF = 1e5;
   double min_x = INF, max_x = -INF;
   double min_y = INF, max_y = -INF;
-  for (int i = 0; i < sketchPoints.size(); i++) {
+  for (size_t i = 0; i < sketchPoints.size(); i++) {
     glm::dvec3 mappedSketchPoint = screen.mapCoordinates(sketchPoints[i]);
 
     min_x = std::min(min_x, mappedSketchPoint.x);
@@ -207,7 +171,7 @@ void SketchTool::findBasisPoints(bool extendedSearch) {
 
   const double castedAverageDist = calcCastedAverageDist();
   std::vector<int>  candidatePointsIndex;
-  std::vector<std::vector<double>> hasCloserNeighborPoints;
+  std::vector<glm::dvec3> hasCloserNeighborPoints;
   for (double x = min_x; x < max_x; x += castedAverageDist*2.0) {
     for (double y = min_y; y < max_y; y += castedAverageDist*2.0) {
       if (!insideSketch(x, y)) continue;
@@ -227,8 +191,8 @@ void SketchTool::findBasisPoints(bool extendedSearch) {
       int minDepthIdx = -1;
       for (int i = 0; i < hitPointCount; i++) {
         int hitPointIdx = hitPointIndices[i];
-        glm::dvec3 p = pointsInWorldCoord[hitPointIdx];
-        glm::dvec3 pn = normalsInWorldCoord[hitPointIdx];
+        glm::dvec3 p = (*verticesPtr)[hitPointIdx];
+        glm::dvec3 pn = (*normalsPtr)[hitPointIdx];
 
         // Discard points that their normals are directed to cameraOrig.
         if (glm::dot(pn, cameraDir) >= 0.0) continue;
@@ -246,14 +210,10 @@ void SketchTool::findBasisPoints(bool extendedSearch) {
         if (hitPointIdx == minDepthIdx) {
           candidatePointsIndex.push_back(hitPointIdx);
         } else {
-          glm::dvec3 pn = normalsInWorldCoord[hitPointIdx];
+          glm::dvec3 pn = (*normalsPtr)[hitPointIdx];
           if (glm::dot(pn, cameraDir) >= 0.0) continue;
 
-          hasCloserNeighborPoints.push_back({
-            pointsInWorldCoord[hitPointIdx].x,
-            pointsInWorldCoord[hitPointIdx].y,
-            pointsInWorldCoord[hitPointIdx].z
-          });
+          hasCloserNeighborPoints.push_back((*verticesPtr)[hitPointIdx]);
         }
       }
     }
@@ -265,7 +225,7 @@ void SketchTool::findBasisPoints(bool extendedSearch) {
   hasCloserNeighborCloud->setEnabled(false);
 
   // Depth detection with DBSCAN
-  Clustering clustering(&candidatePointsIndex, &pointsInWorldCoord, "basis");
+  Clustering clustering(&candidatePointsIndex, verticesPtr, "basis");
   basisPointsIndex = clustering.executeClustering(
     DBSCAN_SearchRange*pointCloud->getAverageDistance(),
     DBSCAN_MinPoints,
@@ -282,22 +242,18 @@ void SketchTool::findBasisPoints(bool extendedSearch) {
 void SketchTool::findAllBasisPoints(bool extendedSearch) {
   if (extendedSearch) extendSketchedArea();
 
+  // Point cloud vertices
+  std::vector<glm::dvec3> *verticesPtr = pointCloud->getVertices();
+
   // Cast points of the point cloud onto the screen plane.
-  std::vector<glm::dvec3> pointsInWorldCoord;
   std::vector<glm::dvec3> pointsMappedOntoScreen;
-  for (int i = 0; i < pointCloud->Vertices.rows(); i++) {
-    glm::dvec3 p = glm::dvec3(
-      pointCloud->Vertices(i, 0),
-      pointCloud->Vertices(i, 1),
-      pointCloud->Vertices(i, 2)
-    );
+  for (size_t i = 0; i < (*verticesPtr).size(); i++) {
+    glm::dvec3 p = (*verticesPtr)[i];
 
     // Cast a ray from p to cameraOrig onto screen.
     Ray ray(p, cameraOrig);
     Hit hitInfo = ray.castPointToPlane(&screen);
     assert(hitInfo.hit == true);
-
-    pointsInWorldCoord.push_back(p);
     pointsMappedOntoScreen.push_back(screen.mapCoordinates(hitInfo.pos));
   }
   const int castedPointSize = pointsMappedOntoScreen.size();
@@ -312,7 +268,7 @@ void SketchTool::findAllBasisPoints(bool extendedSearch) {
   }
 
   // Depth detection with DBSCAN
-  Clustering clustering(&candidatePointsIndex, &pointsInWorldCoord, "basis");
+  Clustering clustering(&candidatePointsIndex, verticesPtr, "basis");
   basisPointsIndex = clustering.executeClustering(
     DBSCAN_SearchRange*pointCloud->getAverageDistance(),
     DBSCAN_MinPoints,
@@ -416,7 +372,7 @@ void SketchTool::extendSketchedArea() {
 
   // Extend sketched area
   double castedAverageDist = calcCastedAverageDist();
-  for (int i = 0; i < sketchPoints.size(); i++) {
+  for (size_t i = 0; i < sketchPoints.size(); i++) {
     glm::dvec3 p = sketchPoints[i];
 
     // ATTENTION: Double the average distance, because the user 
@@ -446,15 +402,14 @@ double SketchTool::calcCCW(glm::dvec2 p, glm::dvec2 a, glm::dvec2 b) {
 void SketchTool::calcBasisConvexHull() {
   const int basisPointsSize = basisPointsIndex.size();
 
+  // Point cloud vertices
+  std::vector<glm::dvec3> *verticesPtr = pointCloud->getVertices();
+
   // Initialize vector of mapped basis points.
   std::vector<glm::dvec2> mappedBasisPoints(basisPointsSize);
   for (int i = 0; i < basisPointsSize; i++) {
     int idx = basisPointsIndex[i];
-    glm::dvec3 p = glm::dvec3(
-      pointCloud->Vertices(idx, 0),
-      pointCloud->Vertices(idx, 1),
-      pointCloud->Vertices(idx, 2)
-    );
+    glm::dvec3 p = (*verticesPtr)[idx];
 
     // Cast a ray from p to cameraOrig onto screen.
     Ray ray(p, cameraOrig);

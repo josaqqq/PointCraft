@@ -26,5 +26,5 @@ class MLSSprayTool : public SketchTool {
     // Search pointCloud for nearest neighbors.
     //  - center: center of search range
     //  - K_size: the max number of nearest neighbors
-    Eigen::MatrixXd searchKNeighbors(glm::dvec3 center, int K_size);
+    std::vector<glm::dvec3> searchKNeighbors(glm::dvec3 center, int K_size);
 };
