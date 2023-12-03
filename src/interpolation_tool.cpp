@@ -7,7 +7,6 @@
 
 #include "constants.hpp"
 #include "interpolation_tool.hpp"
-#include "rbf.hpp"
 #include "surface.hpp"
 #include "cluster.hpp"
 

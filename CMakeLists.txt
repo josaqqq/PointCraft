@@ -85,7 +85,6 @@ add_executable(
     src/interpolation_tool.cpp
     src/mls_spray_tool.cpp
     src/delete_tool.cpp
-    src/rbf.cpp
 )
 
 # Include settings

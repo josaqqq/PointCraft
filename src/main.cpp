@@ -73,13 +73,9 @@ int main(int argc, char **argv) {
 
   PointCloud pointCloud(args::get(inFile));
 
-  std::cout << "debug-1" << std::endl;
-  
   InterpolationTool interpolationTool(&currentMode, &pointCloud);
   MLSSprayTool      mlsSprayTool(&currentMode, &pointCloud);
   DeleteTool        deleteTool(&currentMode, &pointCloud);
-
-  std::cout << "debug-2" << std::endl;
 
   modeSelector = ModeSelector(
     &currentMode, 
@@ -92,13 +88,9 @@ int main(int argc, char **argv) {
     &deleteTool
   );
 
-  std::cout << "debug-3" << std::endl;
-
   // Reconstruct Surfaces
   Surface poissonSurface(PoissonName, pointCloud.getVertices(), pointCloud.getNormals());
   poissonSurface.reconstructPoissonSurface(pointCloud.getAverageDistance());
-
-  std::cout << "debug-4" << std::endl;
 
   // Add the callback
   polyscope::state::userCallback = callback;

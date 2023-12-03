@@ -194,8 +194,8 @@ void SketchTool::findBasisPoints(bool extendedSearch) {
         glm::dvec3 p = (*verticesPtr)[hitPointIdx];
         glm::dvec3 pn = (*normalsPtr)[hitPointIdx];
 
-        // Discard points that their normals are directed to cameraOrig.
-        if (glm::dot(pn, cameraDir) >= 0.0) continue;
+        // Discard points that their normals are directed to rayDir.
+        if (glm::dot(pn, p - cameraOrig) >= 0.0) continue;
 
         double curDepth = glm::length(p - cameraOrig);
         if (curDepth < minDepth) {
@@ -210,8 +210,9 @@ void SketchTool::findBasisPoints(bool extendedSearch) {
         if (hitPointIdx == minDepthIdx) {
           candidatePointsIndex.push_back(hitPointIdx);
         } else {
+          glm::dvec3 p = (*verticesPtr)[hitPointIdx];
           glm::dvec3 pn = (*normalsPtr)[hitPointIdx];
-          if (glm::dot(pn, cameraDir) >= 0.0) continue;
+          if (glm::dot(pn, p - cameraOrig) >= 0.0) continue;
 
           hasCloserNeighborPoints.push_back((*verticesPtr)[hitPointIdx]);
         }

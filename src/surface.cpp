@@ -22,8 +22,6 @@
 // Reconstruct new surface with Vertices and Normals and return them.
 //  - averageDistance: used to decide the resolution of Poisson Surface Reconstruction
 std::pair<std::vector<glm::dvec3>, std::vector<std::vector<size_t>>> Surface::reconstructPoissonSurface(double averageDistance) {
-  std::cout << "reconstructPoissonSurface" << std::endl;
-  
   // Init point cloud
   pcl::PointCloud<pcl::PointNormal>::Ptr inputCloud(new pcl::PointCloud<pcl::PointNormal>);
   inputCloud->points.resize(Vertices->size());
@@ -111,8 +109,6 @@ std::pair<std::vector<glm::dvec3>, std::vector<std::vector<size_t>>> Surface::re
   std::cout << "\tOutput Vertices Size\t->\t" << meshV.size()                 << std::endl;
   std::cout << "\tOutput Faces Size\t->\t"    << meshF.size()                 << std::endl;
   std::cout                                                                   << std::endl;
-
-  std::cout << "reconstructPoissonSurface finished" << std::endl;
 
   return { meshV, meshF };
 }
