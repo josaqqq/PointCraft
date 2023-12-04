@@ -51,13 +51,14 @@ void SketchTool::resetSketch() {
 void SketchTool::registerSurfacePointsAsPointCloud(std::string name) {
   // Show surfacePoints
   polyscope::PointCloud* patchCloud = polyscope::registerPointCloud(name, surfacePoints);
-  patchCloud->setPointRadius(BasisPointRadius);
+  patchCloud->setPointColor(SurfacePointColor);
+  patchCloud->setPointRadius(SurfacePointSize);
   patchCloud->setEnabled(true);
 }
 void SketchTool::registerSketchPointsAsPointCloud(std::string name) {
   // Show sketchPoints
   polyscope::PointCloud* patchCloud = polyscope::registerPointCloud(name, sketchPoints);
-  patchCloud->setPointColor(SketchPointColor);
+  patchCloud->setPointColor(BasisPointColor);
   patchCloud->setPointRadius(BasisPointRadius);
   patchCloud->setEnabled(false);
 }

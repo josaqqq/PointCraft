@@ -33,7 +33,7 @@ void InterpolationTool::draggingEvent() {
   addSketchPoint(hitInfo.pos);
 
   // Update surfacePoints
-  updateSurfacePoints(xPos, yPos, SurfacePointSize);
+  updateSurfacePoints(xPos, yPos, SurfacePointNum);
   removePointCloud(SurfacePointName);
   registerSurfacePointsAsPointCloud(SurfacePointName);
 

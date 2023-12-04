@@ -27,7 +27,13 @@ const std::string ScalarColorMap = "viridis";
 const bool ScalarEnabled = true;
 
 const std::string SurfacePointName = "Surface Points";
-const int SurfacePointSize = 10;
+const int SurfacePointNum = 10;
+
+//
+// Surface points
+//
+const glm::dvec3 SurfacePointColor = { 0.000, 1.000, 0.000 };
+const double SurfacePointSize = 0.005;
 
 //
 // Octree parameters
