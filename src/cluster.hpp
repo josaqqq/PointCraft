@@ -6,16 +6,40 @@
 #include "point_cloud.hpp"
 #include "plane.hpp"
 
+enum ClusteringMode {
+  CLUSTER_MAX_SIZE,
+  CLUSTER_MIN_DEPTH,
+};
+
 class Clustering {
   public:
-    Clustering(std::vector<int> *pointsIndex, PointCloud *pointCloud, Plane *plane) 
-    : pointsIndex(pointsIndex), pointCloud(pointCloud), plane(plane) {}
+    Clustering(
+      std::vector<int> *pointsIndex, 
+      std::vector<glm::dvec3> *points, 
+      std::string name
+    ) : pointsIndex(pointsIndex), points(points), name(name) {}
 
-    // Execute DBSCAN and return selected basis points's index
-    std::vector<int> executeDBSCAN(double eps, int minPoints);
+    // Execute clustering
+    //  - eps: Clustering search distance
+    //  - minPoints: Number of points required to make a point a core point
+    std::vector<int> executeClustering(double eps, size_t minPoints, ClusteringMode mode);
 
   private:
-    std::vector<int> *pointsIndex;
-    PointCloud       *pointCloud;
-    Plane            *plane;
+    ClusteringMode          clusteringMode;
+
+    std::vector<int>        *pointsIndex;
+    std::vector<glm::dvec3> *points;
+    std::string             name;
+
+    // Calculated three orthogonal bases with PCA
+    std::vector<glm::dvec3> orthogonalBases;
+
+    // Execute DBSCAN and return selected basis points's index
+    std::vector<int> executeDBSCAN(double eps, size_t minPoints, int basisIndex);
+
+    void visualizeCluster(
+      int basisIndex,
+      std::vector<int> &pointsIndex,
+      std::vector<int> &labels
+    );
 };

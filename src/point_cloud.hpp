@@ -1,41 +1,67 @@
 #pragma once
 
 #include "polyscope/point_cloud.h"
+#include <pcl/octree/octree_search.h>
 
-#include <Eigen/Dense>
 #include <string>
-
-#include "octree.hpp"
+#include <stack>
 
 class PointCloud {
   public:
-    PointCloud() {}
     PointCloud(std::string filename);
     ~PointCloud() {}
-
-    Eigen::MatrixXd meshV;    // double matrix of vertex positions
-    Eigen::MatrixXd meshN;    // double matrix of corner normals
-    Eigen::MatrixXi meshF;    // list of face indices into vertex positions
-
-    double averageDistance;
 
     // Enable or Disable the point cloud and normals
     void setPointCloudEnabled(bool flag);
     void setPointCloudNormalEnabled(bool flag);
 
     // Update point cloud
-    //   - update octree
-    //   - render points and normals
-    void updatePointCloud();
+    //    - update environments
+    //    - update octree
+    //    - render points and normals
+    void updatePointCloud(bool clearPostEnv);
 
-    // Add points with information of the position and the normal.
-    void addPoints(Eigen::MatrixXd newV, Eigen::MatrixXd newN);
+    // Add vertices from the positions and normals
+    void addPoints(std::vector<glm::dvec3> &newV, std::vector<glm::dvec3> &newN);
+
+    // Delete vertices by referencing the vertex indices
+    void deletePoints(std::vector<int> &indices);
+
+    // Execute Undo/Redo
+    void executeUndo();
+    void executeRedo();
+
+    // Return the pointer to member variables
+    std::vector<glm::dvec3>* getVertices();
+    std::vector<glm::dvec3>* getNormals();
+    double getAverageDistance();
+    double getBoundingSphereRadius();
+    pcl::octree::OctreePointCloudSearch<pcl::PointXYZ>* getOctree();
 
   private:
-    // Move points to set the gravity point to (0.0, 0.0, 0.0).
-    void movePointsToOrigin();
+    // Move points to set the gravity point to (0.0, 0.0, 0.0),
+    // and then calculate bounding sphere radius.
+    void scalePointCloud();
 
-    Octree octree;
+    // Update registered vertices
+    void updateOctree();
+
+    // Calculate average distance between the nearest points.
+    double calcAverageDistance();
+
+    // Point cloud information
+    std::vector<glm::dvec3> Vertices;
+    std::vector<glm::dvec3> Normals;
+    double averageDistance;       // Average Distance between a point and the nearest neighbor
+    double boundingSphereRadius;  // Radius of bounding sphere of point cloud
+
+    // Undo/Redo stacks
+    std::stack<std::pair<std::vector<glm::dvec3>, std::vector<glm::dvec3>>> prevEnvironments;
+    std::stack<std::pair<std::vector<glm::dvec3>, std::vector<glm::dvec3>>> postEnvironments;
+
+    pcl::octree::OctreePointCloudSearch<pcl::PointXYZ> octree;
+
     polyscope::PointCloud *pointCloud;
     polyscope::PointCloudVectorQuantity *vectorQuantity;
+    polyscope::PointCloudScalarQuantity *scalarQuantity;
 };

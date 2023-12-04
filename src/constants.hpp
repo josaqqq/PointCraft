@@ -6,6 +6,7 @@
 const std::array<float, 4> BackgroundColor = { 0.025, 0.025, 0.025, 0.000 };
 const int WindowWidth = 1024;
 const int WindowHeight = 1024;
+const double ScreenOffset = 10.0;
 
 //
 // Point Cloud parameters
@@ -21,10 +22,18 @@ const double NormalRadius = 0.001;
 const bool NormalEnabled = true;
 const std::string NormalMaterial = "flat";
 
+const std::string ScalarName = "depth map";
+const std::string ScalarColorMap = "viridis";
+const bool ScalarEnabled = true;
+
+const std::string SurfacePointName = "Surface Points";
+const int SurfacePointSize = 10;
+
 //
 // Octree parameters
 //
-const double OctreeResolution = 64.0;
+const double OctreeResolution = 0.01;  // The length of the smallest voxels at lowest octree level.
+const int RayMaxStep = 10000;
 
 //
 // Patch parameters
@@ -35,12 +44,20 @@ const double depthInterval = 5.0; // Multiple with averageDistance of input poin
 const glm::dvec3 DiscretizedPointColor = { 1.000, 0.000, 0.000 };
 const double DiscretizedPointRadius = 0.0025;
 
+const std::string SketchPointName = "Sketch Points";
+const glm::dvec3 SketchPointColor = { 0.000, 0.000, 1.000 };
+
 const glm::dvec3 BasisPointColor = { 0.000, 1.000, 0.000 };
 const double BasisPointRadius = 0.0025;
+const double BasisNormalLength = 0.05;
+const double BasisNormalRadius = 0.003;
 
 const std::string TracePrefix = "Trace: ";
 const std::string CastPrefix = "Cast: ";
 const std::string SketchPrefix = "Sketch: ";
+
+const int MLS_SprayNearestNeighbors = 30;
+const int MLS_SpraySize = 4;
 
 //
 //  Curve Network
@@ -55,6 +72,7 @@ const std::string PoissonName = "Poisson Surface Reconstruction";
 const int PoissonMaxDepth = 5;
 const glm::dvec3 PoissonColor = { 0.155, 0.186, 0.790 };
 const std::string PoissonMaterial = "normal";
+const bool PoissonEnabled = false;
 
 //
 // Radial Basis Functions
@@ -69,8 +87,7 @@ const std::string MLSName = "Interpolation MLS";
 const glm::dvec3 MLSColor = { 0.000, 0.000, 1.000 };
 
 const int MLSPolynomialOrder = 2;
-const bool MLSPolynomialFitFlag = true;
-const double MLSSearchRadius = 0.3;
+const double MLSSearchRadius = 1.0; // TODO: This parameter depends on the point cloud
 
 //
 // Delaunay Triangulation
@@ -86,9 +103,20 @@ const bool GreedyProjNormalConsistency = false;
 
 const glm::dvec3 GreedyProjColor = { 0.155, 0.186, 0.790 };
 const std::string GreedyProjMaterial = "normal";
+const bool GreedyProjEnabled = false;
+
+//
+// Pseudo Surface
+//
+const std::string PseudoSurfaceName = "Pseudo Surface";
+const glm::dvec3 PseudoSurfaceColor = { 0.155, 0.186, 0.790 };
+const std::string PseudoSurfaceMaterial = "normal";
+const bool PseudoSurfaceEnabled = false;
 
 //
 // Clustering
 //
+const std::string DBSCAN_Name = "DBSCAN Labeling: ";
+const bool DBSCAN_Enabled = false;
 const double DBSCAN_SearchRange = 1.0;
 const int DBSCAN_MinPoints = 1;
