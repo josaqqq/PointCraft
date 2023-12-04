@@ -21,7 +21,7 @@ void DeleteTool::draggingEvent() {
 
   // Cast a ray
   Ray ray(xPos, yPos);
-  Hit hitInfo = ray.castPointToPlane(getScreen());
+  Ray::Hit hitInfo = ray.castPointToPlane(getScreen());
   if (hitInfo.hit) addSketchPoint(hitInfo.pos);
 
   // Register sketchPoints as curve network (LINE)

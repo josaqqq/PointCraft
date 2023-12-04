@@ -17,7 +17,6 @@
 /*
   Manage functions
 */
-
 // Initialize screen information
 void SketchTool::initSketch() {
   screenDist = polyscope::view::nearClipRatio * ScreenOffset;
@@ -40,6 +39,7 @@ void SketchTool::resetSketch() {
   cameraDir = glm::dvec3(0.0, 0.0, 0.0);
   screen = Plane();
 
+  surfacePoints.clear();
   sketchPoints.clear();
   basisPointsIndex.clear();
   mappedBasisConvexHull.clear();
@@ -48,9 +48,21 @@ void SketchTool::resetSketch() {
 /*
   Viewer functions
 */
+void SketchTool::registerSurfacePointsAsPointCloud(std::string name) {
+  // Show surfacePoints
+  polyscope::PointCloud* patchCloud = polyscope::registerPointCloud(name, surfacePoints);
+  patchCloud->setPointRadius(BasisPointRadius);
+  patchCloud->setEnabled(true);
+}
+void SketchTool::registerSketchPointsAsPointCloud(std::string name) {
+  // Show sketchPoints
+  polyscope::PointCloud* patchCloud = polyscope::registerPointCloud(name, sketchPoints);
+  patchCloud->setPointColor(SketchPointColor);
+  patchCloud->setPointRadius(BasisPointRadius);
+  patchCloud->setEnabled(false);
+}
 void SketchTool::registerBasisPointsAsPointCloud(std::string name) {
   // Show basisPoints
-
   std::vector<glm::dvec3> points;
   std::vector<glm::dvec3> normals;
 
@@ -110,6 +122,53 @@ void SketchTool::removeCurveNetworkLoop(std::string name) {
 /*
   Geometry functions
 */
+// Compute the surface points where mouse is currently hovering
+//  - xPos: io.DisplayFramebufferScale.x * mousePos.x
+//  - xPos: io.DisplayFramebufferScale.y * mousePos.y
+//  - K_size: the selected nearest neighbors size
+void SketchTool::updateSurfacePoints(double xPos, double yPos, int K_size) {
+  // Reset surfacePoints
+  surfacePoints.clear();
+  
+  // Cast a ray to pointCloud
+  Ray ray(xPos, yPos);
+    // Search radius is doubled because the user 
+    // should reference the boundary of the pseudo surface.
+  Ray::Hit hitInfo = ray.searchNearestNeighbor(
+    pointCloud,
+    pointCloud->getAverageDistance() * 2.0  
+  );
+  if (!hitInfo.hit) return;
+
+  // Search the point cloud for K-nearest-neighbors of "center point"
+  glm::dvec3 rayDir = hitInfo.rayDir;
+  glm::dvec3 center = cameraOrig + glm::dot(hitInfo.pos - cameraOrig, rayDir)*rayDir;
+
+  // Search pointCloud for nearest neighbors
+  std::vector<int>    hitPointIndices;
+  std::vector<float>  hitPointDistances;
+  int hitPointCount = pointCloud->getOctree()->nearestKSearch(
+    pcl::PointXYZ(center.x, center.y, center.z),
+    K_size,
+    hitPointIndices,
+    hitPointDistances
+  );
+
+  std::vector<glm::dvec3> *verticesPtr = pointCloud->getVertices();
+  std::vector<glm::dvec3> *normalsPtr = pointCloud->getNormals();
+  for (int i = 0; i < hitPointCount; i++) {
+    int idx = hitPointIndices[i];
+
+    glm::dvec3 p = (*verticesPtr)[idx];
+    glm::dvec3 pn = (*normalsPtr)[idx];
+
+    // If the normal does not face rayDir, then skip it.
+    if (glm::dot(pn, rayDir) >= 0.0) continue;
+
+    // Add nearest neighbor to surfacePoints
+    surfacePoints.push_back(p);
+  }
+}
 
 // Cast the specified point to screen.
 void SketchTool::addSketchPoint(glm::dvec3 p) {
@@ -138,7 +197,7 @@ void SketchTool::findBasisPoints(bool extendedSearch) {
 
     // Cast a ray from p to cameraOrig onto screen.
     Ray ray(p, cameraOrig);
-    Hit hitInfo = ray.castPointToPlane(&screen);
+    Ray::Hit hitInfo = ray.castPointToPlane(&screen);
     assert(hitInfo.hit == true);
     pointsMappedOntoScreen.push_back(screen.mapCoordinates(hitInfo.pos));
   }
@@ -253,7 +312,7 @@ void SketchTool::findAllBasisPoints(bool extendedSearch) {
 
     // Cast a ray from p to cameraOrig onto screen.
     Ray ray(p, cameraOrig);
-    Hit hitInfo = ray.castPointToPlane(&screen);
+    Ray::Hit hitInfo = ray.castPointToPlane(&screen);
     assert(hitInfo.hit == true);
     pointsMappedOntoScreen.push_back(screen.mapCoordinates(hitInfo.pos));
   }
@@ -352,6 +411,9 @@ glm::dvec3 SketchTool::getCameraDir() {
 Plane* SketchTool::getScreen() {
   return &screen;
 }
+std::vector<glm::dvec3>* SketchTool::getSurfacePoints() {
+  return &surfacePoints;
+}
 std::vector<glm::dvec3>* SketchTool::getSketchPoints() {
   return &sketchPoints;
 }
@@ -414,7 +476,7 @@ void SketchTool::calcBasisConvexHull() {
 
     // Cast a ray from p to cameraOrig onto screen.
     Ray ray(p, cameraOrig);
-    Hit hitInfo = ray.castPointToPlane(&screen);
+    Ray::Hit hitInfo = ray.castPointToPlane(&screen);
     assert(hitInfo.hit == true);
     glm::dvec3 mappedP = screen.mapCoordinates(hitInfo.pos);
     mappedBasisPoints[i] = glm::dvec2(mappedP.x, mappedP.y);

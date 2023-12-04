@@ -14,7 +14,6 @@ const double ScreenOffset = 10.0;
 const std::string PointName = "Point Cloud";
 const glm::dvec3 PointColor = { 1.000, 1.000, 1.000 };
 const double PointRadius = 0.002;
-const bool  PointEnabled = false;
 
 const std::string NormalName = "normal vector";
 const glm::dvec3 NormalColor =  { 1.000, 1.000, 1.000 };
@@ -26,6 +25,9 @@ const std::string NormalMaterial = "flat";
 const std::string ScalarName = "depth map";
 const std::string ScalarColorMap = "viridis";
 const bool ScalarEnabled = true;
+
+const std::string SurfacePointName = "Surface Points";
+const int SurfacePointSize = 10;
 
 //
 // Octree parameters
@@ -42,6 +44,9 @@ const double depthInterval = 5.0; // Multiple with averageDistance of input poin
 const glm::dvec3 DiscretizedPointColor = { 1.000, 0.000, 0.000 };
 const double DiscretizedPointRadius = 0.0025;
 
+const std::string SketchPointName = "Sketch Points";
+const glm::dvec3 SketchPointColor = { 0.000, 0.000, 1.000 };
+
 const glm::dvec3 BasisPointColor = { 0.000, 1.000, 0.000 };
 const double BasisPointRadius = 0.0025;
 const double BasisNormalLength = 0.05;
@@ -51,8 +56,8 @@ const std::string TracePrefix = "Trace: ";
 const std::string CastPrefix = "Cast: ";
 const std::string SketchPrefix = "Sketch: ";
 
-const int MLS_SprayK = 10;
-const int MLS_SpraySize = 10;
+const int MLS_SprayNearestNeighbors = 30;
+const int MLS_SpraySize = 4;
 
 //
 //  Curve Network
@@ -82,7 +87,7 @@ const std::string MLSName = "Interpolation MLS";
 const glm::dvec3 MLSColor = { 0.000, 0.000, 1.000 };
 
 const int MLSPolynomialOrder = 2;
-const double MLSSearchRadius = 0.3;
+const double MLSSearchRadius = 1.0; // TODO: This parameter depends on the point cloud
 
 //
 // Delaunay Triangulation

@@ -16,9 +16,16 @@ class Surface {
 
     // Compute approximate surface using Vertices and Normals.
     // Then project points randomly onto the surface and return the projected points.
+    //  - xPos: io.DisplayFramebufferScale.x * mousePos.x
+    //  - xPos: io.DisplayFramebufferScale.y * mousePos.y
     //  - averageDistance:  the range of the randomly added points.
     //  - pointSize:        the size of randomly added points.
-    std::pair<std::vector<glm::dvec3>, std::vector<glm::dvec3>> projectMLSSurface(double averageDistance, int pointSize);
+    std::pair<std::vector<glm::dvec3>, std::vector<glm::dvec3>> projectMLSSurface(
+      int xPos,
+      int yPos,
+      double averageDistance, 
+      int pointSize
+    );
 
     // Show hexagons for each vertex as a pseudo surface.
     //  - averageDistance:  the radius of the shown hexagon.

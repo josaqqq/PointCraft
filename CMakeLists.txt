@@ -66,7 +66,7 @@ endif()
 find_package(Eigen3 3.3 REQUIRED NO_MODULE)
 
 # Find PCL
-find_package(PCL 1.3 REQUIRED)
+find_package(PCL 1.10 REQUIRED)
 
 # Add polyscope
 add_subdirectory("deps/polyscope")

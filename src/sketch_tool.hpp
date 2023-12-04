@@ -15,7 +15,6 @@ class SketchTool {
     /*
       Manage functions
     */
-
     // Initialize member variables.
     void initSketch();
 
@@ -28,10 +27,11 @@ class SketchTool {
     /*
       Viewer functions
     */
-
     // Register/Remove point cloud with name.
     // Be aware that the point cloud with 
     // the same name is overwritten.
+    void registerSurfacePointsAsPointCloud(std::string name);
+    void registerSketchPointsAsPointCloud(std::string name);
     void registerBasisPointsAsPointCloud(std::string name);
     void removePointCloud(std::string name);
 
@@ -50,6 +50,11 @@ class SketchTool {
     /*
       Geometry functions
     */
+    // Compute the surface points where mouse is currently hovering
+    //  - xPos: io.DisplayFramebufferScale.x * mousePos.x
+    //  - xPos: io.DisplayFramebufferScale.y * mousePos.y
+    //  - K_size: the selected nearest neighbors size
+    void updateSurfacePoints(double xPos, double yPos, int K_size);
 
     // Add the specified point to sketchPoints
     void addSketchPoint(glm::dvec3 p);
@@ -92,6 +97,7 @@ class SketchTool {
     glm::dvec3                getCameraOrig();
     glm::dvec3                getCameraDir();
     Plane*                    getScreen();
+    std::vector<glm::dvec3>*  getSurfacePoints();
     std::vector<glm::dvec3>*  getSketchPoints();
     std::vector<int>*         getBasisPointsIndex();
     std::vector<glm::dvec2>*  getMappedBasisConvexHull();
@@ -106,6 +112,7 @@ class SketchTool {
     glm::dvec3  cameraDir;    // Camera direction
     Plane       screen;       // Plane on nearClip
 
+    std::vector<glm::dvec3>   surfacePoints;          // Surface points where the mouse is hovering
     std::vector<glm::dvec3>   sketchPoints;           // Sketched points on the camera screen
     std::vector<int>          basisPointsIndex;       // The indices of selected basis points
     std::vector<glm::dvec2>   mappedBasisConvexHull;  // Convex hull of the basis points mapped onto screen

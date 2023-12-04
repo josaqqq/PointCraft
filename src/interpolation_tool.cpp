@@ -26,10 +26,16 @@ void InterpolationTool::draggingEvent() {
   double xPos = io.DisplayFramebufferScale.x * mousePos.x;
   double yPos = io.DisplayFramebufferScale.y * mousePos.y;
 
-  // Cast a ray
+  // Cast a ray to screen
   Ray ray(xPos, yPos);
-  Hit hitInfo = ray.castPointToPlane(getScreen());
-  if (hitInfo.hit) addSketchPoint(hitInfo.pos);
+  Ray::Hit hitInfo = ray.castPointToPlane(getScreen());
+  assert(hitInfo.hit);
+  addSketchPoint(hitInfo.pos);
+
+  // Update surfacePoints
+  updateSurfacePoints(xPos, yPos, SurfacePointSize);
+  removePointCloud(SurfacePointName);
+  registerSurfacePointsAsPointCloud(SurfacePointName);
 
   // Register sketchPoints as curve network (LINE)
   registerSketchPointsAsCurveNetworkLine(SketchPrefix);
@@ -82,14 +88,17 @@ void InterpolationTool::releasedEvent() {
     return;
   }
 
+  // Add the interpolated points.
+  getPointCloud()->addPoints(newV, newN);
+
   // Register Interpolated Points as point cloud
   renderInterpolatedPoints(newV, newN);
 
+  // Remove surfacePoints
+  removePointCloud(SurfacePointName);
+
   // Remove sketch as curve network (LINE)
   removeCurveNetworkLine(SketchPrefix);
-
-  // Add the interpolated points.
-  getPointCloud()->addPoints(newV, newN);
   
   // Reset all member variables.
   resetSketch();
@@ -157,8 +166,8 @@ std::pair<std::vector<glm::dvec3>, std::vector<glm::dvec3>> InterpolationTool::f
     
     // Cast a ray from p to cameraOrig onto screen.
     Ray ray(p, getCameraOrig());
-    Hit hitInfo = ray.castPointToPlane(getScreen());
-    assert(hitInfo.hit == true);
+    Ray::Hit hitInfo = ray.castPointToPlane(getScreen());
+    assert(hitInfo.hit);
 
     pointsInWorldCoord.push_back(p);
     normalsInWorldCoord.push_back(pn);
@@ -174,8 +183,8 @@ std::pair<std::vector<glm::dvec3>, std::vector<glm::dvec3>> InterpolationTool::f
 
     // Cast a ray from p to cameraOrig onto screen.
     Ray ray(p, getCameraOrig());
-    Hit hitInfo = ray.castPointToPlane(getScreen());
-    assert(hitInfo.hit == true);
+    Ray::Hit hitInfo = ray.castPointToPlane(getScreen());
+    assert(hitInfo.hit);
 
     pointsInWorldCoord.push_back(p);
     normalsInWorldCoord.push_back(pn);

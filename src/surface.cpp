@@ -14,9 +14,11 @@
 #include <glm/gtx/transform.hpp>
 
 #include <string>
+#include <random>
 
 #include "surface.hpp"
 #include "plane.hpp"
+#include "ray.hpp"
 #include "constants.hpp"
 
 // Reconstruct new surface with Vertices and Normals and return them.
@@ -115,9 +117,27 @@ std::pair<std::vector<glm::dvec3>, std::vector<std::vector<size_t>>> Surface::re
 
 // Compute approximate surface using Vertices and Normals.
 // Then project points randomly onto the surface and return the projected points.
+//  - xPos: io.DisplayFramebufferScale.x * mousePos.x
+//  - xPos: io.DisplayFramebufferScale.y * mousePos.y
 //  - averageDistance:  the range of the randomly added points.
 //  - pointSize:        the size of randomly added points.
-std::pair<std::vector<glm::dvec3>, std::vector<glm::dvec3>> Surface::projectMLSSurface(double averageDistance, int pointSize) {
+std::pair<std::vector<glm::dvec3>, std::vector<glm::dvec3>> Surface::projectMLSSurface(
+  int xPos,
+  int yPos,
+  double averageDistance, 
+  int pointSize
+) {
+  // Seed generation
+  std::random_device rd;
+  std::mt19937 gen(rd());
+  std::uniform_real_distribution<double> dis(-averageDistance, averageDistance);
+  
+  // Calculate center point
+  glm::dvec3 g(0.0, 0.0, 0.0);
+  for (size_t i = 0; i < Vertices->size(); i++) g += (*Vertices)[i];
+  g /= Vertices->size();
+  Vertices->push_back(g);
+
   // Init point cloud
   pcl::PointCloud<pcl::PointXYZ>::Ptr inputCloud(new pcl::PointCloud<pcl::PointXYZ>);
   inputCloud->points.resize(Vertices->size());
@@ -128,7 +148,6 @@ std::pair<std::vector<glm::dvec3>, std::vector<glm::dvec3>> Surface::projectMLSS
   } 
 
   // Create a KD-Tree 
-  // TODO: Not KD-Tree but Octree
   pcl::search::KdTree<pcl::PointXYZ>::Ptr tree(new pcl::search::KdTree<pcl::PointXYZ>);
 
   // Initialize Moving Least Squares
@@ -142,36 +161,58 @@ std::pair<std::vector<glm::dvec3>, std::vector<glm::dvec3>> Surface::projectMLSS
   // Execute MLS
   pcl::PointCloud<pcl::PointNormal>::Ptr outputCloud(new pcl::PointCloud<pcl::PointNormal>);
   mls.process(*outputCloud);
+  assert(inputCloud->points.size() == outputCloud->points.size());
 
-  std::vector<glm::dvec3> newV(outputCloud->size());
-  std::vector<glm::dvec3> newN(outputCloud->size());
-  glm::dvec3 averageNormal = glm::dvec3(0.0, 0.0, 0.0);
-  for (size_t i = 0; i < outputCloud->size(); i++) {
-    newV[i] = glm::dvec3(
-      outputCloud->points[i].x,
-      outputCloud->points[i].y,
-      outputCloud->points[i].z
-    );
-    newN[i] = glm::dvec3(
-      outputCloud->points[i].normal_x,
-      outputCloud->points[i].normal_y,
-      outputCloud->points[i].normal_z
-    );
+  // Compute the center point where the ray 
+  // intersects the approximate plane of MLS.
+  std::vector<pcl::MLSResult> mlsResults = mls.getMLSResults();
+  pcl::MLSResult mlsResult = mlsResults[Vertices->size() - 1];
 
-    averageNormal += newN[i];
-  }
-  averageNormal /= (double)outputCloud->size();
+  glm::dvec3 mlsCenter = glm::dvec3(mlsResult.mean.x(), mlsResult.mean.y(), mlsResult.mean.z());
+  glm::dvec3 mlsPlaneNormal = glm::dvec3(mlsResult.plane_normal.x(), mlsResult.plane_normal.y(), mlsResult.plane_normal.z());
+  glm::dvec3 mlsUAxis = glm::dvec3(mlsResult.u_axis.x(), mlsResult.u_axis.y(), mlsResult.u_axis.z());
+  glm::dvec3 mlsVAxis = glm::dvec3(mlsResult.v_axis.x(), mlsResult.v_axis.y(), mlsResult.v_axis.z());
   
-  // If the averageNormal is the same direction with cameraDir, flip the normals
-  const glm::dvec3 cameraDir  = polyscope::view::screenCoordsToWorldRay(glm::vec2(polyscope::view::windowWidth/2, polyscope::view::windowHeight/2));
-  if (glm::dot(averageNormal, cameraDir) > 0) {
-    for (size_t i = 0; i < newN.size(); i++) newN[i] *= (double)-1.0;
+  Plane H(mlsCenter, mlsPlaneNormal);
+  Ray ray(xPos, yPos);
+  Ray::Hit hitInfo = ray.castPointToPlane(&H);
+  if (!hitInfo.hit) return { std::vector<glm::dvec3>(), std::vector<glm::dvec3>() };
+  
+  double centerU = glm::dot(hitInfo.pos - mlsCenter, mlsUAxis);
+  double centerV = glm::dot(hitInfo.pos - mlsCenter, mlsVAxis);
+
+  // Project random points onto MLS surface
+  std::vector<glm::dvec3> newV, newN;
+  const glm::dvec3 cameraOrig = polyscope::view::getCameraWorldPosition();
+  for (int i = 0; i < pointSize; i++) {
+    double u = dis(gen);
+    double v = dis(gen);
+
+    pcl::MLSResult::MLSProjectionResults 
+      projectedResult = mlsResult.projectPointSimpleToPolynomialSurface(centerU + u, centerV + v);
+    
+    glm::dvec3 p = glm::dvec3(
+      projectedResult.point.x(),
+      projectedResult.point.y(),
+      projectedResult.point.z()
+    );
+    glm::dvec3 pn = glm::dvec3(
+      projectedResult.normal.x(),
+      projectedResult.normal.y(),
+      projectedResult.normal.z()
+    );
+
+    // If the normal is not facing cameraOrig, then reverse it
+    if (glm::dot(pn, p - cameraOrig) >= 0.0) pn *= -1.0;
+
+    newV.push_back(p);
+    newN.push_back(pn);
   }
 
+  // Display points projected mls surface
   polyscope::PointCloud *mlsPoints = polyscope::registerPointCloud(Name, newV);
-  mlsPoints->setPointColor(PointColor);
   mlsPoints->setPointRadius(PointRadius);
-  mlsPoints->setEnabled(PointEnabled);
+  mlsPoints->setEnabled(false);
 
   polyscope::PointCloudVectorQuantity *mlsVectorQuantity = mlsPoints->addVectorQuantity(NormalName, newN);
   mlsVectorQuantity->setVectorColor(NormalColor);

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <vector>
 #include "sketch_tool.hpp"
 
 // "It randomly creates points inside the brush volume
@@ -19,12 +20,4 @@ class MLSSprayTool : public SketchTool {
   private:
     void draggingEvent();
     void releasedEvent();
-
-    // Display added points as pseudo surface temporarily
-    void displayAddedPoints();
-
-    // Search pointCloud for nearest neighbors.
-    //  - center: center of search range
-    //  - K_size: the max number of nearest neighbors
-    std::vector<glm::dvec3> searchKNeighbors(glm::dvec3 center, int K_size);
 };

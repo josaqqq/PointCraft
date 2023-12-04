@@ -19,18 +19,61 @@ Ray::Ray(glm::dvec3 p, glm::dvec3 q){
   cameraDir   = polyscope::view::screenCoordsToWorldRay(glm::vec2(polyscope::view::windowWidth/2, polyscope::view::windowHeight/2));
 }
 
-// Cast the point to the specified plane
-// that is parallel to "camera plane".
-Hit Ray::castPointToPlane(Plane* plane) {
+// Search pointCloud for the closest point to the screen
+// within the range of searchRadius
+Ray::Hit Ray::searchNearestNeighbor(PointCloud *pointCloud, double searchRadius) {
   // Return value
   Hit hitInfo;
 
-  double depth = std::abs(plane->mapCoordinates(cameraOrig).z);
-  double t = depth/glm::dot(rayDir, cameraDir);
+  double currentDepth = 1e5;
+  std::vector<glm::dvec3> *verticesPtr = pointCloud->getVertices();
+  std::vector<glm::dvec3> *normalsPtr = pointCloud->getNormals();
+  for (size_t i = 0; i < verticesPtr->size(); i++) {
+    glm::dvec3 p = (*verticesPtr)[i];
+    glm::dvec3 pn = (*normalsPtr)[i];
+
+    // If the normal does not face rayDir, then skip it.
+    if (glm::dot(pn, rayDir) >= 0.0) continue;
+
+    // If the distance from the ray line is greater than searchRadius, then skip it.
+    double distFromRayLine = glm::length(glm::cross(p - cameraOrig, rayDir));
+    if (distFromRayLine >= searchRadius) continue;
+
+    // If the depth is less than currenDepth, then update hitInfo
+    double depthFromCameraOrig = glm::dot(p - cameraOrig, rayDir);
+    if (depthFromCameraOrig < currentDepth) {
+      currentDepth = depthFromCameraOrig;
+
+      hitInfo.hit = true;
+      hitInfo.rayDir = rayDir;
+      
+      hitInfo.index = i;
+      hitInfo.pos = p;
+      hitInfo.normal = pn;
+    } 
+  }
+  
+  return hitInfo;
+}
+
+// Cast the point to the specified plane
+Ray::Hit Ray::castPointToPlane(Plane* plane) {
+  // Return value
+  Hit hitInfo;
+
+  glm::dvec3 planeOrig = plane->getOrigin();
+  glm::dvec3 planeNormal = plane->getNormal();
+
+  // Calculate the intersection point
+  double D = glm::dot(planeNormal, planeOrig);
+  double t = (D - glm::dot(planeNormal, cameraOrig))/glm::dot(planeNormal, rayDir);
 
   hitInfo.hit = true; // must hit
+  hitInfo.rayDir = rayDir;
+
+  hitInfo.index = -1;
   hitInfo.pos = cameraOrig + t*rayDir;
-  hitInfo.normal = -cameraDir;
+  hitInfo.normal = planeNormal;
 
   return hitInfo;
 }

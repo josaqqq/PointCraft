@@ -101,7 +101,7 @@ void PointCloud::updatePointCloud(bool clearPostEnv) {
   pointCloud = polyscope::registerPointCloud(PointName, Vertices);
   pointCloud->setPointColor(PointColor);
   pointCloud->setPointRadius(PointRadius);
-  pointCloud->setEnabled(PointEnabled);
+  pointCloud->setEnabled(false);
 
   // Register Normals
   vectorQuantity = pointCloud->addVectorQuantity(NormalName, Normals);
@@ -115,6 +115,7 @@ void PointCloud::updatePointCloud(bool clearPostEnv) {
   std::cout << "\tVertex num\t\t->\t"       << Vertices.size()    << std::endl;
   std::cout << "\tNormal num\t\t->\t"       << Normals.size()     << std::endl;
   std::cout << "\tAverage Distance\t->\t"   << averageDistance    << std::endl;
+  std::cout                                                       << std::endl;
 
   // Show Pseudo Surface
   Surface pseudoSurface(PseudoSurfaceName, &Vertices, &Normals);
