@@ -9,6 +9,7 @@
 #include <pcl/search/kdtree.h>
 #include <pcl/surface/poisson.h>
 #include <pcl/surface/mls.h>
+#include <pcl/surface/impl/mls.hpp>
 #include <pcl/surface/gp3.h>
 
 #include <glm/gtx/transform.hpp>
@@ -185,11 +186,11 @@ std::pair<std::vector<glm::dvec3>, std::vector<glm::dvec3>> Surface::projectMLSS
   std::vector<glm::dvec3> newV, newN;
   const glm::dvec3 cameraOrig = polyscope::view::getCameraWorldPosition();
   for (int i = 0; i < pointSize; i++) {
-    double u = dis(gen);
-    double v = dis(gen);
+    double u = centerU + dis(gen);
+    double v = centerV + dis(gen);
 
     pcl::MLSResult::MLSProjectionResults 
-      projectedResult = mlsResult.projectPointSimpleToPolynomialSurface(centerU + u, centerV + v);
+      projectedResult = mlsResult.projectPointSimpleToPolynomialSurface(u, v);
     
     glm::dvec3 p = glm::dvec3(
       projectedResult.point.x(),
