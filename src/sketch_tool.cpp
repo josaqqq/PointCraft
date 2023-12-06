@@ -61,6 +61,7 @@ void SketchTool::registerSurfacePointsAsPointCloud(std::string name) {
   polyscope::PointCloud* patchCloud = polyscope::registerPointCloud(name, points);
   patchCloud->setPointColor(SurfacePointColor);
   patchCloud->setPointRadius(SurfacePointSize);
+  patchCloud->setMaterial(SurfaceMaterial);
   patchCloud->setEnabled(true);
 }
 void SketchTool::registerSketchPointsAsPointCloud(std::string name) {
@@ -111,6 +112,7 @@ void SketchTool::registerSketchPointsAsCurveNetworkLine(std::string name) {
   polyscope::CurveNetwork* curveNetwork = polyscope::registerCurveNetworkLine(name, sketch);
   curveNetwork->setColor(CurveNetworkColor);
   curveNetwork->setRadius(CurveNetworkRadius);  
+  curveNetwork->setMaterial(CurveNetworkMaterial);
 }
 void SketchTool::removeCurveNetworkLine(std::string name) {
   polyscope::removeCurveNetwork(name, false);

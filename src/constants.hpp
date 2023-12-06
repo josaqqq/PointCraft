@@ -34,6 +34,7 @@ const int SurfacePointNum = 10;
 //
 const glm::dvec3 SurfacePointColor = { 0.000, 1.000, 0.000 };
 const double SurfacePointSize = 0.005;
+const std::string SurfaceMaterial = "flat";
 
 //
 // Octree parameters
@@ -70,6 +71,7 @@ const int MLS_SpraySize = 4;
 //
 const glm::dvec3 CurveNetworkColor = { 0.000, 1.000, 0.000 };
 const double CurveNetworkRadius   = 0.00025;
+const std::string CurveNetworkMaterial = "flat";
 
 //
 // Poisson Surface Reconstruction
