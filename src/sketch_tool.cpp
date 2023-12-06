@@ -396,6 +396,78 @@ bool SketchTool::insideBasisConvexHull(double x, double y) {
   else return true;
 }
 
+
+// Filter the points on the interpolated surface.
+// Considering points of the surface and the point cloud,
+// select the candidate point of each voxel.
+// Voxel size is averageDistance per side
+//  - existingPoints: already existing points. 
+//                    Points in the same voxel with a point of existingPoints are skipped.
+//  - filteredPoints: Filtering target
+std::vector<int> SketchTool::voxelFilter(
+  std::vector<glm::dvec3> &existingPoints,
+  std::vector<glm::dvec3> &filteredPoints
+) {
+  // Voxel size is averageDistance per side
+  double voxelSide = pointCloud->getAverageDistance();
+
+  // map for voxel filter
+  //  - std::tupple<double, double, double>:  the index of the voxel
+  //  - std::pair<double, int>: the distance between the center point and the current 
+  //                            candidate point and the index of the current candidate point
+  std::map<std::tuple<int, int, int>, std::pair<double, int>> voxels;
+
+  // Add the points of the point 
+  for (glm::dvec3 p: existingPoints) {
+    std::tuple<int, int, int> idx = {
+      std::floor(p.x/voxelSide),
+      std::floor(p.y/voxelSide),
+      std::floor(p.z/voxelSide)
+    };
+
+    voxels[idx] = { 0.0, -1 };
+  }
+
+  // Compute whether each surface point is a candidate point.
+  std::vector<bool> isCandidatePoint(filteredPoints.size());
+  for (size_t i = 0; i < filteredPoints.size(); i++) {
+    glm::dvec3 p = filteredPoints[i];
+    std::tuple<int, int, int> idx = {
+      std::floor(p.x/voxelSide),
+      std::floor(p.y/voxelSide),
+      std::floor(p.z/voxelSide)
+    };
+
+    std::pair<double, int> currentCandidate = { 1e5, i };
+    if (voxels.count(idx) != 0) {
+      currentCandidate = voxels[idx];
+    }
+
+    double currentCandidateDist = currentCandidate.first;
+    int currentCandidateIdx = currentCandidate.second;
+
+    // If a point of the point cloud is in the voxel, then skip it
+    if (currentCandidateIdx == -1) continue;
+
+
+    // Update the voxels information
+    glm::dvec3 voxelCenter = p + glm::dvec3(voxelSide, voxelSide, voxelSide);
+    double currentDist = glm::length(p - voxelCenter);
+    if (currentDist < currentCandidateDist) {
+      voxels[idx] = { currentDist, i };
+      isCandidatePoint[currentCandidateIdx] = false;
+      isCandidatePoint[i] = true;
+    }
+  }
+
+  // Compute newV and newN
+  std::vector<int> filteredIndex;
+  for (size_t i = 0; i < filteredPoints.size(); i++) {
+    if (isCandidatePoint[i]) filteredIndex.push_back(i);
+  }
+  return filteredIndex;
+}
+
 // Calculate averageDistance casted onto the screen
 double SketchTool::calcCastedAverageDist() {
   double objectDist = glm::length(cameraOrig);

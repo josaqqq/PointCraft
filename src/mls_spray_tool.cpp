@@ -44,9 +44,9 @@ void MLSSprayTool::draggingEvent() {
 
   // Construct MLS surface and project random points onto the surface
   std::vector<glm::dvec3> dummyNormals;
-  std::vector<glm::dvec3> newV, newN;
+  std::vector<glm::dvec3> mlsVertices, mlsNormals;
   Surface mlsSurface(MLSName, &surfacePoints, &dummyNormals);
-  std::tie(newV, newN) = mlsSurface.projectMLSSurface(
+  std::tie(mlsVertices, mlsNormals) = mlsSurface.projectMLSSurface(
     xPos,
     yPos,
     getPointCloud()->getBoundingSphereRadius(),
@@ -54,6 +54,18 @@ void MLSSprayTool::draggingEvent() {
     MLS_SpraySize
   );
 
+  // Filter the added vertices in order to preserve the density of the point cloud
+  std::vector<int> filteredIndex = voxelFilter(*verticesPtr, mlsVertices);
+  std::vector<glm::dvec3> newV(filteredIndex.size());
+  std::vector<glm::dvec3> newN(filteredIndex.size());
+  for (size_t i = 0; i < filteredIndex.size(); i++) {
+    int idx = filteredIndex[i];
+    newV[i] = mlsVertices[idx];
+    newN[i] = mlsNormals[idx];
+  }
+
+  if (newV.size() == 0) return;
+  
   // Add the interpolated points to the point cloud.
   getPointCloud()->addPoints(newV, newN);
 }

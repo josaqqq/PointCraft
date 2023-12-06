@@ -90,29 +90,6 @@ void InterpolationTool::releasedEvent() {
     return;
   }
 
-  // // MLS Surface Reconstruction
-  // Surface mlsSurface("Interpolation: MLS", &basisPoints, &basisNormals);
-  // std::tie(basisPoints, basisNormals) = mlsSurface.reconstructMLSSurface(
-  //   getPointCloud()->getBoundingSphereRadius(),
-  //   getPointCloud()->getAverageDistance()
-  // );
-  // if (basisPoints.size() == 0) {
-  //   std::cout << "WARNING: No mesh was reconstructed with Poisson Surface Reconstruction." << std::endl;
-  //   removeCurveNetworkLine(SketchPrefix);
-  //   resetSketch();
-  //   return;
-  // }
-
-  // // Filter the reconstructed surface
-  // std::vector<glm::dvec3> newV, newN;
-  // std::tie(newV, newN) = filterSurfacePointsWithNormals(basisPoints, basisNormals);
-  // if (newV.size() == 0) {
-  //   std::cout << "WARNING: No surface point was selected after filtering method." << std::endl;
-  //   removeCurveNetworkLine(SketchPrefix);
-  //   resetSketch();
-  //   return;
-  // }
-
   // Add the interpolated points.
   getPointCloud()->addPoints(newV, newN);
 
@@ -378,22 +355,30 @@ std::pair<std::vector<glm::dvec3>, std::vector<glm::dvec3>> InterpolationTool::f
 
   // Detect depth with DBSCAN
   Clustering clustering(&candidatePointsIndex, &pointsInWorldCoord, "surface");
-  std::vector<int> interpolatedPointsIndex = clustering.executeClustering(
+  std::vector<int> clusteredPointsIndex = clustering.executeClustering(
     DBSCAN_SearchRange*getPointCloud()->getAverageDistance(),
     DBSCAN_MinPoints,
     CLUSTER_MIN_DEPTH
   );
 
-  int newPointsSize = interpolatedPointsIndex.size();
-  std::vector<glm::dvec3> newV(newPointsSize);
-  std::vector<glm::dvec3> newN(newPointsSize);
-  for (int i = 0; i < newPointsSize; i++) {
-    int idx = interpolatedPointsIndex[i];
+  // Filter the added vertices in order to preserve the density of the point cloud
+  std::vector<glm::dvec3> clusteredV(clusteredPointsIndex.size());
+  std::vector<glm::dvec3> clusteredN(clusteredPointsIndex.size());
+  for (size_t i = 0; i <  clusteredPointsIndex.size(); i++) {
+    int idx = clusteredPointsIndex[i];
     glm::dvec3 p = pointsInWorldCoord[idx];
     glm::dvec3 pn = normalsInWorldCoord[idx];
 
-    newV[i] = p;
-    newN[i] = pn;
+    clusteredV[i] = p;
+    clusteredN[i] = pn;
+  }
+  std::vector<int> filteredIndex = voxelFilter(*(getPointCloud()->getVertices()), clusteredV);
+  std::vector<glm::dvec3> newV(filteredIndex.size());
+  std::vector<glm::dvec3> newN(filteredIndex.size());
+  for (size_t i = 0; i < filteredIndex.size(); i++) {
+    int idx = filteredIndex[i];
+    newV[i] = clusteredV[idx];
+    newN[i] = clusteredN[idx];
   }
 
   return { newV, newN };
