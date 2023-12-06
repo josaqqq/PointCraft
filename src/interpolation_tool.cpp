@@ -69,6 +69,8 @@ void InterpolationTool::releasedEvent() {
     basisPoints[i] = (*verticesPtr)[idx];
     basisNormals[i] = (*normalsPtr)[idx];
   }
+
+  // Poisson Surface Reconstruction
   Surface poissonSurface("Interpolation: PSR", &basisPoints, &basisNormals);
   std::tie(basisPoints, basisFaces) = poissonSurface.reconstructPoissonSurface(getPointCloud()->getAverageDistance());
   if (basisPoints.size() == 0) {
@@ -87,6 +89,29 @@ void InterpolationTool::releasedEvent() {
     resetSketch();
     return;
   }
+
+  // // MLS Surface Reconstruction
+  // Surface mlsSurface("Interpolation: MLS", &basisPoints, &basisNormals);
+  // std::tie(basisPoints, basisNormals) = mlsSurface.reconstructMLSSurface(
+  //   getPointCloud()->getBoundingSphereRadius(),
+  //   getPointCloud()->getAverageDistance()
+  // );
+  // if (basisPoints.size() == 0) {
+  //   std::cout << "WARNING: No mesh was reconstructed with Poisson Surface Reconstruction." << std::endl;
+  //   removeCurveNetworkLine(SketchPrefix);
+  //   resetSketch();
+  //   return;
+  // }
+
+  // // Filter the reconstructed surface
+  // std::vector<glm::dvec3> newV, newN;
+  // std::tie(newV, newN) = filterSurfacePointsWithNormals(basisPoints, basisNormals);
+  // if (newV.size() == 0) {
+  //   std::cout << "WARNING: No surface point was selected after filtering method." << std::endl;
+  //   removeCurveNetworkLine(SketchPrefix);
+  //   resetSketch();
+  //   return;
+  // }
 
   // Add the interpolated points.
   getPointCloud()->addPoints(newV, newN);

@@ -42,6 +42,7 @@ void MLSSprayTool::draggingEvent() {
   std::tie(newV, newN) = mlsSurface.projectMLSSurface(
     xPos,
     yPos,
+    getPointCloud()->getBoundingSphereRadius(),
     getPointCloud()->getAverageDistance(),
     MLS_SpraySize
   );

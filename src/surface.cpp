@@ -67,6 +67,7 @@ std::pair<std::vector<glm::dvec3>, std::vector<std::vector<size_t>>> Surface::re
   pcl::Poisson<pcl::PointNormal> poisson;
   poisson.setDepth(maxDepth);
   poisson.setInputCloud(inputCloud);
+  poisson.setThreads(PoissonThreadNum);
 
   // Reconstruct surface
   pcl::PolygonMesh mesh;
@@ -116,64 +117,29 @@ std::pair<std::vector<glm::dvec3>, std::vector<std::vector<size_t>>> Surface::re
   return { meshV, meshF };
 }
 
-// Compute approximate surface using Vertices and Normals.
+// Compute an approximate surface using Vertices and Normals.
 // Then project points randomly onto the surface and return the projected points.
 //  - xPos: io.DisplayFramebufferScale.x * mousePos.x
 //  - xPos: io.DisplayFramebufferScale.y * mousePos.y
-//  - averageDistance:  the range of the randomly added points.
+//  - searchRadius: the range of the nearest neighbor search
+//  - averageDistance:  the radius of the range where points are randomly added.
 //  - pointSize:        the size of randomly added points.
 std::pair<std::vector<glm::dvec3>, std::vector<glm::dvec3>> Surface::projectMLSSurface(
   int xPos,
   int yPos,
+  double searchRadius,
   double averageDistance, 
   int pointSize
 ) {
-  // Seed generation
-  std::random_device rd;
-  std::mt19937 gen(rd());
-  std::uniform_real_distribution<double> dis(-averageDistance, averageDistance);
-  
-  // Calculate center point
-  glm::dvec3 g(0.0, 0.0, 0.0);
-  for (size_t i = 0; i < Vertices->size(); i++) g += (*Vertices)[i];
-  g /= Vertices->size();
-  Vertices->push_back(g);
-
-  // Init point cloud
-  pcl::PointCloud<pcl::PointXYZ>::Ptr inputCloud(new pcl::PointCloud<pcl::PointXYZ>);
-  inputCloud->points.resize(Vertices->size());
-  for (size_t i = 0; i < Vertices->size(); i++) {
-    inputCloud->points[i].x = (*Vertices)[i].x;
-    inputCloud->points[i].y = (*Vertices)[i].y;
-    inputCloud->points[i].z = (*Vertices)[i].z;
-  } 
-
-  // Create a KD-Tree 
-  pcl::search::KdTree<pcl::PointXYZ>::Ptr tree(new pcl::search::KdTree<pcl::PointXYZ>);
-
-  // Initialize Moving Least Squares
-  pcl::MovingLeastSquares<pcl::PointXYZ, pcl::PointNormal> mls;
-  mls.setComputeNormals(true);
-  mls.setInputCloud(inputCloud);
-  mls.setPolynomialOrder(MLSPolynomialOrder);
-  mls.setSearchMethod(tree);
-  mls.setSearchRadius(MLSSearchRadius);
-
-  // Execute MLS
-  pcl::PointCloud<pcl::PointNormal>::Ptr outputCloud(new pcl::PointCloud<pcl::PointNormal>);
-  mls.process(*outputCloud);
-  assert(inputCloud->points.size() == outputCloud->points.size());
-
-  // Compute the center point where the ray 
-  // intersects the approximate plane of MLS.
-  std::vector<pcl::MLSResult> mlsResults = mls.getMLSResults();
-  pcl::MLSResult mlsResult = mlsResults[Vertices->size() - 1];
+  // Initialize MLS surface
+  pcl::MLSResult mlsResult = InitializeMLSSurface(searchRadius);
 
   glm::dvec3 mlsCenter = glm::dvec3(mlsResult.mean.x(), mlsResult.mean.y(), mlsResult.mean.z());
   glm::dvec3 mlsPlaneNormal = glm::dvec3(mlsResult.plane_normal.x(), mlsResult.plane_normal.y(), mlsResult.plane_normal.z());
   glm::dvec3 mlsUAxis = glm::dvec3(mlsResult.u_axis.x(), mlsResult.u_axis.y(), mlsResult.u_axis.z());
   glm::dvec3 mlsVAxis = glm::dvec3(mlsResult.v_axis.x(), mlsResult.v_axis.y(), mlsResult.v_axis.z());
   
+  // Cast a ray to the approximate surface
   Plane H(mlsCenter, mlsPlaneNormal);
   Ray ray(xPos, yPos);
   Ray::Hit hitInfo = ray.castPointToPlane(&H);
@@ -183,6 +149,10 @@ std::pair<std::vector<glm::dvec3>, std::vector<glm::dvec3>> Surface::projectMLSS
   double centerV = glm::dot(hitInfo.pos - mlsCenter, mlsVAxis);
 
   // Project random points onto MLS surface
+  std::random_device rd;
+  std::mt19937 gen(rd());
+  std::uniform_real_distribution<double> dis(-averageDistance, averageDistance);
+  
   std::vector<glm::dvec3> newV, newN;
   const glm::dvec3 cameraOrig = polyscope::view::getCameraWorldPosition();
   for (int i = 0; i < pointSize; i++) {
@@ -203,11 +173,86 @@ std::pair<std::vector<glm::dvec3>, std::vector<glm::dvec3>> Surface::projectMLSS
       projectedResult.normal.z()
     );
 
+    // If the point is outside the point cloud range, then skip it
+    if (glm::length(p) > searchRadius) continue;
+
     // If the normal is not facing cameraOrig, then reverse it
     if (glm::dot(pn, p - cameraOrig) >= 0.0) pn *= -1.0;
 
     newV.push_back(p);
     newN.push_back(pn);
+  }
+
+  // Display points projected mls surface
+  polyscope::PointCloud *mlsPoints = polyscope::registerPointCloud(Name, newV);
+  mlsPoints->setPointRadius(PointRadius);
+  mlsPoints->setEnabled(false);
+
+  polyscope::PointCloudVectorQuantity *mlsVectorQuantity = mlsPoints->addVectorQuantity(NormalName, newN);
+  mlsVectorQuantity->setVectorColor(NormalColor);
+  mlsVectorQuantity->setVectorLengthScale(NormalLength);
+  mlsVectorQuantity->setVectorRadius(NormalRadius);
+  mlsVectorQuantity->setEnabled(NormalEnabled);
+
+  return { newV, newN };
+}
+
+// Compute an approximate surface using Vertices and Normals.
+// Then project points inside of the range of basis points.
+//  - searchRadius: the range of the nearest neighbor search
+//  - averagedistance: the distance between points in the point cloud
+std::pair<std::vector<glm::dvec3>, std::vector<glm::dvec3>> Surface::reconstructMLSSurface(
+  double searchRadius,
+  double averageDistance
+) {
+  // Initialize MLS Surface
+  pcl::MLSResult mlsResult = InitializeMLSSurface(searchRadius);
+
+  glm::dvec3 mlsCenter = glm::dvec3(mlsResult.mean.x(), mlsResult.mean.y(), mlsResult.mean.z());
+  glm::dvec3 mlsPlaneNormal = glm::dvec3(mlsResult.plane_normal.x(), mlsResult.plane_normal.y(), mlsResult.plane_normal.z());
+  glm::dvec3 mlsUAxis = glm::dvec3(mlsResult.u_axis.x(), mlsResult.u_axis.y(), mlsResult.u_axis.z());
+  glm::dvec3 mlsVAxis = glm::dvec3(mlsResult.v_axis.x(), mlsResult.v_axis.y(), mlsResult.v_axis.z());
+
+  // Cast all vertices to the MLS surface
+  Plane H(mlsCenter, mlsPlaneNormal);
+  const double INF = 1e5;
+  double min_x = INF, max_x = -INF;
+  double min_y = INF, max_y = -INF;
+  for (size_t i = 0; i < Vertices->size(); i++) {
+    glm::dvec3 mappedPoint = H.mapCoordinates((*Vertices)[i]);
+
+    min_x = std::min(min_x, mappedPoint.x);
+    max_x = std::max(max_x, mappedPoint.x);
+    min_y = std::min(min_y, mappedPoint.y);
+    max_y = std::max(max_y, mappedPoint.y);
+  }
+
+  // Project discretized point to the MLS surface
+  // Discretize in squares with averageDistance/2.0 on each side
+  std::vector<glm::dvec3> newV, newN;
+  const glm::dvec3 cameraOrig = polyscope::view::getCameraWorldPosition();
+  for (double x = min_x; x < max_x; x += averageDistance/2.0) {
+    for (double y = min_y; y < max_y; y += averageDistance/2.0) {
+      pcl::MLSResult::MLSProjectionResults 
+        projectedResult = mlsResult.projectPointSimpleToPolynomialSurface(x, y);
+      
+      glm::dvec3 p = glm::dvec3(
+        projectedResult.point.x(),
+        projectedResult.point.y(),
+        projectedResult.point.z()
+      );
+      glm::dvec3 pn = glm::dvec3(
+        projectedResult.normal.x(),
+        projectedResult.normal.y(),
+        projectedResult.normal.z()
+      );
+
+      // If the normal is not facing cameraOrig, then reverse it
+      if (glm::dot(pn, p - cameraOrig) >= 0.0) pn *= -1.0;
+
+      newV.push_back(p);
+      newN.push_back(pn);
+    }
   }
 
   // Display points projected mls surface
@@ -265,4 +310,44 @@ void Surface::showPseudoSurface(double averageDistance) {
   polyscope::SurfaceMesh *pseudoSurface = polyscope::registerSurfaceMesh(Name, meshV, meshF);
   pseudoSurface->setSurfaceColor(PseudoSurfaceColor);
   pseudoSurface->setMaterial(PseudoSurfaceMaterial);
+}
+
+pcl::MLSResult Surface::InitializeMLSSurface(double searchRadius) {
+  // Calculate center point
+  glm::dvec3 g(0.0, 0.0, 0.0);
+  for (size_t i = 0; i < Vertices->size(); i++) g += (*Vertices)[i];
+  g /= Vertices->size();
+  Vertices->push_back(g);
+
+  // Init point cloud
+  pcl::PointCloud<pcl::PointXYZ>::Ptr inputCloud(new pcl::PointCloud<pcl::PointXYZ>);
+  inputCloud->points.resize(Vertices->size());
+  for (size_t i = 0; i < Vertices->size(); i++) {
+    inputCloud->points[i].x = (*Vertices)[i].x;
+    inputCloud->points[i].y = (*Vertices)[i].y;
+    inputCloud->points[i].z = (*Vertices)[i].z;
+  } 
+
+  // Create a KD-Tree 
+  pcl::search::KdTree<pcl::PointXYZ>::Ptr tree(new pcl::search::KdTree<pcl::PointXYZ>);
+
+  // Initialize Moving Least Squares
+  pcl::MovingLeastSquares<pcl::PointXYZ, pcl::PointNormal> mls;
+  mls.setComputeNormals(true);
+  mls.setInputCloud(inputCloud);
+  mls.setPolynomialOrder(MLSPolynomialOrder);
+  mls.setSearchMethod(tree);
+  mls.setSearchRadius(searchRadius);
+
+  // Execute MLS
+  pcl::PointCloud<pcl::PointNormal>::Ptr outputCloud(new pcl::PointCloud<pcl::PointNormal>);
+  mls.process(*outputCloud);
+  assert(inputCloud->points.size() == outputCloud->points.size());
+
+  // Compute the center point where the ray 
+  // intersects the approximate plane of MLS.
+  std::vector<pcl::MLSResult> mlsResults = mls.getMLSResults();
+  pcl::MLSResult mlsResult = mlsResults[Vertices->size() - 1];
+
+  return mlsResult;
 }

@@ -76,6 +76,7 @@ const double CurveNetworkRadius   = 0.00025;
 //
 const std::string PoissonName = "Poisson Surface Reconstruction";
 const int PoissonMaxDepth = 5;
+const int PoissonThreadNum = 4;
 const glm::dvec3 PoissonColor = { 0.155, 0.186, 0.790 };
 const std::string PoissonMaterial = "normal";
 const bool PoissonEnabled = false;
@@ -93,7 +94,6 @@ const std::string MLSName = "Interpolation MLS";
 const glm::dvec3 MLSColor = { 0.000, 0.000, 1.000 };
 
 const int MLSPolynomialOrder = 2;
-const double MLSSearchRadius = 1.0; // TODO: This parameter depends on the point cloud
 
 //
 // Delaunay Triangulation
