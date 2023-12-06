@@ -36,6 +36,11 @@ void ModeSelector::enableModeSelection(ImGuiIO &io) {
     *currentMode = MODE_DELETE;
     deleteTool->initSketch();
   }
+  ImGui::Text("   "); ImGui::SameLine();
+  if (ImGui::Button("Delete Spray Tool")) {
+    *currentMode = MODE_DELETE_SPRAY;
+    deleteSprayTool->initSketch();
+  }
 
   switch (*currentMode) {
     case MODE_NONE:
@@ -55,6 +60,11 @@ void ModeSelector::enableModeSelection(ImGuiIO &io) {
     case MODE_DELETE:
       ImGui::Text("   Selected Tool: Delete Tool");
       deleteTool->launchToolOperation();
+      *currentSurfaceMode = SURFACE_MODE_PSEUDO;
+      break;
+    case MODE_DELETE_SPRAY:
+      ImGui::Text("   Selected Tool: Delete Spray Tool");
+      deleteSprayTool->launchToolOperation();
       *currentSurfaceMode = SURFACE_MODE_PSEUDO;
       break;
   }

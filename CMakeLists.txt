@@ -84,6 +84,7 @@ add_executable(
     src/sketch_tool.cpp
     src/interpolation_tool.cpp
     src/mls_spray_tool.cpp
+    src/delete_spray_tool.cpp
     src/delete_tool.cpp
 )
 

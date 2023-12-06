@@ -32,7 +32,7 @@ void InterpolationTool::draggingEvent() {
   assert(hitInfo.hit);
   addSketchPoint(hitInfo.pos);
 
-  // Update surfacePoints
+  // Update surfacePointsIndex
   updateSurfacePoints(xPos, yPos, SurfacePointNum);
   removePointCloud(SurfacePointName);
   registerSurfacePointsAsPointCloud(SurfacePointName);
@@ -119,7 +119,7 @@ void InterpolationTool::releasedEvent() {
   // Register Interpolated Points as point cloud
   renderInterpolatedPoints(newV, newN);
 
-  // Remove surfacePoints
+  // Remove surfacePointsIndex
   removePointCloud(SurfacePointName);
 
   // Remove sketch as curve network (LINE)

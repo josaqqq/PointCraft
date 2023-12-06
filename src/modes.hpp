@@ -7,12 +7,14 @@
 #include "interpolation_tool.hpp"
 #include "mls_spray_tool.hpp"
 #include "delete_tool.hpp"
+#include "delete_spray_tool.hpp"
 
 enum Mode {
   MODE_NONE,
   MODE_INTERPOLATION,
   MODE_DELETE,
   MODE_MLS_SPRAY,
+  MODE_DELETE_SPRAY,
 };
 
 enum VisualizationMode {
@@ -37,7 +39,8 @@ struct ModeSelector {
       
       InterpolationTool *interpolationTool,
       MLSSprayTool *mlsSprayTool,
-      DeleteTool *deleteTool
+      DeleteTool *deleteTool,
+      DeleteSprayTool *deleteSprayTool
     ) 
     : currentMode(currentMode),
       currentSurfaceMode(currentSurfaceMode),
@@ -46,7 +49,8 @@ struct ModeSelector {
       
       interpolationTool(interpolationTool),
       mlsSprayTool(mlsSprayTool),
-      deleteTool(deleteTool)
+      deleteTool(deleteTool),
+      deleteSprayTool(deleteSprayTool)
     { 
       // Initialize current modes.
       *currentMode = MODE_NONE;
@@ -66,4 +70,5 @@ struct ModeSelector {
     InterpolationTool *interpolationTool;
     MLSSprayTool      *mlsSprayTool;
     DeleteTool        *deleteTool;
+    DeleteSprayTool   *deleteSprayTool;
 };

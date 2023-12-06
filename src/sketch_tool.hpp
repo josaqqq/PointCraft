@@ -51,6 +51,7 @@ class SketchTool {
       Geometry functions
     */
     // Compute the surface points where mouse is currently hovering
+    // and then update surfacePointsIndex
     //  - xPos: io.DisplayFramebufferScale.x * mousePos.x
     //  - xPos: io.DisplayFramebufferScale.y * mousePos.y
     //  - K_size: the selected nearest neighbors size
@@ -97,7 +98,7 @@ class SketchTool {
     glm::dvec3                getCameraOrig();
     glm::dvec3                getCameraDir();
     Plane*                    getScreen();
-    std::vector<glm::dvec3>*  getSurfacePoints();
+    std::vector<int>*         getSurfacePointsIndex();
     std::vector<glm::dvec3>*  getSketchPoints();
     std::vector<int>*         getBasisPointsIndex();
     std::vector<glm::dvec2>*  getMappedBasisConvexHull();
@@ -112,7 +113,7 @@ class SketchTool {
     glm::dvec3  cameraDir;    // Camera direction
     Plane       screen;       // Plane on nearClip
 
-    std::vector<glm::dvec3>   surfacePoints;          // Surface points where the mouse is hovering
+    std::vector<int>          surfacePointsIndex;     // The indices of surface points where the mouse is hovering
     std::vector<glm::dvec3>   sketchPoints;           // Sketched points on the camera screen
     std::vector<int>          basisPointsIndex;       // The indices of selected basis points
     std::vector<glm::dvec2>   mappedBasisConvexHull;  // Convex hull of the basis points mapped onto screen

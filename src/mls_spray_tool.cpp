@@ -27,18 +27,25 @@ void MLSSprayTool::draggingEvent() {
   assert(hitInfo.hit);
   addSketchPoint(hitInfo.pos);
 
-  // Update surfacePoints
+  // Update surfacePointsIndex
   updateSurfacePoints(xPos, yPos, MLS_SprayNearestNeighbors);
   removePointCloud(SurfacePointName);
   registerSurfacePointsAsPointCloud(SurfacePointName);
-
   // If no point was selected, then return.
-  if (getSurfacePoints()->size() == 0) return;
+  if (getSurfacePointsIndex()->size() == 0) return;
+
+  std::vector<glm::dvec3> surfacePoints;
+  std::vector<int>        *surfacePointsIndexPtr = getSurfacePointsIndex();
+  std::vector<glm::dvec3> *verticesPtr = getPointCloud()->getVertices();
+  for (size_t i = 0; i < surfacePointsIndexPtr->size(); i++) {
+    int idx = (*surfacePointsIndexPtr)[i];
+    surfacePoints.push_back((*verticesPtr)[idx]);
+  }
 
   // Construct MLS surface and project random points onto the surface
   std::vector<glm::dvec3> dummyNormals;
   std::vector<glm::dvec3> newV, newN;
-  Surface mlsSurface(MLSName, getSurfacePoints(), &dummyNormals);
+  Surface mlsSurface(MLSName, &surfacePoints, &dummyNormals);
   std::tie(newV, newN) = mlsSurface.projectMLSSurface(
     xPos,
     yPos,
@@ -54,7 +61,7 @@ void MLSSprayTool::draggingEvent() {
 void MLSSprayTool::releasedEvent() {
   if (getSketchPoints()->size() == 0) return;
 
-  // Remove surfacePoints
+  // Remove surfacePointsIndex
   removePointCloud(SurfacePointName);
 
   // Reset all member variables.

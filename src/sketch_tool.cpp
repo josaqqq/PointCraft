@@ -39,7 +39,7 @@ void SketchTool::resetSketch() {
   cameraDir = glm::dvec3(0.0, 0.0, 0.0);
   screen = Plane();
 
-  surfacePoints.clear();
+  surfacePointsIndex.clear();
   sketchPoints.clear();
   basisPointsIndex.clear();
   mappedBasisConvexHull.clear();
@@ -50,7 +50,15 @@ void SketchTool::resetSketch() {
 */
 void SketchTool::registerSurfacePointsAsPointCloud(std::string name) {
   // Show surfacePoints
-  polyscope::PointCloud* patchCloud = polyscope::registerPointCloud(name, surfacePoints);
+  std::vector<glm::dvec3> points;
+
+  std::vector<glm::dvec3> *verticesPtr = pointCloud->getVertices();
+  for (size_t i = 0; i < surfacePointsIndex.size(); i++) {
+    int idx = surfacePointsIndex[i];
+    points.push_back((*verticesPtr)[idx]);
+  }
+
+  polyscope::PointCloud* patchCloud = polyscope::registerPointCloud(name, points);
   patchCloud->setPointColor(SurfacePointColor);
   patchCloud->setPointRadius(SurfacePointSize);
   patchCloud->setEnabled(true);
@@ -128,8 +136,8 @@ void SketchTool::removeCurveNetworkLoop(std::string name) {
 //  - xPos: io.DisplayFramebufferScale.y * mousePos.y
 //  - K_size: the selected nearest neighbors size
 void SketchTool::updateSurfacePoints(double xPos, double yPos, int K_size) {
-  // Reset surfacePoints
-  surfacePoints.clear();
+  // Reset surfacePointsIndex
+  surfacePointsIndex.clear();
   
   // Cast a ray to pointCloud
   Ray ray(xPos, yPos);
@@ -155,19 +163,16 @@ void SketchTool::updateSurfacePoints(double xPos, double yPos, int K_size) {
     hitPointDistances
   );
 
-  std::vector<glm::dvec3> *verticesPtr = pointCloud->getVertices();
   std::vector<glm::dvec3> *normalsPtr = pointCloud->getNormals();
   for (int i = 0; i < hitPointCount; i++) {
     int idx = hitPointIndices[i];
 
-    glm::dvec3 p = (*verticesPtr)[idx];
-    glm::dvec3 pn = (*normalsPtr)[idx];
-
     // If the normal does not face rayDir, then skip it.
+    glm::dvec3 pn = (*normalsPtr)[idx];
     if (glm::dot(pn, rayDir) >= 0.0) continue;
 
-    // Add nearest neighbor to surfacePoints
-    surfacePoints.push_back(p);
+    // Add nearest neighbor to surfacePointsIndex
+    surfacePointsIndex.push_back(idx);
   }
 }
 
@@ -412,8 +417,8 @@ glm::dvec3 SketchTool::getCameraDir() {
 Plane* SketchTool::getScreen() {
   return &screen;
 }
-std::vector<glm::dvec3>* SketchTool::getSurfacePoints() {
-  return &surfacePoints;
+std::vector<int>* SketchTool::getSurfacePointsIndex() {
+  return &surfacePointsIndex;
 }
 std::vector<glm::dvec3>* SketchTool::getSketchPoints() {
   return &sketchPoints;

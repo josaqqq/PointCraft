@@ -76,6 +76,7 @@ int main(int argc, char **argv) {
   InterpolationTool interpolationTool(&currentMode, &pointCloud);
   MLSSprayTool      mlsSprayTool(&currentMode, &pointCloud);
   DeleteTool        deleteTool(&currentMode, &pointCloud);
+  DeleteSprayTool   deleteSprayTool(&currentMode, &pointCloud);
 
   modeSelector = ModeSelector(
     &currentMode, 
@@ -85,7 +86,8 @@ int main(int argc, char **argv) {
     
     &interpolationTool,
     &mlsSprayTool,
-    &deleteTool
+    &deleteTool,
+    &deleteSprayTool
   );
 
   // Reconstruct Surfaces
