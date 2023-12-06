@@ -247,8 +247,8 @@ std::pair<std::vector<glm::dvec3>, std::vector<glm::dvec3>> Surface::reconstruct
         projectedResult.normal.z()
       );
 
-      // If the normal is not facing cameraOrig, then reverse it
-      if (glm::dot(pn, p - cameraOrig) >= 0.0) pn *= -1.0;
+      // If the normal is not facing cameraOrig, then skip it
+      if (glm::dot(pn, p - cameraOrig) >= 0.0) continue;
 
       newV.push_back(p);
       newN.push_back(pn);
