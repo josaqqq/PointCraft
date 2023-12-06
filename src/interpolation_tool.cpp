@@ -313,10 +313,11 @@ std::pair<std::vector<glm::dvec3>, std::vector<glm::dvec3>> InterpolationTool::f
   }
 
   const double castedAverageDist = calcCastedAverageDist();
+  std::set<int> candidatePointsIndexSet;
   std::vector<int> candidatePointsIndex;
   std::vector<glm::dvec3> hasCloserNeighborPoints;
-  for (double x = min_x; x < max_x; x += castedAverageDist*2.0) {
-    for (double y = min_y; y < max_y; y += castedAverageDist*2.0) {
+  for (double x = min_x; x < max_x; x += castedAverageDist) {
+    for (double y = min_y; y < max_y; y += castedAverageDist) {
       if (!insideSketch(x, y)) continue;
       if (!insideBasisConvexHull(x, y)) continue;
 
@@ -351,10 +352,14 @@ std::pair<std::vector<glm::dvec3>, std::vector<glm::dvec3>> InterpolationTool::f
       // Discard points that is one of basisPoints.
       if (minDepthIdx >= surfacePointsSize) continue;
 
+      // If the point is already selected, then skip it.
+      if (candidatePointsIndexSet.count(minDepthIdx)) continue;
+
       // Update the buffer vectors
       for (int i = 0; i < hitPointCount; i++) {
         int hitPointIdx = hitPointIndices[i];
         if (hitPointIdx == minDepthIdx) {
+          candidatePointsIndexSet.insert(minDepthIdx);
           candidatePointsIndex.push_back(hitPointIdx);
         } else {
           glm::dvec3 pn = normalsInWorldCoord[hitPointIdx];
