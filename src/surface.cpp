@@ -67,7 +67,6 @@ std::pair<std::vector<glm::dvec3>, std::vector<std::vector<size_t>>> Surface::re
   pcl::Poisson<pcl::PointNormal> poisson;
   poisson.setDepth(maxDepth);
   poisson.setInputCloud(inputCloud);
-  poisson.setThreads(PoissonThreadNum);
 
   // Reconstruct surface
   pcl::PolygonMesh mesh;
