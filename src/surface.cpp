@@ -98,7 +98,9 @@ std::pair<std::vector<glm::dvec3>, std::vector<std::vector<size_t>>> Surface::re
   // Register mesh
   polyscope::SurfaceMesh *poissonMesh = polyscope::registerSurfaceMesh(Name, meshV, meshF);
   poissonMesh->setSurfaceColor(PoissonColor);
+  poissonMesh->setBackFaceColor(PoissonBackgroundColor);
   poissonMesh->setMaterial(PoissonMaterial);
+  poissonMesh->setBackFacePolicy(PoissonBackFacePolicy);
   poissonMesh->setEnabled(PoissonEnabled);
 
   // Output results
@@ -308,7 +310,9 @@ void Surface::showPseudoSurface(double averageDistance) {
   // Register mesh
   polyscope::SurfaceMesh *pseudoSurface = polyscope::registerSurfaceMesh(Name, meshV, meshF);
   pseudoSurface->setSurfaceColor(PseudoSurfaceColor);
+  pseudoSurface->setBackFaceColor(PseudoSurfaceBackgroundColor);
   pseudoSurface->setMaterial(PseudoSurfaceMaterial);
+  pseudoSurface->setBackFacePolicy(PseudoSurfaceBackFacePolicy);
 }
 
 pcl::MLSResult Surface::InitializeMLSSurface(double searchRadius) {
