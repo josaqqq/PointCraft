@@ -32,9 +32,6 @@ Ray::Hit Ray::searchNearestNeighbor(PointCloud *pointCloud, double searchRadius)
     glm::dvec3 p = (*verticesPtr)[i];
     glm::dvec3 pn = (*normalsPtr)[i];
 
-    // If the normal does not face rayDir, then skip it.
-    if (glm::dot(pn, rayDir) >= 0.0) continue;
-
     // If the distance from the ray line is greater than searchRadius, then skip it.
     double distFromRayLine = glm::length(glm::cross(p - cameraOrig, rayDir));
     if (distFromRayLine >= searchRadius) continue;
@@ -51,6 +48,11 @@ Ray::Hit Ray::searchNearestNeighbor(PointCloud *pointCloud, double searchRadius)
       hitInfo.pos = p;
       hitInfo.normal = pn;
     } 
+  }
+
+  // If the normal of the hit point does not face rayDir, then return false
+  if (hitInfo.hit && glm::dot(hitInfo.normal, rayDir) >= 0.0) {
+    hitInfo.hit = false;
   }
   
   return hitInfo;
