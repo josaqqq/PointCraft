@@ -237,10 +237,11 @@ void SketchTool::findBasisPoints(bool extendedSearch) {
   }
 
   const double castedAverageDist = calcCastedAverageDist();
+  std::set<int> candidatePointsIndexSet;
   std::vector<int>  candidatePointsIndex;
   std::vector<glm::dvec3> hasCloserNeighborPoints;
-  for (double x = min_x; x < max_x; x += castedAverageDist*2.0) {
-    for (double y = min_y; y < max_y; y += castedAverageDist*2.0) {
+  for (double x = min_x; x < max_x; x += castedAverageDist) {
+    for (double y = min_y; y < max_y; y += castedAverageDist) {
       if (!insideSketch(x, y)) continue;
 
       // Search for nearest neighbors with octree
@@ -261,9 +262,6 @@ void SketchTool::findBasisPoints(bool extendedSearch) {
         glm::dvec3 p = (*verticesPtr)[hitPointIdx];
         glm::dvec3 pn = (*normalsPtr)[hitPointIdx];
 
-        // Discard points that their normals are directed to rayDir.
-        if (glm::dot(pn, p - cameraOrig) >= 0.0) continue;
-
         double curDepth = glm::length(p - cameraOrig);
         if (curDepth < minDepth) {
           minDepth = curDepth;
@@ -271,17 +269,23 @@ void SketchTool::findBasisPoints(bool extendedSearch) {
         }
       }
 
+      // If the point is already selected, then skip it.
+      if (candidatePointsIndexSet.count(minDepthIdx)) continue;
+
       // Update the buffer vectors
       for (int i = 0; i < hitPointCount; i++) {
         int hitPointIdx = hitPointIndices[i];
+        glm::dvec3 p = (*verticesPtr)[hitPointIdx];
+        glm::dvec3 pn = (*normalsPtr)[hitPointIdx];
+
+        // Discard points that their normals are not directed to cameraOrig.
+        if (glm::dot(pn, p - cameraOrig) >= 0.0) continue;
+
         if (hitPointIdx == minDepthIdx) {
+          candidatePointsIndexSet.insert(hitPointIdx);
           candidatePointsIndex.push_back(hitPointIdx);
         } else {
-          glm::dvec3 p = (*verticesPtr)[hitPointIdx];
-          glm::dvec3 pn = (*normalsPtr)[hitPointIdx];
-          if (glm::dot(pn, p - cameraOrig) >= 0.0) continue;
-
-          hasCloserNeighborPoints.push_back((*verticesPtr)[hitPointIdx]);
+          hasCloserNeighborPoints.push_back(p);
         }
       }
     }

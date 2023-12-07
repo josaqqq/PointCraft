@@ -316,9 +316,6 @@ std::pair<std::vector<glm::dvec3>, std::vector<glm::dvec3>> InterpolationTool::f
         glm::dvec3 p = pointsInWorldCoord[hitPointIdx];
         glm::dvec3 pn = normalsInWorldCoord[hitPointIdx];
 
-        // Discard points that their normals are directed to cameraOrig.
-        if (glm::dot(pn, getCameraDir()) >= 0.0) continue;
-
         double curDepth = glm::length(p - getCameraOrig());
         if (curDepth < minDepth) {
           minDepth = curDepth;
@@ -335,14 +332,17 @@ std::pair<std::vector<glm::dvec3>, std::vector<glm::dvec3>> InterpolationTool::f
       // Update the buffer vectors
       for (int i = 0; i < hitPointCount; i++) {
         int hitPointIdx = hitPointIndices[i];
+        glm::dvec3 p = pointsInWorldCoord[hitPointIdx];
+        glm::dvec3 pn = normalsInWorldCoord[hitPointIdx];
+
+        // Discard points that their normals are not directed to cameraOrig.
+        if (glm::dot(pn, p - getCameraOrig()) >= 0.0) continue;
+
         if (hitPointIdx == minDepthIdx) {
-          candidatePointsIndexSet.insert(minDepthIdx);
+          candidatePointsIndexSet.insert(hitPointIdx);
           candidatePointsIndex.push_back(hitPointIdx);
         } else {
-          glm::dvec3 pn = normalsInWorldCoord[hitPointIdx];
-          if (glm::dot(pn, getCameraDir()) >= 0.0) continue;
-
-          hasCloserNeighborPoints.push_back(pointsInWorldCoord[hitPointIdx]);
+          hasCloserNeighborPoints.push_back(p);
         }
       }
     }
