@@ -47,6 +47,9 @@ class SketchTool {
     void registerSketchPointsAsCurveNetworkLoop(std::string name);
     void removeCurveNetworkLoop(std::string name);
 
+    // Display voxels for each specified point.
+    void displayVoxels(std::vector<glm::dvec3> &points);
+
     /*
       Geometry functions
     */

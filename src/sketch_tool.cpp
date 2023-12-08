@@ -2,6 +2,7 @@
 
 #include "polyscope/view.h"
 #include "polyscope/point_cloud.h"
+#include "polyscope/surface_mesh.h"
 #include "polyscope/curve_network.h"
 
 #include <pcl/point_cloud.h>
@@ -128,6 +129,87 @@ void SketchTool::registerSketchPointsAsCurveNetworkLoop(std::string name) {
 }
 void SketchTool::removeCurveNetworkLoop(std::string name) {
   polyscope::removeCurveNetwork(name, false);
+}
+
+// Display voxels for each specified point.
+void SketchTool::displayVoxels(std::vector<glm::dvec3> &points) {
+  // Voxel size is averageDistance per side
+  const double voxelSide = pointCloud->getAverageDistance();
+
+  // Collect the indices in the voxel grid of the points
+  std::set<std::tuple<int, int, int>> voxelIndices;
+  for (glm::dvec3 p: points) {
+    std::tuple<int, int, int> idx = {
+      std::floor(p.x/voxelSide),
+      std::floor(p.y/voxelSide),
+      std::floor(p.z/voxelSide)
+    };
+    voxelIndices.insert(idx);
+  }
+
+  // Compute the registered mesh
+  std::vector<std::vector<bool>> positionOffset = {
+    { false, false, false },
+
+    { true, false, false },
+    { false, true, false },
+    { false, false, true },
+
+    { true, true, false },
+    { false, true, true },
+    { true, false, true },
+
+    { true, true, true },
+  };
+  std::vector<std::vector<size_t>> faceIndices = {
+    { 1, 0, 2 },
+    { 1, 2, 4 },
+
+    { 0, 1, 3 },
+    { 3, 1, 6 },
+    
+    { 1, 4, 6 },
+    { 4, 7, 6 },
+    
+    { 7, 4, 2 },
+    { 7, 2, 5 },
+
+    { 3, 6, 5 },
+    { 5, 6, 7 },
+    
+    { 0, 3, 2 },
+    { 2, 3, 5 },
+  };
+
+  std::vector<glm::dvec3> meshV;
+  std::vector<std::vector<size_t>> meshF;
+  for (std::tuple<int, int, int> idx: voxelIndices) {
+    // Compute meshF
+    size_t offset = meshV.size();
+    for (size_t i = 0; i < faceIndices.size(); i++) {
+      std::vector<size_t> faceIdx;
+      for (int j = 0; j < 3; j++) faceIdx.push_back(offset + faceIndices[i][j]);
+      meshF.push_back(faceIdx);
+    }
+    
+    // Compute meshV
+    for (size_t i = 0; i < positionOffset.size(); i++) {
+      glm::dvec3 p = glm::dvec3(
+        voxelSide*static_cast<double>(std::get<0>(idx)),
+        voxelSide*static_cast<double>(std::get<1>(idx)),
+        voxelSide*static_cast<double>(std::get<2>(idx))
+      );
+      for (int j = 0; j < 3; j++) {
+        if (positionOffset[i][j]) p[j] += voxelSide;
+      }
+      meshV.push_back(p);
+    }
+  }
+
+  // Register meshV, meshF as SurfaceMesh
+  polyscope::SurfaceMesh *voxelMesh = polyscope::registerSurfaceMesh("Voxel Mesh", meshV, meshF);
+  voxelMesh->setSurfaceColor({ 0.000, 153.0/255.0, 119.0/255.0 });
+  voxelMesh->setMaterial("clay");
 }
 
 /*
@@ -415,7 +497,7 @@ std::vector<int> SketchTool::voxelFilter(
   std::vector<glm::dvec3> &filteredPoints
 ) {
   // Voxel size is averageDistance per side
-  double voxelSide = pointCloud->getAverageDistance();
+  const double voxelSide = pointCloud->getAverageDistance();
 
   // map for voxel filter
   //  - std::tupple<double, double, double>:  the index of the voxel
@@ -430,7 +512,6 @@ std::vector<int> SketchTool::voxelFilter(
       std::floor(p.y/voxelSide),
       std::floor(p.z/voxelSide)
     };
-
     voxels[idx] = { 0.0, -1 };
   }
 
@@ -454,7 +535,6 @@ std::vector<int> SketchTool::voxelFilter(
 
     // If a point of the point cloud is in the voxel, then skip it
     if (currentCandidateIdx == -1) continue;
-
 
     // Update the voxels information
     glm::dvec3 voxelCenter = p + glm::dvec3(voxelSide, voxelSide, voxelSide);
