@@ -64,20 +64,18 @@ class SketchTool {
     void addSketchPoint(glm::dvec3 p);
 
     // Find basis points.
-    //  - If extendedSearch is true, extend the sketched area.
     //  - Cast points of the point cloud onto the screen plane.
     //  - Construct octree for the casted surface points
     //  - Search for a candidate point for each discretized grid.
     //    - Only points that their normals are directed to cameraOrig
     //  - Detect depth with DBSCAN
-    void findBasisPoints(bool extendedSearch);
+    void findBasisPoints();
 
     // Find all basis points inside the sketch
-    //  - If extendedSearch is true, extend the sketched area.
     //  - Cast points of the point cloud onto the screen plane.
     //  - Judge inside/outside of the sketch.
     //  - Detect depth with DBSCAN.
-    void findAllBasisPoints(bool extendedSearch);
+    void findAllBasisPoints();
 
     // Check whether (x, y) is inside or outside of the sketch.
     //  1.  Draw a half-line parallel to the x-axis from a point.
@@ -107,6 +105,12 @@ class SketchTool {
 
     // Calculate averageDistance casted onto the screen
     double calcCastedAverageDist();
+
+    // Reset member variables (vector and set)
+    void resetSurfacePointsIndex();
+    void resetSketchPoints();
+    void resetBasisPointsIndex();
+    void resetMappedBasisConvexHull();
 
     // Return the pointer to member variables.
     PointCloud*               getPointCloud();

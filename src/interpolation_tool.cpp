@@ -45,7 +45,7 @@ void InterpolationTool::releasedEvent() {
   if (getSketchPoints()->size() == 0) return;
 
   // Find basis points for the surface reconstruction.
-  findBasisPoints(true);
+  findBasisPoints();
   if (getBasisPointsIndex()->size() == 0) {
     std::cout << "WARNING: No basis point was found." << std::endl;
     removeCurveNetworkLine(SketchPrefix);

@@ -40,10 +40,11 @@ void SketchTool::resetSketch() {
   cameraDir = glm::dvec3(0.0, 0.0, 0.0);
   screen = Plane();
 
-  surfacePointsIndex.clear();
-  sketchPoints.clear();
-  basisPointsIndex.clear();
-  mappedBasisConvexHull.clear();
+  // Reset member variables (vector and set)
+  resetSurfacePointsIndex();
+  resetSketchPoints();
+  resetBasisPointsIndex();
+  resetMappedBasisConvexHull();
 }
 
 /*
@@ -220,9 +221,6 @@ void SketchTool::displayVoxels(std::vector<glm::dvec3> &points) {
 //  - xPos: io.DisplayFramebufferScale.y * mousePos.y
 //  - K_size: the selected nearest neighbors size
 void SketchTool::updateSurfacePoints(double xPos, double yPos, int K_size) {
-  // Reset surfacePointsIndex
-  surfacePointsIndex.clear();
-  
   // Cast a ray to pointCloud
   Ray ray(xPos, yPos);
     // Search radius is doubled because the user 
@@ -266,16 +264,12 @@ void SketchTool::addSketchPoint(glm::dvec3 p) {
 }
 
 // Find basis points.
-//  - If extendedSearch is true, extend the sketched area.
 //  - Cast points of the point cloud onto the screen plane.
 //  - Construct octree for the casted surface points
 //  - Search for a candidate point for each discretized grid.
 //    - Only points that their normals are directed to cameraOrig
 //  - Detect depth with DBSCAN
-void SketchTool::findBasisPoints(bool extendedSearch) {
-  // If extendedSearch is true, extend the sketched area.
-  if (extendedSearch) extendSketchedArea();
-
+void SketchTool::findBasisPoints() {
   // Point cloud vertices and normals
   std::vector<glm::dvec3> *verticesPtr = pointCloud->getVertices();
   std::vector<glm::dvec3> *normalsPtr = pointCloud->getNormals();
@@ -318,10 +312,19 @@ void SketchTool::findBasisPoints(bool extendedSearch) {
     max_y = std::max(max_y, mappedSketchPoint.y);
   }
 
-  const double castedAverageDist = calcCastedAverageDist();
-  std::set<int> candidatePointsIndexSet;
+  const double      castedAverageDist = calcCastedAverageDist();
+  std::set<int>     candidatePointsIndexSet;
   std::vector<int>  candidatePointsIndex;
   std::vector<glm::dvec3> hasCloserNeighborPoints;
+  for (size_t i = 0; i < surfacePointsIndex.size(); i++) {
+    int idx = surfacePointsIndex[i];
+    
+    // If the point is not selected yet, then skip it.
+    if (candidatePointsIndexSet.count(idx) == 0) {
+      candidatePointsIndexSet.insert(idx);
+      candidatePointsIndex.push_back(idx);
+    }
+  }
   for (double x = min_x; x < max_x; x += castedAverageDist) {
     for (double y = min_y; y < max_y; y += castedAverageDist) {
       if (!insideSketch(x, y)) continue;
@@ -389,13 +392,10 @@ void SketchTool::findBasisPoints(bool extendedSearch) {
 
 
 // Find all basis points inside the sketch
-//  - If extendedSearch is true, extend the sketched area.
 //  - Cast points of the point cloud onto the screen plane.
 //  - Judge inside/outside of the sketch.
 //  - Detect depth with DBSCAN.
-void SketchTool::findAllBasisPoints(bool extendedSearch) {
-  if (extendedSearch) extendSketchedArea();
-
+void SketchTool::findAllBasisPoints() {
   // Point cloud vertices
   std::vector<glm::dvec3> *verticesPtr = pointCloud->getVertices();
 
@@ -560,6 +560,20 @@ double SketchTool::calcCastedAverageDist() {
   double castedAverageDist = pointCloud->getAverageDistance()*screenDist/objectDist;
 
   return castedAverageDist;
+}
+
+// Reset member variables (vector and set)
+void SketchTool::resetSurfacePointsIndex() {
+  surfacePointsIndex.clear();
+}
+void SketchTool::resetSketchPoints() {
+  sketchPoints.clear();
+}
+void SketchTool::resetBasisPointsIndex() {
+  basisPointsIndex.clear();
+}
+void SketchTool::resetMappedBasisConvexHull() {
+  mappedBasisConvexHull.clear();
 }
 
 // Return the pointer to member variables.

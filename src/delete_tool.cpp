@@ -32,7 +32,7 @@ void DeleteTool::releasedEvent() {
   if (getSketchPoints()->size() == 0) return;
 
   // Find basis points for the surface reconstruction.
-  findAllBasisPoints(false);
+  findAllBasisPoints();
   if (getBasisPointsIndex()->size() == 0) {
     std::cout << "WARNING: No basis point was found." << std::endl;
     removeCurveNetworkLine(SketchPrefix);

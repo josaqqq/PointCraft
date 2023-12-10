@@ -28,6 +28,7 @@ void MLSSprayTool::draggingEvent() {
   addSketchPoint(hitInfo.pos);
 
   // Update surfacePointsIndex
+  resetSurfacePointsIndex();
   updateSurfacePoints(xPos, yPos, MLS_SprayNearestNeighbors);
   removePointCloud(SurfacePointName);
   registerSurfacePointsAsPointCloud(SurfacePointName);

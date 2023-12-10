@@ -27,6 +27,7 @@ void DeleteSprayTool::draggingEvent() {
   addSketchPoint(hitInfo.pos);
 
   // Update surfacePointsIndex
+  resetSurfacePointsIndex();
   updateSurfacePoints(xPos, yPos, 1);
   removePointCloud(SurfacePointName);
   registerSurfacePointsAsPointCloud(SurfacePointName);
