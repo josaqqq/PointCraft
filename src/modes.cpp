@@ -22,23 +22,23 @@ void ModeSelector::enableModeSelection(ImGuiIO &io) {
     *currentMode = MODE_NONE;
   }
   ImGui::Text("   "); ImGui::SameLine();
-  if (ImGui::Button("Interpolation Tool")) {
-    *currentMode = MODE_INTERPOLATION;
+  if (ImGui::Button("Sketch-Interpolation Tool")) {
+    *currentMode = MODE_INTERPOLATION_SKETCH;
     interpolationTool->initSketch();
   }
   ImGui::Text("   "); ImGui::SameLine();
-  if (ImGui::Button("MLS Spray Tool")) {
-    *currentMode = MODE_MLS_SPRAY;
+  if (ImGui::Button("Paint-Interpolation Tool")) {
+    *currentMode = MODE_INTERPOLATION_PAINT;
     mlsSprayTool->initSketch();
   }
   ImGui::Text("   "); ImGui::SameLine();
-  if (ImGui::Button("Delete Tool")) {
-    *currentMode = MODE_DELETE;
+  if (ImGui::Button("Sketch-Deletion Tool")) {
+    *currentMode = MODE_DELETION_SKETCH;
     deleteTool->initSketch();
   }
   ImGui::Text("   "); ImGui::SameLine();
-  if (ImGui::Button("Delete Spray Tool")) {
-    *currentMode = MODE_DELETE_SPRAY;
+  if (ImGui::Button("Paint-Deletion Tool")) {
+    *currentMode = MODE_DELETION_PAINT;
     deleteSprayTool->initSketch();
   }
 
@@ -47,32 +47,32 @@ void ModeSelector::enableModeSelection(ImGuiIO &io) {
       ImGui::Text("   Selected Tool: None");
       polyscope::view::moveScale = 1.0;
       break;
-    case MODE_INTERPOLATION:
-      ImGui::Text("   Selected Tool: Interpolation Tool");
+    case MODE_INTERPOLATION_SKETCH:
+      ImGui::Text("   Selected Tool: Sketch-Interpolation Tool");
       interpolationTool->launchToolOperation();
       *currentSurfaceMode = SURFACE_MODE_PSEUDO;
       break;
-    case MODE_MLS_SPRAY:
-      ImGui::Text("   Selected Tool: MLS Spray Tool");
+    case MODE_INTERPOLATION_PAINT:
+      ImGui::Text("   Selected Tool: Paint-Interpolation Tool");
       mlsSprayTool->launchToolOperation();
       *currentSurfaceMode = SURFACE_MODE_PSEUDO;
       break;
-    case MODE_DELETE:
-      ImGui::Text("   Selected Tool: Delete Tool");
+    case MODE_DELETION_SKETCH:
+      ImGui::Text("   Selected Tool: Sketch-Deletion Tool");
       deleteTool->launchToolOperation();
       *currentSurfaceMode = SURFACE_MODE_PSEUDO;
       break;
-    case MODE_DELETE_SPRAY:
-      ImGui::Text("   Selected Tool: Delete Spray Tool");
+    case MODE_DELETION_PAINT:
+      ImGui::Text("   Selected Tool: Paint-Deletion Tool");
       deleteSprayTool->launchToolOperation();
       *currentSurfaceMode = SURFACE_MODE_PSEUDO;
       break;
   }
 
   // Surface Reconstruction
-  ImGui::Text("\nSurface Reconstruction");
+  ImGui::Text("\nSurface Reconstruction:");
   ImGui::Text("   "); ImGui::SameLine();
-  if (ImGui::Button("Reconstruct Poisson Surface")) {
+  if (ImGui::Button("Reconstrut Poisson Surface")) {
     Surface poissonSurface(PoissonName, pointCloud->getVertices(), pointCloud->getNormals());
     poissonSurface.reconstructPoissonSurface(pointCloud->getAverageDistance());
     *currentSurfaceMode = SURFACE_MODE_POISSON;
