@@ -36,10 +36,9 @@ void MLSSprayTool::draggingEvent() {
   if (getSurfacePointsIndex()->size() == 0) return;
 
   std::vector<glm::dvec3> surfacePoints;
-  std::vector<int>        *surfacePointsIndexPtr = getSurfacePointsIndex();
+  std::set<int>           *surfacePointsIndexPtr = getSurfacePointsIndex();
   std::vector<glm::dvec3> *verticesPtr = getPointCloud()->getVertices();
-  for (size_t i = 0; i < surfacePointsIndexPtr->size(); i++) {
-    int idx = (*surfacePointsIndexPtr)[i];
+  for (int idx: *surfacePointsIndexPtr) {
     surfacePoints.push_back((*verticesPtr)[idx]);
   }
 

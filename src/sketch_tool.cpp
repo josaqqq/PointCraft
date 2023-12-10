@@ -55,8 +55,7 @@ void SketchTool::registerSurfacePointsAsPointCloud(std::string name) {
   std::vector<glm::dvec3> points;
 
   std::vector<glm::dvec3> *verticesPtr = pointCloud->getVertices();
-  for (size_t i = 0; i < surfacePointsIndex.size(); i++) {
-    int idx = surfacePointsIndex[i];
+  for (int idx: surfacePointsIndex) {
     points.push_back((*verticesPtr)[idx]);
   }
 
@@ -80,8 +79,7 @@ void SketchTool::registerBasisPointsAsPointCloud(std::string name) {
 
   std::vector<glm::dvec3> *verticesPtr = pointCloud->getVertices();
   std::vector<glm::dvec3> *normalsPtr = pointCloud->getNormals();
-  for (size_t i = 0; i < basisPointsIndex.size(); i++) {
-    int idx = basisPointsIndex[i];
+  for (int idx: basisPointsIndex) {
     points.push_back((*verticesPtr)[idx]);
     normals.push_back((*normalsPtr)[idx]);
   }
@@ -254,7 +252,7 @@ void SketchTool::updateSurfacePoints(double xPos, double yPos, int K_size) {
     if (glm::dot(pn, rayDir) >= 0.0) continue;
 
     // Add nearest neighbor to surfacePointsIndex
-    surfacePointsIndex.push_back(idx);
+    surfacePointsIndex.insert(idx);
   }
 }
 
@@ -313,17 +311,10 @@ void SketchTool::findBasisPoints() {
   }
 
   const double      castedAverageDist = calcCastedAverageDist();
-  std::set<int>     candidatePointsIndexSet;
   std::vector<int>  candidatePointsIndex;
   std::vector<glm::dvec3> hasCloserNeighborPoints;
-  for (size_t i = 0; i < surfacePointsIndex.size(); i++) {
-    int idx = surfacePointsIndex[i];
-    
-    // If the point is not selected yet, then skip it.
-    if (candidatePointsIndexSet.count(idx) == 0) {
-      candidatePointsIndexSet.insert(idx);
-      candidatePointsIndex.push_back(idx);
-    }
+  for (int idx: surfacePointsIndex) {
+    candidatePointsIndex.push_back(idx);
   }
   for (double x = min_x; x < max_x; x += castedAverageDist) {
     for (double y = min_y; y < max_y; y += castedAverageDist) {
@@ -354,9 +345,6 @@ void SketchTool::findBasisPoints() {
         }
       }
 
-      // If the point is already selected, then skip it.
-      if (candidatePointsIndexSet.count(minDepthIdx)) continue;
-
       // Update the buffer vectors
       for (int i = 0; i < hitPointCount; i++) {
         int hitPointIdx = hitPointIndices[i];
@@ -367,7 +355,6 @@ void SketchTool::findBasisPoints() {
         if (glm::dot(pn, p - cameraOrig) >= 0.0) continue;
 
         if (hitPointIdx == minDepthIdx) {
-          candidatePointsIndexSet.insert(hitPointIdx);
           candidatePointsIndex.push_back(hitPointIdx);
         } else {
           hasCloserNeighborPoints.push_back(p);
@@ -589,13 +576,13 @@ glm::dvec3 SketchTool::getCameraDir() {
 Plane* SketchTool::getScreen() {
   return &screen;
 }
-std::vector<int>* SketchTool::getSurfacePointsIndex() {
+std::set<int>* SketchTool::getSurfacePointsIndex() {
   return &surfacePointsIndex;
 }
 std::vector<glm::dvec3>* SketchTool::getSketchPoints() {
   return &sketchPoints;
 }
-std::vector<int>* SketchTool::getBasisPointsIndex() {
+std::set<int>* SketchTool::getBasisPointsIndex() {
   return &basisPointsIndex;
 }
 std::vector<glm::dvec2>* SketchTool::getMappedBasisConvexHull() {
@@ -647,9 +634,8 @@ void SketchTool::calcBasisConvexHull() {
   std::vector<glm::dvec3> *verticesPtr = pointCloud->getVertices();
 
   // Initialize vector of mapped basis points.
-  std::vector<glm::dvec2> mappedBasisPoints(basisPointsSize);
-  for (int i = 0; i < basisPointsSize; i++) {
-    int idx = basisPointsIndex[i];
+  std::vector<glm::dvec2> mappedBasisPoints;
+  for (int idx: basisPointsIndex) {
     glm::dvec3 p = (*verticesPtr)[idx];
 
     // Cast a ray from p to cameraOrig onto screen.
@@ -657,7 +643,7 @@ void SketchTool::calcBasisConvexHull() {
     Ray::Hit hitInfo = ray.castPointToPlane(&screen);
     assert(hitInfo.hit == true);
     glm::dvec3 mappedP = screen.mapCoordinates(hitInfo.pos);
-    mappedBasisPoints[i] = glm::dvec2(mappedP.x, mappedP.y);
+    mappedBasisPoints.push_back(glm::dvec2(mappedP.x, mappedP.y));
   }
 
   //  1. Find point P with the lowest y-coordinate.

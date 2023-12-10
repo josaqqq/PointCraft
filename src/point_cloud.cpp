@@ -140,14 +140,14 @@ void PointCloud::addPoints(std::vector<glm::dvec3> &newV, std::vector<glm::dvec3
 }
 
 // Delete vertices by referencing the vertex indices
-void PointCloud::deletePoints(std::vector<int> &indices) {
+void PointCloud::deletePoints(std::set<int> &indices) {
   const int curSize = Vertices.size();
   const int newSize = Vertices.size() - indices.size();
 
   std::vector<glm::dvec3> newV;
   std::vector<glm::dvec3> newN;
 
-  std::vector<int>::iterator itr = indices.begin();
+  std::set<int>::iterator itr = indices.begin();
   for (int i = 0; i < curSize; i++) {
     if (itr != indices.end() && i == *itr) {
       itr++;

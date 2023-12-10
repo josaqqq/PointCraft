@@ -117,9 +117,9 @@ class SketchTool {
     glm::dvec3                getCameraOrig();
     glm::dvec3                getCameraDir();
     Plane*                    getScreen();
-    std::vector<int>*         getSurfacePointsIndex();
+    std::set<int>*            getSurfacePointsIndex();
     std::vector<glm::dvec3>*  getSketchPoints();
-    std::vector<int>*         getBasisPointsIndex();
+    std::set<int>*            getBasisPointsIndex();
     std::vector<glm::dvec2>*  getMappedBasisConvexHull();
 
   private:
@@ -132,9 +132,9 @@ class SketchTool {
     glm::dvec3  cameraDir;    // Camera direction
     Plane       screen;       // Plane on nearClip
 
-    std::vector<int>          surfacePointsIndex;     // The indices of surface points where the mouse is hovering
+    std::set<int>             surfacePointsIndex;     // The indices of surface points where the mouse is hovering
     std::vector<glm::dvec3>   sketchPoints;           // Sketched points on the camera screen
-    std::vector<int>          basisPointsIndex;       // The indices of selected basis points
+    std::set<int>             basisPointsIndex;       // The indices of selected basis points
     std::vector<glm::dvec2>   mappedBasisConvexHull;  // Convex hull of the basis points mapped onto screen
 
     // Extend sketched area by averageDistance casted onto the screen.

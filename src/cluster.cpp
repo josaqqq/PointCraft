@@ -16,7 +16,7 @@
 // Execute clustering
 //  - eps: Clustering search distance
 //  - minPoints: Number of points required to make a point a core point
-std::vector<int> Clustering::executeClustering(double eps, size_t minPoints, ClusteringMode mode) {
+std::set<int> Clustering::executeClustering(double eps, size_t minPoints, ClusteringMode mode) {
   // Set ClusteringMode
   clusteringMode = mode;
 
@@ -34,7 +34,7 @@ std::vector<int> Clustering::executeClustering(double eps, size_t minPoints, Clu
   }
 
   // Execute DBSCAN for each basis
-  std::vector<int> selectedCluster;
+  std::set<int> selectedCluster;
   for (size_t i = 0; i < orthogonalBases.size(); i++) {
     selectedCluster = executeDBSCAN(eps, minPoints, i);
   }
@@ -44,7 +44,7 @@ std::vector<int> Clustering::executeClustering(double eps, size_t minPoints, Clu
 
 // Execute DBSCAN and return selected basis points
 // implemented referencing https://en.wikipedia.org/wiki/DBSCAN
-std::vector<int> Clustering::executeDBSCAN(double eps, size_t minPoints, int basisIndex) {
+std::set<int> Clustering::executeDBSCAN(double eps, size_t minPoints, int basisIndex) {
   // Initialize points information
   int pointSize = pointsIndex->size();
   std::vector<double> depths(pointSize);
@@ -140,9 +140,9 @@ std::vector<int> Clustering::executeDBSCAN(double eps, size_t minPoints, int bas
   }
 
 
-  std::vector<int> basisPointsIndex;
+  std::set<int> basisPointsIndex;
   for (int i = 0; i < pointSize; i++) {
-    if (labels[i] == selectedLabel) basisPointsIndex.push_back((*pointsIndex)[i]);
+    if (labels[i] == selectedLabel) basisPointsIndex.insert((*pointsIndex)[i]);
   }
 
   // Visualize the depth of points with labels.

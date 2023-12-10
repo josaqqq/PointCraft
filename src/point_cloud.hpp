@@ -25,7 +25,7 @@ class PointCloud {
     void addPoints(std::vector<glm::dvec3> &newV, std::vector<glm::dvec3> &newN);
 
     // Delete vertices by referencing the vertex indices
-    void deletePoints(std::vector<int> &indices);
+    void deletePoints(std::set<int> &indices);
 
     // Execute Undo/Redo
     void executeUndo();
