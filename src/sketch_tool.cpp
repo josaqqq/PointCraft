@@ -479,7 +479,7 @@ bool SketchTool::insideBasisConvexHull(double x, double y) {
 //  - existingPoints: already existing points. 
 //                    Points in the same voxel with a point of existingPoints are skipped.
 //  - filteredPoints: Filtering target
-std::vector<int> SketchTool::voxelFilter(
+std::set<int> SketchTool::filterWithVoxel(
   std::vector<glm::dvec3> &existingPoints,
   std::vector<glm::dvec3> &filteredPoints
 ) {
@@ -524,7 +524,12 @@ std::vector<int> SketchTool::voxelFilter(
     if (currentCandidateIdx == -1) continue;
 
     // Update the voxels information
-    glm::dvec3 voxelCenter = p + glm::dvec3(voxelSide, voxelSide, voxelSide);
+    glm::dvec3 voxelBasis = glm::dvec3(
+      (double)std::get<0>(idx)*voxelSide,
+      (double)std::get<1>(idx)*voxelSide,
+      (double)std::get<2>(idx)*voxelSide
+    );
+    glm::dvec3 voxelCenter = voxelBasis + 0.5d*glm::dvec3(voxelSide, voxelSide, voxelSide);
     double currentDist = glm::length(p - voxelCenter);
     if (currentDist < currentCandidateDist) {
       voxels[idx] = { currentDist, i };
@@ -534,9 +539,9 @@ std::vector<int> SketchTool::voxelFilter(
   }
 
   // Compute newV and newN
-  std::vector<int> filteredIndex;
+  std::set<int> filteredIndex;
   for (size_t i = 0; i < filteredPoints.size(); i++) {
-    if (isCandidatePoint[i]) filteredIndex.push_back(i);
+    if (isCandidatePoint[i]) filteredIndex.insert(i);
   }
   return filteredIndex;
 }

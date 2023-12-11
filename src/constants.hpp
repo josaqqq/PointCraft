@@ -11,6 +11,9 @@ const double ScreenOffset = 10.0;
 //
 // Point Cloud parameters
 //
+const double PointCloudBoundingBoxSide = 1.0d;
+const double PointCloudDownsampleVoxel = 0.025d;
+
 const std::string PointName = "Point Cloud";
 const glm::dvec3 PointColor = { 1.000, 1.000, 1.000 };
 const double PointRadius = 0.002;
@@ -35,7 +38,7 @@ const std::string SurfaceMaterial = "flat";
 //
 // Octree parameters
 //
-const double OctreeResolution = 0.01;  // The length of the smallest voxels at lowest octree level.
+const double OctreeResolution = 0.025;  // The length of the smallest voxels at lowest octree level.
 
 //
 // Patch parameters
@@ -49,8 +52,6 @@ const double BasisNormalLength = 0.05;
 const double BasisNormalRadius = 0.003;
 
 const std::string SketchPrefix = "Sketch: ";
-
-
 
 //
 //  Curve Network

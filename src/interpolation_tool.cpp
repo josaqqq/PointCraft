@@ -37,7 +37,8 @@ void InterpolationTool::draggingEvent() {
   removePointCloud(SurfacePointName);
   registerSurfacePointsAsPointCloud(SurfacePointName);
 
-  // Register sketchPoints as curve network (LINE)
+  // Register:
+  //  - sketch
   registerSketchPointsAsCurveNetworkLine(SketchPrefix);
 }
 
@@ -52,53 +53,62 @@ void InterpolationTool::releasedEvent() {
     resetSketch();
     return;
   }
+  
+  // Fetch basis points information from the point cloud.
+  std::set<int> *basisPointsIndexPtr    = getBasisPointsIndex();
+  std::vector<glm::dvec3> *verticesPtr  = getPointCloud()->getVertices();
+  std::vector<glm::dvec3> *normalsPtr   = getPointCloud()->getNormals();
 
-  // Register calculated points.
-  registerBasisPointsAsPointCloud("Basis Points");
-
-  // Calculate approximate surface with Poisson Surface Reconstruction.
-  std::vector<glm::dvec3> basisPoints;
-  std::vector<glm::dvec3> basisNormals;
-  std::vector<std::vector<size_t>> basisFaces;
-
-  std::set<int>           *basisPointsIndexPtr = getBasisPointsIndex();
-  std::vector<glm::dvec3> *verticesPtr = getPointCloud()->getVertices();
-  std::vector<glm::dvec3> *normalsPtr = getPointCloud()->getNormals();
+  std::vector<glm::dvec3> basisPoints, basisNormals;
   for (int idx: *basisPointsIndexPtr) {
     basisPoints.push_back((*verticesPtr)[idx]);
     basisNormals.push_back((*normalsPtr)[idx]);
   }
 
-  // Poisson Surface Reconstruction
+  // Compute Poisson Surface Reconstruction
+  std::vector<glm::dvec3>           poissonPoints;
+  std::vector<std::vector<size_t>>  poissonFaces;
   Surface poissonSurface("Interpolation: PSR", &basisPoints, &basisNormals);
-  std::tie(basisPoints, basisFaces) = poissonSurface.reconstructPoissonSurface(getPointCloud()->getAverageDistance());
-  if (basisPoints.size() == 0) {
+  std::tie(poissonPoints, poissonFaces) = poissonSurface.reconstructPoissonSurface(getPointCloud()->getAverageDistance());
+  if (poissonPoints.size() == 0) {
     std::cout << "WARNING: No mesh was reconstructed with Poisson Surface Reconstruction." << std::endl;
     removeCurveNetworkLine(SketchPrefix);
     resetSketch();
     return;
   }
 
-  // Filter the reconstructed surface
-  std::vector<glm::dvec3> newV, newN;
-  std::tie(newV, newN) = filterSurfacePointsWithFaces(basisPoints, basisFaces);
-  if (newV.size() == 0) {
-    std::cout << "WARNING: No surface point was selected after filtering method." << std::endl;
-    removeCurveNetworkLine(SketchPrefix);
-    resetSketch();
-    return;
+  // Calculate the normals of the reconstructed surface.
+  std::vector<glm::dvec3> poissonNormals = calculateSurfaceNormals(poissonPoints, poissonFaces);
+
+  // Filter the reconstructed surface with depth
+  std::set<int> depthFilteredIndex = filterWithDepth(poissonPoints, poissonNormals);
+  std::vector<glm::dvec3> depthFilteredPoints, depthFilteredNormals;
+  for (int idx: depthFilteredIndex) {
+    depthFilteredPoints.push_back(poissonPoints[idx]);
+    depthFilteredNormals.push_back(poissonNormals[idx]);
   }
 
-  // Add the interpolated points.
-  getPointCloud()->addPoints(newV, newN);
+  // Filter the reconstructed surface with voxel
+  std::set<int> voxelFilteredIndex = filterWithVoxel(*(getPointCloud()->getVertices()), depthFilteredPoints);
+  std::vector<glm::dvec3> voxelFilteredPoints, voxelFilteredNormals;
+  for (int idx: voxelFilteredIndex) {
+    voxelFilteredPoints.push_back(depthFilteredPoints[idx]);
+    voxelFilteredNormals.push_back(depthFilteredNormals[idx]);
+  }
 
-  // Register Interpolated Points as point cloud
-  renderInterpolatedPoints(newV, newN);
+  // Add the interpolated points
+  getPointCloud()->addPoints(voxelFilteredPoints, voxelFilteredNormals);
 
-  // Remove surfacePointsIndex
+  // Register:
+  //  - basis points
+  //  - interpolated points
+  registerBasisPointsAsPointCloud("Basis Points");
+  renderInterpolatedPoints(voxelFilteredPoints, voxelFilteredNormals);
+
+  // Remove:
+  //  - surface points
+  //  - sketch
   removePointCloud(SurfacePointName);
-
-  // Remove sketch as curve network (LINE)
   removeCurveNetworkLine(SketchPrefix);
   
   // Reset all member variables.
@@ -123,22 +133,15 @@ void InterpolationTool::renderInterpolatedPoints(
   interpolatedVectorQuantity->setMaterial(NormalMaterial);
 }
 
-
-// Filter the reconstructed surface
-//  1. Cast reconstructed surface and basisPoints onto the screen plane.
-//  2. Construct octree for the casted surface points and basisPoints.
-//  3. Search for a candidate point for each discretized grid.
-//    - Only points that their normals are directed to cameraOrig.
-//    - If the candidate point is one of basisPoints, then skip it.
-//  4. Detect depth with DBSCAN
-std::pair<std::vector<glm::dvec3>, std::vector<glm::dvec3>> InterpolationTool::filterSurfacePointsWithFaces(
+// Calculate normals of the surface points
+std::vector<glm::dvec3> InterpolationTool::calculateSurfaceNormals(
   std::vector<glm::dvec3> &surfacePoints,
   std::vector<std::vector<size_t>> &surfaceFaces
 ) {
   const int surfacePointsSize = surfacePoints.size();
   const int surfaceFacesSize = surfaceFaces.size();
 
-  // Preprocessing: Calculate the points' average normals 
+  // Calculate the points' average normals
   std::map<int, glm::dvec3> indexToNormalSum;
   std::map<int, int>        indexToAdjacentCount;
   // Normals of surfacePoints
@@ -156,14 +159,37 @@ std::pair<std::vector<glm::dvec3>, std::vector<glm::dvec3>> InterpolationTool::f
     }
   }
 
-  // Cast reconstructed surface and basisPoints onto the screen plane.
+  std::vector<glm::dvec3> surfaceNormals(surfacePointsSize);
+  for (int i = 0; i < surfacePointsSize; i++) {
+    surfaceNormals[i] = indexToNormalSum[i]/(double)indexToAdjacentCount[i];
+  }
+
+  return surfaceNormals;
+}
+
+// Filter the interpolated points with depth
+//  1. Cast interpolated points onto the screen plane.
+//  2. Construct octree for the casted interpolated points.
+//  3. Search for a candidate point for each discretized grid.
+//    - Only points that their normals are directed to cameraOrig.
+//  4. Detect depth with DBSCAN
+//
+//  - surfacePoints:  Positions of the interpolated surface points
+//  - surfaceNormals: Normals of the interpolated surface points
+std::set<int> InterpolationTool::filterWithDepth(
+  std::vector<glm::dvec3> &surfacePoints,
+  std::vector<glm::dvec3> &surfaceNormals
+) {
+  const int surfacePointsSize = surfacePoints.size();
+
+  // Cast reconstructed surface onto the screen plane.
   std::vector<glm::dvec3> pointsInWorldCoord;
   std::vector<glm::dvec3> normalsInWorldCoord;
   std::vector<glm::dvec3> pointsCastedOntoScreen;
   // Cast surface points onto screen
   for (int i = 0; i < surfacePointsSize; i++) {
     glm::dvec3 p = surfacePoints[i];
-    glm::dvec3 pn = indexToNormalSum[i]/(double)indexToAdjacentCount[i];
+    glm::dvec3 pn = surfaceNormals[i];
     
     // Cast a ray from p to cameraOrig onto screen.
     Ray ray(p, getCameraOrig());
@@ -174,99 +200,11 @@ std::pair<std::vector<glm::dvec3>, std::vector<glm::dvec3>> InterpolationTool::f
     normalsInWorldCoord.push_back(pn);
     pointsCastedOntoScreen.push_back(getScreen()->mapCoordinates(hitInfo.pos));
   }
-  
-  // Cast basis points onto screen
-  std::set<int>           *basisPointsIndexPtr = getBasisPointsIndex();
-  std::vector<glm::dvec3> *verticesPtr = getPointCloud()->getVertices();
-  std::vector<glm::dvec3> *normalsPtr = getPointCloud()->getNormals();
-  for (int idx: *basisPointsIndexPtr) {
-    glm::dvec3 p = (*verticesPtr)[idx];
-    glm::dvec3 pn = (*normalsPtr)[idx];
 
-    // Cast a ray from p to cameraOrig onto screen.
-    Ray ray(p, getCameraOrig());
-    Ray::Hit hitInfo = ray.castPointToPlane(getScreen());
-    assert(hitInfo.hit);
-
-    pointsInWorldCoord.push_back(p);
-    normalsInWorldCoord.push_back(pn);
-    pointsCastedOntoScreen.push_back(getScreen()->mapCoordinates(hitInfo.pos));
-  }
-
-  return filterSurfacePointsInner(
-    surfacePointsSize,
-    pointsInWorldCoord,
-    normalsInWorldCoord,
-    pointsCastedOntoScreen
-  );
-}
-
-std::pair<std::vector<glm::dvec3>, std::vector<glm::dvec3>> InterpolationTool::filterSurfacePointsWithNormals(
-  std::vector<glm::dvec3> &surfacePoints,
-  std::vector<glm::dvec3> &surfaceNormals
-) {
-  const int surfacePointsSize = surfacePoints.size();
-  const int surfaceNormalsSize = surfaceNormals.size();
-
-  assert(surfacePointsSize == surfaceNormalsSize);
-
-  // Cast reconstructed surface and basisPoints onto the screen plane.
-  std::vector<glm::dvec3> pointsInWorldCoord;
-  std::vector<glm::dvec3> normalsInWorldCoord;
-  std::vector<glm::dvec3> pointsCastedOntoScreen;
-  // Cast surface points onto screen
-  for (int i = 0; i < surfacePointsSize; i++) {
-    glm::dvec3 p = surfacePoints[i];
-    glm::dvec3 pn = surfaceNormals[i];
-
-    // Cast a ray from p to cameraOrig onto screen.
-    Ray ray(p, getCameraOrig());
-    Ray::Hit hitInfo = ray.castPointToPlane(getScreen());
-    assert(hitInfo.hit);
-
-    pointsInWorldCoord.push_back(p);
-    normalsInWorldCoord.push_back(pn);
-    pointsCastedOntoScreen.push_back(getScreen()->mapCoordinates(hitInfo.pos));
-  }
-
-  // Cast basis points onto screen
-  std::set<int>           *basisPointsIndexPtr = getBasisPointsIndex();
-  std::vector<glm::dvec3> *verticesPtr = getPointCloud()->getVertices();
-  std::vector<glm::dvec3> *normalsPtr = getPointCloud()->getNormals();
-  for (int idx: *basisPointsIndexPtr) {
-    glm::dvec3 p = (*verticesPtr)[idx];
-    glm::dvec3 pn = (*normalsPtr)[idx];
-
-    // Cast a ray from p to cameraOrig onto screen.
-    Ray ray(p, getCameraOrig());
-    Ray::Hit hitInfo = ray.castPointToPlane(getScreen());
-    assert(hitInfo.hit);
-
-    pointsInWorldCoord.push_back(p);
-    normalsInWorldCoord.push_back(pn);
-    pointsCastedOntoScreen.push_back(getScreen()->mapCoordinates(hitInfo.pos));
-  }
-
-  return filterSurfacePointsInner(
-    surfacePointsSize,
-    pointsInWorldCoord,
-    normalsInWorldCoord,
-    pointsCastedOntoScreen
-  );
-}
-
-std::pair<std::vector<glm::dvec3>, std::vector<glm::dvec3>> InterpolationTool::filterSurfacePointsInner(
-  int surfacePointsSize,
-  std::vector<glm::dvec3> &pointsInWorldCoord,
-  std::vector<glm::dvec3> &normalsInWorldCoord,
-  std::vector<glm::dvec3> &pointsCastedOntoScreen
-) {
-  const int pointSize = pointsInWorldCoord.size();
-
-  // Construct octree for the casted surface points and basis Points
+  // Construct octree for the casted surface points
   pcl::PointCloud<pcl::PointXYZ>::Ptr castedSurfaceCloud(new pcl::PointCloud<pcl::PointXYZ>);
-  castedSurfaceCloud->points.resize(pointSize);
-  for (int i = 0; i < pointSize; i++) {
+  castedSurfaceCloud->points.resize(surfacePointsSize);
+  for (int i = 0; i < surfacePointsSize; i++) {
     castedSurfaceCloud->points[i].x = pointsCastedOntoScreen[i].x;
     castedSurfaceCloud->points[i].y = pointsCastedOntoScreen[i].y;
     castedSurfaceCloud->points[i].z = pointsCastedOntoScreen[i].z;
@@ -279,7 +217,7 @@ std::pair<std::vector<glm::dvec3>, std::vector<glm::dvec3>> InterpolationTool::f
   const double INF = 1e5;
   double min_x = INF, max_x = -INF;
   double min_y = INF, max_y = -INF;
-  for (int i = 0; i < pointSize; i++) {
+  for (int i = 0; i < surfacePointsSize; i++) {
     glm::dvec3 mapped_p = pointsCastedOntoScreen[i];
 
     min_x = std::min(min_x, mapped_p.x);
@@ -289,8 +227,8 @@ std::pair<std::vector<glm::dvec3>, std::vector<glm::dvec3>> InterpolationTool::f
   }
 
   const double castedAverageDist = calcCastedAverageDist();
-  std::set<int> candidatePointsIndexSet;
-  std::vector<int> candidatePointsIndex;
+  std::set<int>           candidatePointsIndexSet;
+  std::vector<int>        candidatePointsIndex;
   std::vector<glm::dvec3> hasCloserNeighborPoints;
   for (double x = min_x; x < max_x; x += castedAverageDist) {
     for (double y = min_y; y < max_y; y += castedAverageDist) {
@@ -321,9 +259,6 @@ std::pair<std::vector<glm::dvec3>, std::vector<glm::dvec3>> InterpolationTool::f
           minDepthIdx = hitPointIdx;
         }
       }
-
-      // Discard points that is one of basisPoints.
-      if (minDepthIdx >= surfacePointsSize) continue;
 
       // If the point is already selected, then skip it.
       if (candidatePointsIndexSet.count(minDepthIdx)) continue;
@@ -360,24 +295,5 @@ std::pair<std::vector<glm::dvec3>, std::vector<glm::dvec3>> InterpolationTool::f
     CLUSTER_MIN_DEPTH
   );
 
-  // Filter the added vertices in order to preserve the density of the point cloud
-  std::vector<glm::dvec3> clusteredV;
-  std::vector<glm::dvec3> clusteredN;
-  for (int idx: clusteredPointsIndex) {
-    glm::dvec3 p = pointsInWorldCoord[idx];
-    glm::dvec3 pn = normalsInWorldCoord[idx];
-
-    clusteredV.push_back(p);
-    clusteredN.push_back(pn);
-  }
-  std::vector<int> filteredIndex = voxelFilter(*(getPointCloud()->getVertices()), clusteredV);
-  std::vector<glm::dvec3> newV(filteredIndex.size());
-  std::vector<glm::dvec3> newN(filteredIndex.size());
-  for (size_t i = 0; i < filteredIndex.size(); i++) {
-    int idx = filteredIndex[i];
-    newV[i] = clusteredV[idx];
-    newN[i] = clusteredN[idx];
-  }
-
-  return { newV, newN };
+  return clusteredPointsIndex;
 }

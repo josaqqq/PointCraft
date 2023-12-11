@@ -36,6 +36,7 @@ int main(int argc, char **argv) {
   args::ArgumentParser parser("Point cloud editor tool"
                               "");
   // args information
+  args::Flag downsample(parser, "downsample", "enable downsampling", {'d', "downsample"});
   args::Positional<std::string> inFile(parser, "mesh", "input mesh");
 
   // Parse args
@@ -71,7 +72,7 @@ int main(int argc, char **argv) {
   int currentMode;
   int currentSurfaceMode;
 
-  PointCloud pointCloud(args::get(inFile));
+  PointCloud pointCloud(args::get(inFile), downsample);
 
   InterpolationTool interpolationTool(&currentMode, &pointCloud);
   MLSSprayTool      mlsSprayTool(&currentMode, &pointCloud);

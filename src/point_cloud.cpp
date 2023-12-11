@@ -12,9 +12,7 @@
 #include "constants.hpp"
 #include "surface.hpp"
 
-PointCloud::PointCloud(std::string filename) : octree(OctreeResolution) {
-  std::cout << "loading: " << filename << std::endl;
-
+PointCloud::PointCloud(std::string filename, bool downsample) : octree(OctreeResolution) {
   // Extract file format
   if (filename.length() < 3) exit(1);
   std::string fileFormat = filename.substr(filename.size() - 3);
@@ -62,10 +60,21 @@ PointCloud::PointCloud(std::string filename) : octree(OctreeResolution) {
 
   // Initialize member variables
   averageDistance = 0.0;
-  boundingSphereRadius = 0.0;
+  boundingBoxSide = 0.0;
 
-  // Update scaling
+  // Scale the input point cloud
+  // If downsample flag is set, then execute downsampling
   scalePointCloud();
+  if (downsample) {
+    std::set<int> donwsampledIndex = downsampling(PointCloudDownsampleVoxel);
+    std::vector<glm::dvec3> downsampledPoints, downsampledNormals;
+    for (int idx: donwsampledIndex) {
+      downsampledPoints.push_back(Vertices[idx]);
+      downsampledNormals.push_back(Normals[idx]);
+    }
+    Vertices = downsampledPoints;
+    Normals = downsampledNormals;
+  }
 
   // Update point cloud
   //    - update environments
@@ -111,11 +120,12 @@ void PointCloud::updatePointCloud(bool clearPostEnv) {
   vectorQuantity->setEnabled(NormalEnabled);
   vectorQuantity->setMaterial(NormalMaterial);
 
-  std::cout << "Point Cloud Data:"                                << std::endl;
-  std::cout << "\tVertex num\t\t->\t"       << Vertices.size()    << std::endl;
-  std::cout << "\tNormal num\t\t->\t"       << Normals.size()     << std::endl;
-  std::cout << "\tAverage Distance\t->\t"   << averageDistance    << std::endl;
-  std::cout                                                       << std::endl;
+  std::cout << "Point Cloud Data:"                                      << std::endl;
+  std::cout << "\tVertex num\t\t->\t"           << Vertices.size()      << std::endl;
+  std::cout << "\tNormal num\t\t->\t"           << Normals.size()       << std::endl;
+  std::cout << "\tAverage Distance\t->\t"       << averageDistance      << std::endl;
+  std::cout << "\tBoundng Box Side\t->\t"  << boundingBoxSide << std::endl;
+  std::cout                                                             << std::endl;
 
   // Show Pseudo Surface
   Surface pseudoSurface(PseudoSurfaceName, &Vertices, &Normals);
@@ -214,32 +224,90 @@ std::vector<glm::dvec3>* PointCloud::getNormals() {
 double PointCloud::getAverageDistance() {
   return averageDistance;
 }
-double PointCloud::getBoundingSphereRadius() {
-  return boundingSphereRadius;
+double PointCloud::getBoundingBoxSide() {
+  return boundingBoxSide;
 }
 pcl::octree::OctreePointCloudSearch<pcl::PointXYZ>* PointCloud::getOctree() {
   return &octree;
 }
 
 // Move points to set the gravity point to (0.0, 0.0, 0.0),
-// and then calculate bounding sphere radius.
+// and then scale the point cloud so that the bounding box side is 1.0
 void PointCloud::scalePointCloud() {
   glm::dvec3 center;
 
+  // Move points to set the gravity point to (0.0, 0.0, 0.0),
   for (size_t i = 0; i < Vertices.size(); i++) {
     center += Vertices[i];
   }
   center /= static_cast<double>(Vertices.size());
 
-  boundingSphereRadius = 0.0;
+  // Scale the point cloud so that the bounding box side is 1.0
+  boundingBoxSide = 0.0;
   for (size_t i = 0; i < Vertices.size(); i++) {
     Vertices[i] -= center;
 
-    boundingSphereRadius = std::max(
-      boundingSphereRadius, 
-      glm::length(Vertices[i])
-    );
+    boundingBoxSide = std::max(boundingBoxSide, std::abs(Vertices[i].x));
+    boundingBoxSide = std::max(boundingBoxSide, std::abs(Vertices[i].y));
+    boundingBoxSide = std::max(boundingBoxSide, std::abs(Vertices[i].z));
   }
+  for (size_t i = 0; i < Vertices.size(); i++) {
+    // The bounding box is centered at the origin,
+    // so it is normalized by multiplying by 0.t
+    Vertices[i] *= (PointCloudBoundingBoxSide/2.0d) / boundingBoxSide;
+  }
+  boundingBoxSide = PointCloudBoundingBoxSide;
+}
+
+// Filter Vertices by selecting the candidate
+// point for each voxel.
+//  - voxelSide:      the length of the voxel side
+std::set<int> PointCloud::downsampling(double voxelSide) {
+  // map for voxel filter
+  //  - std::tupple<double, double, double>:  the index of the voxel
+  //  - std::pair<double, int>: the distance between the center point and the current 
+  //                            candidate point and the index of the current candidate point
+  std::map<std::tuple<int, int, int>, std::pair<double, int>> voxels;
+
+  // Compute whether each vertex is a candidate point.
+  std::vector<bool> isCandidatePoint(Vertices.size());
+  for (size_t i = 0; i < Vertices.size(); i++) {
+    glm::dvec3 p = Vertices[i];
+    std::tuple<int, int, int> idx = {
+      std::floor(p.x/voxelSide),
+      std::floor(p.y/voxelSide),
+      std::floor(p.z/voxelSide)
+    };
+
+    std::pair<double, int> currentCandidate = { 1e5, i };
+    if (voxels.count(idx) != 0) {
+      currentCandidate = voxels[idx];
+    }
+
+    double currentCandidateDist = currentCandidate.first;
+    int currentCandidateIdx = currentCandidate.second;
+
+    // Update the voxels information
+    glm::dvec3 voxelBasis = glm::dvec3(
+      (double)std::get<0>(idx)*voxelSide,
+      (double)std::get<1>(idx)*voxelSide,
+      (double)std::get<2>(idx)*voxelSide
+    );
+    glm::dvec3 voxelCenter = voxelBasis + 0.5d*glm::dvec3(voxelSide, voxelSide, voxelSide);
+    double currentDist = glm::length(p - voxelCenter);
+    if (currentDist < currentCandidateDist) {
+      voxels[idx] = { currentDist, i };
+      isCandidatePoint[currentCandidateIdx] = false;
+      isCandidatePoint[i] = true;
+    }
+  }
+
+  std::set<int> filteredIndex;
+  for (size_t i = 0; i < Vertices.size(); i++) {
+    if (isCandidatePoint[i]) filteredIndex.insert(i);
+  }
+
+  return filteredIndex;
 }
 
 // Update registered vertices

@@ -35,6 +35,7 @@ void MLSSprayTool::draggingEvent() {
   // If no point was selected, then return.
   if (getSurfacePointsIndex()->size() == 0) return;
 
+  // Fetch actual points' positions from the point cloud
   std::vector<glm::dvec3> surfacePoints;
   std::set<int>           *surfacePointsIndexPtr = getSurfacePointsIndex();
   std::vector<glm::dvec3> *verticesPtr = getPointCloud()->getVertices();
@@ -49,31 +50,30 @@ void MLSSprayTool::draggingEvent() {
   std::tie(mlsVertices, mlsNormals) = mlsSurface.projectMLSSurface(
     xPos,
     yPos,
-    getPointCloud()->getBoundingSphereRadius(),
+    // boundingBoxSide is the length of the side of the bounding box,
+    // so the searchRadius is one-half of boundingBoxSide.
+    getPointCloud()->getBoundingBoxSide()/2.0d,
     getPointCloud()->getAverageDistance(),
     MLS_SpraySize
   );
-
-  // Filter the added vertices in order to preserve the density of the point cloud
-  std::vector<int> filteredIndex = voxelFilter(*verticesPtr, mlsVertices);
-  std::vector<glm::dvec3> newV(filteredIndex.size());
-  std::vector<glm::dvec3> newN(filteredIndex.size());
-  for (size_t i = 0; i < filteredIndex.size(); i++) {
-    int idx = filteredIndex[i];
-    newV[i] = mlsVertices[idx];
-    newN[i] = mlsNormals[idx];
+  
+  // Filter the reconstructed surface with voxel
+  std::set<int> voxelFilteredIndex = filterWithVoxel(*verticesPtr, mlsVertices);
+  std::vector<glm::dvec3> voxelFilteredPoints, voxelFilteredNormals;
+  for (int idx: voxelFilteredIndex) {
+    voxelFilteredPoints.push_back(mlsVertices[idx]);
+    voxelFilteredNormals.push_back(mlsNormals[idx]);
   }
 
-  if (newV.size() == 0) return;
-  
-  // Add the interpolated points to the point cloud.
-  getPointCloud()->addPoints(newV, newN);
+  // Add the interpolated points.
+  getPointCloud()->addPoints(voxelFilteredPoints, voxelFilteredNormals);
 }
 
 void MLSSprayTool::releasedEvent() {
   if (getSketchPoints()->size() == 0) return;
 
-  // Remove surfacePointsIndex
+  // Remove:
+  //  - surface points
   removePointCloud(SurfacePointName);
 
   // Reset all member variables.

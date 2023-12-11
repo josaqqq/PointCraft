@@ -98,7 +98,7 @@ class SketchTool {
     //  - existingPoints: already existing points. 
     //                    Points in the same voxel with a point of existingPoints are skipped.
     //  - filteredPoints: Filtering target
-    std::vector<int> voxelFilter(
+    std::set<int> filterWithVoxel(
       std::vector<glm::dvec3> &existingPoints,
       std::vector<glm::dvec3> &filteredPoints
     );

@@ -8,7 +8,7 @@
 
 class PointCloud {
   public:
-    PointCloud(std::string filename);
+    PointCloud(std::string filename, bool downsample);
     ~PointCloud() {}
 
     // Enable or Disable the point cloud and normals
@@ -35,13 +35,18 @@ class PointCloud {
     std::vector<glm::dvec3>* getVertices();
     std::vector<glm::dvec3>* getNormals();
     double getAverageDistance();
-    double getBoundingSphereRadius();
+    double getBoundingBoxSide();
     pcl::octree::OctreePointCloudSearch<pcl::PointXYZ>* getOctree();
 
   private:
     // Move points to set the gravity point to (0.0, 0.0, 0.0),
-    // and then calculate bounding sphere radius.
+    // and then scale the point cloud so that the bounding box side is 1.0
     void scalePointCloud();
+
+    // Filter Vertices by selecting the candidate
+    // point for each voxel.
+    //  - voxelSide:      the length of the voxel side
+    std::set<int> downsampling(double voxelSide);
 
     // Update registered vertices
     void updateOctree();
@@ -53,7 +58,7 @@ class PointCloud {
     std::vector<glm::dvec3> Vertices;
     std::vector<glm::dvec3> Normals;
     double averageDistance;       // Average Distance between a point and the nearest neighbor
-    double boundingSphereRadius;  // Radius of bounding sphere of point cloud
+    double boundingBoxSide;  // Side of bounding sphere of point cloud
 
     // Undo/Redo stacks
     std::stack<std::pair<std::vector<glm::dvec3>, std::vector<glm::dvec3>>> prevEnvironments;
