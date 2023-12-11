@@ -32,7 +32,7 @@ const int SurfacePointNum = 10;
 // Surface points
 //
 const glm::dvec3 SurfacePointColor = { 0.000, 1.000, 0.000 };
-const double SurfacePointSize = 0.005;
+const double SurfacePointRadius = 0.0025;
 const std::string SurfaceMaterial = "flat";
 
 //
@@ -57,7 +57,7 @@ const std::string SketchPrefix = "Sketch: ";
 //  Curve Network
 //
 const glm::dvec3 CurveNetworkColor = { 0.000, 1.000, 0.000 };
-const double CurveNetworkRadius   = 0.00025;
+const double CurveNetworkRadius   = 0.00020;
 const std::string CurveNetworkMaterial = "flat";
 
 //

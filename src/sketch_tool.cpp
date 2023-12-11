@@ -61,7 +61,7 @@ void SketchTool::registerSurfacePointsAsPointCloud(std::string name) {
 
   polyscope::PointCloud* patchCloud = polyscope::registerPointCloud(name, points);
   patchCloud->setPointColor(SurfacePointColor);
-  patchCloud->setPointRadius(SurfacePointSize);
+  patchCloud->setPointRadius(SurfacePointRadius);
   patchCloud->setMaterial(SurfaceMaterial);
   patchCloud->setEnabled(true);
 }
