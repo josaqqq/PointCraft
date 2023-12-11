@@ -8,8 +8,13 @@
 #include "constants.hpp"
 
 void ModeSelector::enableModeSelection(ImGuiIO &io) {
+  // Export .obj file
+  ImGui::Text("Export file:");
+  ImGui::Text("   "); ImGui::SameLine();
+  if (ImGui::Button(".obj")) pointCloud->exportOBJFile();
+
   // Undo/Redo
-  ImGui::Text("Undo/Redo:");
+  ImGui::Text("\nUndo/Redo:");
   ImGui::Text("   "); ImGui::SameLine();
   if (ImGui::Button("<< Undo")) pointCloud->executeUndo();
   ImGui::SameLine();

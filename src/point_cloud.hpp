@@ -11,6 +11,9 @@ class PointCloud {
     PointCloud(std::string filename, bool downsample);
     ~PointCloud() {}
 
+    // Output current Vertices and Normals as .obj file
+    void exportOBJFile();
+
     // Enable or Disable the point cloud and normals
     void setPointCloudEnabled(bool flag);
     void setPointCloudNormalEnabled(bool flag);

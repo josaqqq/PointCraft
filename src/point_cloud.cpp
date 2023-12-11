@@ -6,7 +6,8 @@
 #include <pcl/io/pcd_io.h>
 #include <pcl/point_cloud.h>
 
-#include <Eigen/Dense>
+#include <string>
+#include <fstream>
 
 #include "point_cloud.hpp"
 #include "constants.hpp"
@@ -82,6 +83,39 @@ PointCloud::PointCloud(std::string filename, bool downsample) : octree(OctreeRes
   //    - render points and normals
   updatePointCloud(false);
 } 
+
+// Output current Vertices and Normals as .obj file
+void PointCloud::exportOBJFile() {
+  std::ofstream objfile("./output.obj");
+
+  if (objfile.is_open()) {
+    // Write vertex information to .obj
+    for (glm::dvec3 p: Vertices) {
+      std::string px = std::to_string(p.x);
+      std::string py = std::to_string(p.y);
+      std::string pz = std::to_string(p.z);
+
+      objfile << "v " << px << ' ' << py << ' ' << pz << '\n';
+    }
+
+    // Write normal information to .obj
+    for (glm::dvec3 pn: Normals) {
+      std::string pn_x = std::to_string(pn.x);
+      std::string pn_y = std::to_string(pn.y);
+      std::string pn_z = std::to_string(pn.z);
+
+      objfile << "vn " << pn_x << ' ' << pn_y << ' ' << pn_z << '\n';
+    }
+
+    // Close the file
+    objfile.close();
+    std::cout << "./output.obj was exported!" << std::endl;
+  } else {
+    std::cout << "WARNING: ./output.obj was not opened." << std::endl;
+  }
+
+  return;
+}
 
 // Enable or Disable the point cloud and normals
 void PointCloud::setPointCloudEnabled(bool flag) {
