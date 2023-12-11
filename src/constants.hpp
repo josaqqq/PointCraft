@@ -12,7 +12,7 @@ const double ScreenOffset = 10.0;
 // Point Cloud parameters
 //
 const double PointCloudBoundingBoxSide = 1.0d;
-const double PointCloudDownsampleVoxel = 0.025d;
+const double PointCloudDownsampleVoxel = 0.010d;
 
 const std::string PointName = "Point Cloud";
 const glm::dvec3 PointColor = { 1.000, 1.000, 1.000 };
