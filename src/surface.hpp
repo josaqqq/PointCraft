@@ -63,4 +63,44 @@ class Surface {
     // Initialize MLS and then return pcl::MLSResult
     //  - searchRadius: the range of the nearest neighbor search
     pcl::MLSResult InitializeMLSSurface(double searchRadius);
+
+    // Detect the holes on the mesh
+    //  1.  Detect the edges not shared by two faces
+    //  2.  Manage vertices of the detected edges with UnionFind
+    //  3.  Calculate the total length of the hole, and skip 
+    //      if the length of the hole boundary is less than 
+    //      the threshold.
+    //  4.  Return the boundary faces' indices
+    //
+    //  - meshV: Vertices on the mesh
+    //  - meshF: Faces on the mesh
+    //  - boundaryLengthLimit: Skip if the boundary length is less than this value
+    std::set<int> detectHolesOnMesh(
+      std::vector<glm::dvec3> meshV,
+      std::vector<std::vector<size_t>> meshF,
+      double boundaryLengthLimit
+    );
+
+    // UnionFind used in detectHolesOnMesh
+    struct UnionFind {
+      std::vector<int> par; 
+      UnionFind(int N) : par(N) {
+        for(int i = 0; i < N; i++) par[i] = i;
+      }
+      int root(int x) {
+        if (par[x] == x) return x;
+        return par[x] = root(par[x]);
+      }
+      void unite(int x, int y) {
+        int rx = root(x); 
+        int ry = root(y); 
+        if (rx == ry) return; 
+        par[rx] = ry; 
+      }
+      bool same(int x, int y) { 
+        int rx = root(x);
+        int ry = root(y);
+        return rx == ry;
+      }
+    };
 };

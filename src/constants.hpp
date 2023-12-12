@@ -89,6 +89,8 @@ const glm::dvec3 MLSColor = { 0.000, 0.000, 1.000 };
 const std::string GreedyProjName = "Greedy Projection Triangulation";
 
 const double GreedyProjSearchRadiusMult = 5.0;
+const double GreedyProjHoleDetectMult = 5.0;
+
 const double GreedyProjMu = 2.5;                   
 const int GreedyProjMaxNN = 100;
 const double GreedyProjMaxSurfaceAngle = 17.0*M_PI/18.0;  // 170 degrees

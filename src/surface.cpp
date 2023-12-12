@@ -16,6 +16,8 @@
 
 #include <string>
 #include <random>
+#include <map>
+#include <set>
 
 #include "surface.hpp"
 #include "plane.hpp"
@@ -333,8 +335,20 @@ void Surface::showGreedyProjection(
     }
   }
 
-  // Coloring hole boundary
-  // TODO: Implement here
+  // Reverse the normal of the face if the adjacent face normals are inversed.
+
+  // Detect holes on the greedy projection surface and determine face colors
+  std::set<int> holeBoundaryFaces = detectHolesOnMesh(meshV, meshF, averageDistance*GreedyProjHoleDetectMult);
+  std::vector<glm::dvec3> meshFC(meshF.size());
+  for (size_t i = 0; i < meshF.size(); i++) {
+    if (holeBoundaryFaces.count(i)) {
+      // On the boundary
+      meshFC[i] = glm::dvec3(1.000, 0.000, 0.000);
+    } else {
+      // Not on the boundary
+      meshFC[i] = GreedyProjColor;
+    }
+  }
 
   // Register mesh
   polyscope::SurfaceMesh *greedyMesh = polyscope::registerSurfaceMesh(Name, meshV, meshF);
@@ -343,6 +357,7 @@ void Surface::showGreedyProjection(
   greedyMesh->setBackFacePolicy(GreedyProjBackFacePolicy);
   greedyMesh->setMaterial(GreedyProjMaterial);
   greedyMesh->setEnabled(enabled);
+  greedyMesh->addFaceColorQuantity("face color", meshFC)->setEnabled(true);
 
   // Output results
   std::cout << "\nFinished Greedy Projection Triangulation!"  << std::endl;
@@ -436,4 +451,99 @@ pcl::MLSResult Surface::InitializeMLSSurface(double searchRadius) {
   pcl::MLSResult mlsResult = mlsResults[Vertices->size() - 1];
 
   return mlsResult;
+}
+
+// Detect the holes on the mesh
+//  1.  Detect the edges not shared by two faces
+//  2.  Manage vertices of the detected edges with UnionFind
+//  3.  Calculate the total length of the hole, and skip 
+//      if the length of the hole boundary is less than 
+//      the threshold.
+//  4.  Return the boundary faces' indices
+//
+//  - meshV: Vertices on the mesh
+//  - meshF: Faces on the mesh
+//  - boundaryLengthLimit: Skip if the boundary length is less than this value
+std::set<int> Surface::detectHolesOnMesh(
+  std::vector<glm::dvec3> meshV,
+  std::vector<std::vector<size_t>> meshF,
+  double boundaryLengthLimit
+) {
+  const int verticesSize = meshV.size();
+  const int facesSize = meshF.size();
+
+  // Detect the edges not shared by two faces
+  std::map<int, std::vector<std::pair<int, int>>> vertexToAdjacentEdges;
+  std::map<std::pair<int, int>, std::vector<int>> edgeToAdjacentFaces;
+  for (int i = 0; i < facesSize; i++) {
+    const int polySize = meshF[i].size();
+    for (int j = 0; j < polySize; j++) {
+      int u = meshF[i][j];
+      int v = meshF[i][(j + 1)%polySize];
+      std::pair<int, int> e = {u, v};
+      if (u >= v) std::swap(e.first, e.second);
+
+      // vertex -> edges
+      vertexToAdjacentEdges[u].push_back(e);
+      // edge -> faces
+      edgeToAdjacentFaces[e].push_back(i);
+    }
+  }
+
+  // Compute boundary vertices and edges
+  std::set<int> boundaryVertices;
+  std::set<std::pair<int, int>> boundaryEdges;
+  for (auto i: edgeToAdjacentFaces) {
+    std::pair<int, int> edge = i.first;
+    std::vector<int> facesShareEdge = i.second;
+    if (facesShareEdge.size() != 1) continue;
+
+    // Add boundary information
+    boundaryVertices.insert(edge.first);
+    boundaryVertices.insert(edge.second);
+    boundaryEdges.insert(edge);
+  }
+
+  // Manage vertices of the detected edges with UnionFind
+  UnionFind unionFind(verticesSize);
+  for (std::pair<int, int> e: boundaryEdges) {
+    unionFind.unite(e.first, e.second);
+  }
+  
+  // Compute root-to-group relationships
+  std::map<int, std::set<int>> rootToGroup;
+  for (int i = 0; i < verticesSize; i++) {
+    if (boundaryVertices.count(i) == 0) continue;
+
+    int root = unionFind.root(i);
+    rootToGroup[root].insert(i);
+  }
+
+  // Calculate the total length of the hole 
+  std::map<int, double> rootToBoundaryLength;
+  for (std::pair<int, int> e: boundaryEdges) {
+    int root = unionFind.root(e.first);
+    double length = glm::length(meshV[e.first] - meshV[e.second]);
+    rootToBoundaryLength[root] += length;
+  }
+
+  // Return the boundary faces' indices
+  std::set<int> boundaryFaces;
+  for (std::pair<int, double> i: rootToBoundaryLength) {
+    int root = i.first;
+    double length = i.second;
+
+    // Skip if the length of the hole boundary is less than the threshold.
+    if (length < boundaryLengthLimit) continue;
+
+    for (int vertexIdx: rootToGroup[root]) {
+      for (std::pair<int, int> edgeIdx: vertexToAdjacentEdges[vertexIdx]) {
+        for (int faceIdx: edgeToAdjacentFaces[edgeIdx]) {
+          boundaryFaces.insert(faceIdx);
+        }
+      }
+    }
+  }
+
+  return boundaryFaces;
 }
