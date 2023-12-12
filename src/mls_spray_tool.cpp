@@ -50,15 +50,13 @@ void MLSSprayTool::draggingEvent() {
   std::tie(mlsVertices, mlsNormals) = mlsSurface.projectMLSSurface(
     xPos,
     yPos,
-    // boundingBoxSide is the length of the side of the bounding box,
-    // so the searchRadius is one-half of boundingBoxSide.
-    getPointCloud()->getBoundingBoxSide()/2.0d,
+    getPointCloud()->getBoundingBoxSide(),
     getPointCloud()->getAverageDistance(),
     MLS_SpraySize
   );
   
   // Filter the reconstructed surface with voxel
-  std::set<int> voxelFilteredIndex = filterWithVoxel(*verticesPtr, mlsVertices);
+  std::set<int> voxelFilteredIndex = filterWithVoxel(mlsVertices);
   std::vector<glm::dvec3> voxelFilteredPoints, voxelFilteredNormals;
   for (int idx: voxelFilteredIndex) {
     voxelFilteredPoints.push_back(mlsVertices[idx]);

@@ -89,7 +89,7 @@ void InterpolationTool::releasedEvent() {
   }
 
   // Filter the reconstructed surface with voxel
-  std::set<int> voxelFilteredIndex = filterWithVoxel(*(getPointCloud()->getVertices()), depthFilteredPoints);
+  std::set<int> voxelFilteredIndex = filterWithVoxel(depthFilteredPoints);
   std::vector<glm::dvec3> voxelFilteredPoints, voxelFilteredNormals;
   for (int idx: voxelFilteredIndex) {
     voxelFilteredPoints.push_back(depthFilteredPoints[idx]);

@@ -476,13 +476,8 @@ bool SketchTool::insideBasisConvexHull(double x, double y) {
 // Considering points of the surface and the point cloud,
 // select the candidate point of each voxel.
 // Voxel size is averageDistance per side
-//  - existingPoints: already existing points. 
-//                    Points in the same voxel with a point of existingPoints are skipped.
 //  - filteredPoints: Filtering target
-std::set<int> SketchTool::filterWithVoxel(
-  std::vector<glm::dvec3> &existingPoints,
-  std::vector<glm::dvec3> &filteredPoints
-) {
+std::set<int> SketchTool::filterWithVoxel(std::vector<glm::dvec3> &filteredPoints) {
   // Voxel size is averageDistance per side
   const double voxelSide = pointCloud->getAverageDistance();
 
@@ -491,16 +486,6 @@ std::set<int> SketchTool::filterWithVoxel(
   //  - std::pair<double, int>: the distance between the center point and the current 
   //                            candidate point and the index of the current candidate point
   std::map<std::tuple<int, int, int>, std::pair<double, int>> voxels;
-
-  // Add the points of the point 
-  for (glm::dvec3 p: existingPoints) {
-    std::tuple<int, int, int> idx = {
-      std::floor(p.x/voxelSide),
-      std::floor(p.y/voxelSide),
-      std::floor(p.z/voxelSide)
-    };
-    voxels[idx] = { 0.0, -1 };
-  }
 
   // Compute whether each surface point is a candidate point.
   std::vector<bool> isCandidatePoint(filteredPoints.size());
@@ -520,9 +505,6 @@ std::set<int> SketchTool::filterWithVoxel(
     double currentCandidateDist = currentCandidate.first;
     int currentCandidateIdx = currentCandidate.second;
 
-    // If a point of the point cloud is in the voxel, then skip it
-    if (currentCandidateIdx == -1) continue;
-
     // Update the voxels information
     glm::dvec3 voxelBasis = glm::dvec3(
       (double)std::get<0>(idx)*voxelSide,
@@ -538,11 +520,43 @@ std::set<int> SketchTool::filterWithVoxel(
     }
   }
 
-  // Compute newV and newN
+  // Search for nearest neighbors for each filteredPoints
+  // If candidate points are in the same voxel with points 
+  // of the point cloud, then skip it.
   std::set<int> filteredIndex;
+
+  const int K = 1;
+  std::vector<int>    hitPointIndices(K);
+  std::vector<float>  hitPointDistances(K);
+  std::vector<glm::dvec3> *verticesPtr = pointCloud->getVertices();
   for (size_t i = 0; i < filteredPoints.size(); i++) {
-    if (isCandidatePoint[i]) filteredIndex.insert(i);
+    if (!isCandidatePoint[i]) continue;
+
+    glm::dvec3 p = filteredPoints[i];
+    std::tuple<int, int, int> p_idx = {
+      std::floor(p.x/voxelSide),
+      std::floor(p.y/voxelSide),
+      std::floor(p.z/voxelSide)
+    };
+
+    // Check no point is in the same voxel
+    int hitPointCount = pointCloud->getOctree()->nearestKSearch(
+      pcl::PointXYZ(p.x, p.y, p.z),
+      K,
+      hitPointIndices,
+      hitPointDistances
+    );
+    assert(hitPointCount == 1);
+    glm::dvec3 hitPoint = (*verticesPtr)[hitPointIndices[0]];
+    std::tuple<int, int, int> hit_idx = {
+      std::floor(hitPoint.x/voxelSide),
+      std::floor(hitPoint.y/voxelSide),
+      std::floor(hitPoint.z/voxelSide)
+    };
+
+    if (hit_idx != p_idx) filteredIndex.insert(i);
   }
+
   return filteredIndex;
 }
 

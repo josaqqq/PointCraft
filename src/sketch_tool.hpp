@@ -95,13 +95,8 @@ class SketchTool {
     // Considering points of the surface and the point cloud,
     // select the candidate point of each voxel.
     // Voxel size is averageDistance per side
-    //  - existingPoints: already existing points. 
-    //                    Points in the same voxel with a point of existingPoints are skipped.
     //  - filteredPoints: Filtering target
-    std::set<int> filterWithVoxel(
-      std::vector<glm::dvec3> &existingPoints,
-      std::vector<glm::dvec3> &filteredPoints
-    );
+    std::set<int> filterWithVoxel(std::vector<glm::dvec3> &filteredPoints);
 
     // Calculate averageDistance casted onto the screen
     double calcCastedAverageDist();
