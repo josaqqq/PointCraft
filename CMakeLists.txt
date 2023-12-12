@@ -66,7 +66,7 @@ endif()
 find_package(Eigen3 3.3 REQUIRED NO_MODULE)
 
 # Find PCL
-find_package(PCL 1.3 REQUIRED)
+find_package(PCL 1.10 REQUIRED)
 
 # Add polyscope
 add_subdirectory("deps/polyscope")
@@ -80,11 +80,12 @@ add_executable(
     src/plane.cpp
     src/cluster.cpp
     src/modes.cpp
-    src/octree.cpp
     src/point_cloud.cpp
     src/sketch_tool.cpp
     src/interpolation_tool.cpp
-    src/rbf.cpp
+    src/mls_spray_tool.cpp
+    src/delete_spray_tool.cpp
+    src/delete_tool.cpp
 )
 
 # Include settings

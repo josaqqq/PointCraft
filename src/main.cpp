@@ -17,11 +17,6 @@
 #include "point_cloud.hpp"
 #include "constants.hpp"
 
-int currentMode;
-int currentPointCloud;
-int currentPointCloudNormal;
-int currentSurfaceMode;
-PointCloud pointCloud;
 ModeSelector modeSelector;
 
 void callback() {
@@ -41,6 +36,7 @@ int main(int argc, char **argv) {
   args::ArgumentParser parser("Point cloud editor tool"
                               "");
   // args information
+  args::Flag downsample(parser, "downsample", "enable downsampling", {'d', "downsample"});
   args::Positional<std::string> inFile(parser, "mesh", "input mesh");
 
   // Parse args
@@ -57,28 +53,47 @@ int main(int argc, char **argv) {
   }
 
   // Options
-  polyscope::options::autocenterStructures = false;
-  polyscope::options::autoscaleStructures = false;
   polyscope::view::windowWidth = WindowWidth;
   polyscope::view::windowHeight = WindowHeight;
+  polyscope::view::bgColor = BackgroundColor;
+
+  polyscope::state::lengthScale = 1.0;
+
+  polyscope::options::autocenterStructures = false;
+  polyscope::options::autoscaleStructures = false;
+  polyscope::options::automaticallyComputeSceneExtents = false;
+  polyscope::options::groundPlaneMode = polyscope::GroundPlaneMode::None;
+  // polyscope::options::buildDefaultGuiPanels = false;
 
   // Initialize polyscope
   polyscope::init();
-  polyscope::options::groundPlaneMode = polyscope::GroundPlaneMode::None;
-  // polyscope::options::buildDefaultGuiPanels = false;
-  polyscope::view::bgColor = BackgroundColor;
 
   // Initialize classes
-  pointCloud = PointCloud(args::get(inFile));
-  InterpolationTool interpolationTool(&pointCloud, &currentMode);
+  int currentMode;
+  int currentSurfaceMode;
+
+  PointCloud pointCloud(args::get(inFile), downsample);
+
+  InterpolationTool interpolationTool(&currentMode, &pointCloud);
+  MLSSprayTool      mlsSprayTool(&currentMode, &pointCloud);
+  DeleteTool        deleteTool(&currentMode, &pointCloud);
+  DeleteSprayTool   deleteSprayTool(&currentMode, &pointCloud);
+
   modeSelector = ModeSelector(
     &currentMode, 
-    &currentPointCloud,
-    &currentPointCloudNormal,
     &currentSurfaceMode, 
+
     &pointCloud, 
-    &interpolationTool
+    
+    &interpolationTool,
+    &mlsSprayTool,
+    &deleteTool,
+    &deleteSprayTool
   );
+
+  // Reconstruct Surfaces
+  Surface poissonSurface(PoissonName, pointCloud.getVertices(), pointCloud.getNormals());
+  poissonSurface.reconstructPoissonSurface(pointCloud.getAverageDistance());
 
   // Add the callback
   polyscope::state::userCallback = callback;

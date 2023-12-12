@@ -5,10 +5,16 @@
 #include "point_cloud.hpp"
 #include "sketch_tool.hpp"
 #include "interpolation_tool.hpp"
+#include "mls_spray_tool.hpp"
+#include "delete_tool.hpp"
+#include "delete_spray_tool.hpp"
 
 enum Mode {
   MODE_NONE,
-  MODE_INTERPOLATION,
+  MODE_INTERPOLATION_SKETCH,
+  MODE_DELETION_SKETCH,
+  MODE_INTERPOLATION_PAINT,
+  MODE_DELETION_PAINT,
 };
 
 enum VisualizationMode {
@@ -18,8 +24,8 @@ enum VisualizationMode {
 
 enum SurfaceMode {
   SURFACE_MODE_NONE,
+  SURFACE_MODE_PSEUDO,
   SURFACE_MODE_POISSON,
-  SURFACE_MODE_GREEDY,
 };
 
 struct ModeSelector {
@@ -27,24 +33,28 @@ struct ModeSelector {
     ModeSelector() {}
     ModeSelector(
       int *currentMode,
-      int *currentPointCloud,
-      int *currentPointCloudNormal,
       int *currentSurfaceMode,
+
       PointCloud *pointCloud,
-      InterpolationTool *interpolationTool
+      
+      InterpolationTool *interpolationTool,
+      MLSSprayTool *mlsSprayTool,
+      DeleteTool *deleteTool,
+      DeleteSprayTool *deleteSprayTool
     ) 
     : currentMode(currentMode),
-      currentPointCloud(currentPointCloud),
-      currentPointCloudNormal(currentPointCloudNormal),
       currentSurfaceMode(currentSurfaceMode),
+
       pointCloud(pointCloud), 
-      interpolationTool(interpolationTool) 
+      
+      interpolationTool(interpolationTool),
+      mlsSprayTool(mlsSprayTool),
+      deleteTool(deleteTool),
+      deleteSprayTool(deleteSprayTool)
     { 
       // Initialize current modes.
       *currentMode = MODE_NONE;
-      *currentPointCloud = MODE_SHOW;
-      *currentPointCloudNormal = MODE_SHOW;
-      *currentSurfaceMode = SURFACE_MODE_GREEDY;
+      *currentSurfaceMode = SURFACE_MODE_PSEUDO;
     }
 
     ~ModeSelector() {}
@@ -53,12 +63,12 @@ struct ModeSelector {
   
   private:
     int *currentMode;
-    int *currentPointCloud;
-    int *currentPointCloudNormal;
     int *currentSurfaceMode;
 
-    PointCloud *pointCloud;
+    PointCloud        *pointCloud;
+
     InterpolationTool *interpolationTool;
-    // SmoothingTool *smoothingTool;
-    // DeleteTool *deleteTool;
+    MLSSprayTool      *mlsSprayTool;
+    DeleteTool        *deleteTool;
+    DeleteSprayTool   *deleteSprayTool;
 };
