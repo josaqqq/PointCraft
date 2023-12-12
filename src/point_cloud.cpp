@@ -1,5 +1,6 @@
 #include "polyscope/polyscope.h"
 #include "polyscope/point_cloud.h"
+#include "polyscope/surface_mesh.h"
 
 #include <igl/readOBJ.h>
 
@@ -13,7 +14,8 @@
 #include "constants.hpp"
 #include "surface.hpp"
 
-PointCloud::PointCloud(std::string filename, bool downsample) : octree(OctreeResolution) {
+PointCloud::PointCloud(std::string filename, bool downsample) 
+: inputCloud(new pcl::PointCloud<pcl::PointXYZ>), octree(OctreeResolution) {
   // Extract file format
   if (filename.length() < 3) exit(1);
   std::string fileFormat = filename.substr(filename.size() - 3);
@@ -140,6 +142,15 @@ void PointCloud::updatePointCloud(bool clearPostEnv) {
   // Calculate average distance between the nearest points.
   if (averageDistance == 0.0) averageDistance = calcAverageDistance();
 
+  // Clear the buffer data and remove temporal pseudo surface
+  VerticesBuffer.clear();
+  NormalsBuffer.clear();
+  polyscope::removeSurfaceMesh(TemporalPseudoSurfaceName);
+
+  // Show Pseudo Surface of current point cloud
+  Surface pseudoSurface(PseudoSurfaceName, &Vertices, &Normals);
+  pseudoSurface.showPseudoSurface(averageDistance);
+
   // Register Points
   pointCloud = polyscope::registerPointCloud(PointName, Vertices);
   pointCloud->setPointColor(PointColor);
@@ -158,29 +169,36 @@ void PointCloud::updatePointCloud(bool clearPostEnv) {
   std::cout << "\tVertex num\t\t->\t"           << Vertices.size()      << std::endl;
   std::cout << "\tNormal num\t\t->\t"           << Normals.size()       << std::endl;
   std::cout << "\tAverage Distance\t->\t"       << averageDistance      << std::endl;
-  std::cout << "\tBoundng Box Side\t->\t"  << boundingBoxSide << std::endl;
+  std::cout << "\tBoundng Box Side\t->\t"       << boundingBoxSide      << std::endl;
   std::cout                                                             << std::endl;
-
-  // Show Pseudo Surface
-  Surface pseudoSurface(PseudoSurfaceName, &Vertices, &Normals);
-  pseudoSurface.showPseudoSurface(averageDistance);
 }
 
 // Add vertices from the positions and normals
 void PointCloud::addPoints(std::vector<glm::dvec3> &newV, std::vector<glm::dvec3> &newN) {
   assert(newV.size() == newN.size());
+  const int addedSize = newV.size();
 
-  int addedSize = newV.size();
+  // Add new points to octree
+  for (int i = 0; i < addedSize; i++) {
+    glm::dvec3 p = newV[i];
+    octree.addPointToCloud(pcl::PointXYZ(p.x, p.y, p.z), inputCloud);
+  }
+
+  // Add new points to VerticesBuffer and NormalsBuffer
   for (int i = 0; i < addedSize; i++) {
     Vertices.push_back(newV[i]);
     Normals.push_back(newN[i]);
   }
 
-  // Update point cloud
-  //    - update environments
-  //    - update octree
-  //    - render points and normals
-  updatePointCloud(true);
+  // Add new points to VerticesBuffer and NormalsBuffer
+  for (int i = 0; i < addedSize; i++) {
+    VerticesBuffer.push_back(newV[i]);
+    NormalsBuffer.push_back(newN[i]);
+  }
+
+  // Render added points temporarily
+  Surface pseudoSurfaceTemporal(TemporalPseudoSurfaceName, &VerticesBuffer, &NormalsBuffer);
+  pseudoSurfaceTemporal.showPseudoSurface(averageDistance);
 }
 
 // Delete vertices by referencing the vertex indices
@@ -203,12 +221,6 @@ void PointCloud::deletePoints(std::set<int> &indices) {
 
   Vertices = newV;
   Normals = newN;
-
-  // Update point cloud
-  //    - update environments
-  //    - update octree
-  //    - render points and normals
-  updatePointCloud(true);
 }
 
 // Execute Undo/Redo
@@ -346,7 +358,6 @@ std::set<int> PointCloud::downsampling(double voxelSide) {
 
 // Update registered vertices
 void PointCloud::updateOctree() {
-  pcl::PointCloud<pcl::PointXYZ>::Ptr inputCloud(new pcl::PointCloud<pcl::PointXYZ>);
   inputCloud->points.resize(Vertices.size());
   for (size_t i = 0; i < Vertices.size(); i++) {
     inputCloud->points[i].x = Vertices[i].x;

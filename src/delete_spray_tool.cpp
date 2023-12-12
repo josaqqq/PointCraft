@@ -28,7 +28,7 @@ void DeleteSprayTool::draggingEvent() {
 
   // Update surfacePointsIndex
   resetSurfacePointsIndex();
-  updateSurfacePoints(xPos, yPos, 1);
+  updateSurfacePoints(xPos, yPos, MLS_DeleteSpraySize);
   removePointCloud(SurfacePointName);
   registerSurfacePointsAsPointCloud(SurfacePointName);
   // If no point was selected, then return.
@@ -36,12 +36,19 @@ void DeleteSprayTool::draggingEvent() {
 
   // Delete the selected surface points from the point cloud
   getPointCloud()->deletePoints(*getSurfacePointsIndex());
+
+  // Update point cloud
+  //    - update environments
+  //    - update octree
+  //    - render points and normals
+  getPointCloud()->updatePointCloud(true);
 }
 
 void DeleteSprayTool::releasedEvent() {
   if (getSketchPoints()->size() == 0) return;
   
-  // Remove surfacePointsIndex
+  // Remove:
+  //  - surface points
   removePointCloud(SurfacePointName);
 
   // Reset all member variables

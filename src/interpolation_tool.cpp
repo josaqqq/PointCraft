@@ -96,8 +96,6 @@ void InterpolationTool::releasedEvent() {
     voxelFilteredNormals.push_back(depthFilteredNormals[idx]);
   }
 
-  // Add the interpolated points
-  getPointCloud()->addPoints(voxelFilteredPoints, voxelFilteredNormals);
 
   // Register:
   //  - basis points
@@ -111,6 +109,15 @@ void InterpolationTool::releasedEvent() {
   removePointCloud(SurfacePointName);
   removeCurveNetworkLine(SketchPrefix);
   
+  // Add the interpolated points
+  getPointCloud()->addPoints(voxelFilteredPoints, voxelFilteredNormals);
+
+  // Update point cloud
+  //    - update environments
+  //    - update octree
+  //    - render points and normals
+  getPointCloud()->updatePointCloud(true);
+
   // Reset all member variables.
   resetSketch();
 }

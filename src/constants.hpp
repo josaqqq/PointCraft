@@ -77,7 +77,8 @@ const bool PoissonEnabled = false;
 // Moving Least Squares
 //
 const int MLS_SprayNearestNeighbors = 30;
-const int MLS_SpraySize = 4;
+const int MLS_SpraySize = 5;
+const int MLS_DeleteSpraySize = 3;
 
 const int MLSPolynomialOrder = 2;
 
@@ -88,6 +89,7 @@ const glm::dvec3 MLSColor = { 0.000, 0.000, 1.000 };
 // Pseudo Surface
 //
 const std::string PseudoSurfaceName = "Pseudo Surface";
+const std::string TemporalPseudoSurfaceName = "Pseudo Surface (Temporal)";
 const glm::dvec3 PseudoSurfaceColor =  { 0.000, 0.196, 1.000 };
 const glm::dvec3 PseudoSurfaceBackgroundColor = { 1.000, 0.686, 0.000 };
 const std::string PseudoSurfaceMaterial = "clay";

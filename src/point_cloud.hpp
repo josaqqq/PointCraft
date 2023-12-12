@@ -63,10 +63,20 @@ class PointCloud {
     double averageDistance;       // Average Distance between a point and the nearest neighbor
     double boundingBoxSide;  // Side of bounding sphere of point cloud
 
+    // std::vector<glm::dvec3> as buffer
+    //  There is a lag between when the added points are
+    //  added to Vertices and Normals, and when they are
+    //  actually rendered. VerticesBuffer and NormalsBuffer
+    //  are used to hold data until the added points are 
+    //  actually rendered.
+    std::vector<glm::dvec3> VerticesBuffer;
+    std::vector<glm::dvec3> NormalsBuffer;
+
     // Undo/Redo stacks
     std::stack<std::pair<std::vector<glm::dvec3>, std::vector<glm::dvec3>>> prevEnvironments;
     std::stack<std::pair<std::vector<glm::dvec3>, std::vector<glm::dvec3>>> postEnvironments;
 
+    pcl::PointCloud<pcl::PointXYZ>::Ptr inputCloud;
     pcl::octree::OctreePointCloudSearch<pcl::PointXYZ> octree;
 
     polyscope::PointCloud *pointCloud;

@@ -40,14 +40,22 @@ void DeleteTool::releasedEvent() {
     return;
   }
 
-  // Register calculated points.
+  // Register:
+  //  - basis points
   registerBasisPointsAsPointCloud("Basis Points");
 
-  // Remove sketch as curve network (LINE)
+  // Remove:
+  //  - sketch
   removeCurveNetworkLine(SketchPrefix);
 
   // Delete basis points from point cloud
   getPointCloud()->deletePoints(*getBasisPointsIndex());
+
+  // Update point cloud
+  //    - update environments
+  //    - update octree
+  //    - render points and normals
+  getPointCloud()->updatePointCloud(true);
 
   // Reset all member variables
   resetSketch();

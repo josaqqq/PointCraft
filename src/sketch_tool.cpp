@@ -524,10 +524,6 @@ std::set<int> SketchTool::filterWithVoxel(std::vector<glm::dvec3> &filteredPoint
   // If candidate points are in the same voxel with points 
   // of the point cloud, then skip it.
   std::set<int> filteredIndex;
-
-  const int K = 1;
-  std::vector<int>    hitPointIndices(K);
-  std::vector<float>  hitPointDistances(K);
   std::vector<glm::dvec3> *verticesPtr = pointCloud->getVertices();
   for (size_t i = 0; i < filteredPoints.size(); i++) {
     if (!isCandidatePoint[i]) continue;
@@ -539,22 +535,31 @@ std::set<int> SketchTool::filterWithVoxel(std::vector<glm::dvec3> &filteredPoint
       std::floor(p.z/voxelSide)
     };
 
-    // Check no point is in the same voxel
-    int hitPointCount = pointCloud->getOctree()->nearestKSearch(
+    // Search the point cloud for nearest neighbors of point p.
+    // This search is based on radiusSearch.
+    std::vector<int>    hitPointIndices;
+    std::vector<float>  hitPointDistances;
+    int hitPointCount = pointCloud->getOctree()->radiusSearch(
       pcl::PointXYZ(p.x, p.y, p.z),
-      K,
+      voxelSide,
       hitPointIndices,
       hitPointDistances
     );
-    assert(hitPointCount == 1);
-    glm::dvec3 hitPoint = (*verticesPtr)[hitPointIndices[0]];
-    std::tuple<int, int, int> hit_idx = {
-      std::floor(hitPoint.x/voxelSide),
-      std::floor(hitPoint.y/voxelSide),
-      std::floor(hitPoint.z/voxelSide)
-    };
 
-    if (hit_idx != p_idx) filteredIndex.insert(i);
+    // Check whether some points are already in the same voxel.
+    bool pointsInSameVoxel = false;
+    for (int i = 0; i < hitPointCount; i++) {
+      glm::dvec3 hitPoint = (*verticesPtr)[hitPointIndices[i]];
+      std::tuple<int, int, int> hit_idx = {
+        std::floor(hitPoint.x/voxelSide),
+        std::floor(hitPoint.y/voxelSide),
+        std::floor(hitPoint.z/voxelSide)
+      };
+      if (hit_idx == p_idx) pointsInSameVoxel = true;
+    }
+
+    // If no point is already in the same voxel, then add it.
+    if (!pointsInSameVoxel) filteredIndex.insert(i);
   }
 
   return filteredIndex;

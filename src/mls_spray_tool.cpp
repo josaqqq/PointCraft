@@ -73,6 +73,12 @@ void MLSSprayTool::releasedEvent() {
   // Remove:
   //  - surface points
   removePointCloud(SurfacePointName);
+  
+  // Update point cloud
+  //    - update environments
+  //    - update octree
+  //    - render points and normals
+  getPointCloud()->updatePointCloud(true);
 
   // Reset all member variables.
   resetSketch();
