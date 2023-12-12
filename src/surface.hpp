@@ -64,6 +64,12 @@ class Surface {
     //  - searchRadius: the range of the nearest neighbor search
     pcl::MLSResult InitializeMLSSurface(double searchRadius);
 
+    // Flip faces if the average of the adjacent faces are inversed.
+    void flipFaces(
+      std::vector<glm::dvec3> &meshV,
+      std::vector<std::vector<size_t>> &meshF
+    ); 
+
     // Detect the holes on the mesh
     //  1.  Detect the edges not shared by two faces
     //  2.  Manage vertices of the detected edges with UnionFind
@@ -76,8 +82,8 @@ class Surface {
     //  - meshF: Faces on the mesh
     //  - boundaryLengthLimit: Skip if the boundary length is less than this value
     std::set<int> detectHolesOnMesh(
-      std::vector<glm::dvec3> meshV,
-      std::vector<std::vector<size_t>> meshF,
+      std::vector<glm::dvec3> &meshV,
+      std::vector<std::vector<size_t>> &meshF,
       double boundaryLengthLimit
     );
 

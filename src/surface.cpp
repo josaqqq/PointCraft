@@ -335,7 +335,8 @@ void Surface::showGreedyProjection(
     }
   }
 
-  // Reverse the normal of the face if the adjacent face normals are inversed.
+  // Flip faces if the adjacent face normals are inversed.
+  flipFaces(meshV, meshF);
 
   // Detect holes on the greedy projection surface and determine face colors
   std::set<int> holeBoundaryFaces = detectHolesOnMesh(meshV, meshF, averageDistance*GreedyProjHoleDetectMult);
@@ -453,6 +454,64 @@ pcl::MLSResult Surface::InitializeMLSSurface(double searchRadius) {
   return mlsResult;
 }
 
+// Flip faces if the average of the adjacent faces are inversed.
+void Surface::flipFaces(
+  std::vector<glm::dvec3> &meshV,
+  std::vector<std::vector<size_t>> &meshF
+) {
+  const int verticesSize = meshV.size();
+  const int facesSize = meshF.size();
+
+  // Compute edge-face adjacency and faces' normals
+  std::map<int, std::vector<std::pair<int, int>>> faceToAdjacentEdges;
+  std::map<std::pair<int, int>, std::vector<int>> edgeToAdjacentFaces;
+  std::vector<glm::dvec3> faceNormals(facesSize);
+  for (int i = 0; i < facesSize; i++) {
+    const int polySize = meshF[i].size();
+
+    // edge-face adjacency
+    for (int j = 0; j < polySize; j++) {
+      int u = meshF[i][j];
+      int v = meshF[i][(j + 1)%polySize];
+      std::pair<int, int> e = {u, v};
+      if (u >= v) std::swap(e.first, e.second);
+
+      // face -> edges
+      faceToAdjacentEdges[i].push_back(e);
+      // edge -> faces
+      edgeToAdjacentFaces[e].push_back(i);
+    }
+
+    // Calculate the normal of the face
+    glm::dvec3 u = meshV[meshF[i][0]];
+    glm::dvec3 v = meshV[meshF[i][1]];
+    glm::dvec3 w = meshV[meshF[i][polySize - 1]];
+    glm::dvec3 n = glm::normalize(glm::cross(v - u, w - u));
+    faceNormals[i] = n;
+  }
+  
+  // Flip faces if the normal of the adjacent faces are inversed
+  for (int i = 0; i < facesSize; i++) {
+    // Calculate the average normal of the adjacent faces
+    double adjacentCount = 0;
+    glm::dvec3 averageNormal = glm::dvec3(0.0, 0.0, 0.0);
+    for (std::pair<int, int> e: faceToAdjacentEdges[i]) {
+      for (int f: edgeToAdjacentFaces[e]) {
+        adjacentCount += 1.0;
+        averageNormal += faceNormals[f];
+      }
+    }
+    averageNormal /= adjacentCount;
+
+    // Flip the face if averageNormal is inverted
+    if (glm::dot(faceNormals[i], averageNormal) < 0.0) {
+      std::vector<size_t> reversedFace = meshF[i];
+      std::reverse(reversedFace.begin(), reversedFace.end());
+      meshF[i] = reversedFace;
+    }
+  }
+}
+
 // Detect the holes on the mesh
 //  1.  Detect the edges not shared by two faces
 //  2.  Manage vertices of the detected edges with UnionFind
@@ -465,8 +524,8 @@ pcl::MLSResult Surface::InitializeMLSSurface(double searchRadius) {
 //  - meshF: Faces on the mesh
 //  - boundaryLengthLimit: Skip if the boundary length is less than this value
 std::set<int> Surface::detectHolesOnMesh(
-  std::vector<glm::dvec3> meshV,
-  std::vector<std::vector<size_t>> meshF,
+  std::vector<glm::dvec3> &meshV,
+  std::vector<std::vector<size_t>> &meshF,
   double boundaryLengthLimit
 ) {
   const int verticesSize = meshV.size();
