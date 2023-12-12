@@ -140,7 +140,7 @@ std::pair<std::vector<glm::dvec3>, std::vector<glm::dvec3>> Surface::projectMLSS
   glm::dvec3 mlsUAxis = glm::dvec3(mlsResult.u_axis.x(), mlsResult.u_axis.y(), mlsResult.u_axis.z());
   glm::dvec3 mlsVAxis = glm::dvec3(mlsResult.v_axis.x(), mlsResult.v_axis.y(), mlsResult.v_axis.z());
   
-  // Cast a ray to the approximate surface
+  // Cast a ray to the approximate plane
   Plane H(mlsCenter, mlsPlaneNormal);
   Ray ray(xPos, yPos);
   Ray::Hit hitInfo = ray.castPointToPlane(&H);
@@ -173,9 +173,6 @@ std::pair<std::vector<glm::dvec3>, std::vector<glm::dvec3>> Surface::projectMLSS
       projectedResult.normal.y(),
       projectedResult.normal.z()
     );
-
-    // If the point is outside the point cloud range, then skip it
-    if (glm::length(p) > searchRadius) continue;
 
     // If the normal is not facing cameraOrig, then reverse it
     if (glm::dot(pn, p - cameraOrig) >= 0.0) pn *= -1.0;

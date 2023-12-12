@@ -96,7 +96,6 @@ void InterpolationTool::releasedEvent() {
     voxelFilteredNormals.push_back(depthFilteredNormals[idx]);
   }
 
-
   // Register:
   //  - basis points
   //  - interpolated points
@@ -235,7 +234,6 @@ std::set<int> InterpolationTool::filterWithDepth(
 
   const double castedAverageDist = calcCastedAverageDist();
   std::set<int>           candidatePointsIndexSet;
-  std::vector<int>        candidatePointsIndex;
   std::vector<glm::dvec3> hasCloserNeighborPoints;
   for (double x = min_x; x < max_x; x += castedAverageDist) {
     for (double y = min_y; y < max_y; y += castedAverageDist) {
@@ -267,9 +265,6 @@ std::set<int> InterpolationTool::filterWithDepth(
         }
       }
 
-      // If the point is already selected, then skip it.
-      if (candidatePointsIndexSet.count(minDepthIdx)) continue;
-
       // Update the buffer vectors
       for (int i = 0; i < hitPointCount; i++) {
         int hitPointIdx = hitPointIndices[i];
@@ -281,7 +276,6 @@ std::set<int> InterpolationTool::filterWithDepth(
 
         if (hitPointIdx == minDepthIdx) {
           candidatePointsIndexSet.insert(hitPointIdx);
-          candidatePointsIndex.push_back(hitPointIdx);
         } else {
           hasCloserNeighborPoints.push_back(p);
         }
@@ -295,7 +289,7 @@ std::set<int> InterpolationTool::filterWithDepth(
   hasCloserNeighborCloud->setEnabled(false);
 
   // Detect depth with DBSCAN
-  Clustering clustering(&candidatePointsIndex, &pointsInWorldCoord, "surface");
+  Clustering clustering(&candidatePointsIndexSet, &pointsInWorldCoord, "surface");
   std::set<int> clusteredPointsIndex = clustering.executeClustering(
     DBSCAN_SearchRange*getPointCloud()->getAverageDistance(),
     DBSCAN_MinPoints,

@@ -14,7 +14,7 @@ enum ClusteringMode {
 class Clustering {
   public:
     Clustering(
-      std::vector<int> *pointsIndex, 
+      std::set<int> *pointsIndex, 
       std::vector<glm::dvec3> *points, 
       std::string name
     ) : pointsIndex(pointsIndex), points(points), name(name) {}
@@ -27,7 +27,7 @@ class Clustering {
   private:
     ClusteringMode          clusteringMode;
 
-    std::vector<int>        *pointsIndex;
+    std::set<int>           *pointsIndex;
     std::vector<glm::dvec3> *points;
     std::string             name;
 
@@ -39,7 +39,6 @@ class Clustering {
 
     void visualizeCluster(
       int basisIndex,
-      std::vector<int> &pointsIndex,
       std::vector<int> &labels
     );
 };

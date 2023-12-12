@@ -2,6 +2,7 @@
 #include "polyscope/view.h"
 
 #include "mls_spray_tool.hpp"
+#include "cluster.hpp"
 #include "surface.hpp"
 #include "constants.hpp"
 
@@ -54,13 +55,36 @@ void MLSSprayTool::draggingEvent() {
     getPointCloud()->getAverageDistance(),
     MLS_SpraySize
   );
-  
+  assert(mlsVertices.size() == MLS_SpraySize);
+
+  // Filter the reconstructed surface with DBSCAN
+  std::set<int> candidatePointsIndexSet;
+  for (size_t i = 0; i < surfacePoints.size() + MLS_SpraySize; i++) {
+    candidatePointsIndexSet.insert(i);
+    if (i < surfacePoints.size()) {
+      mlsVertices.push_back(surfacePoints[i]);
+      mlsNormals.push_back(glm::dvec3(0.0, 0.0, 0.0));
+    }
+  }
+
+  Clustering clustering(&candidatePointsIndexSet, &mlsVertices, "surface");
+  std::set<int> clusteredPointsIndex = clustering.executeClustering(
+    DBSCAN_SearchRange*getPointCloud()->getAverageDistance(),
+    DBSCAN_MinPoints,
+    CLUSTER_MAX_SIZE
+  );
+  std::vector<glm::dvec3> clusteredPoints, clusteredNormals;
+  for (int idx: clusteredPointsIndex) {
+    clusteredPoints.push_back(mlsVertices[idx]);
+    clusteredNormals.push_back(mlsNormals[idx]);
+  }
+
   // Filter the reconstructed surface with voxel
-  std::set<int> voxelFilteredIndex = filterWithVoxel(mlsVertices);
+  std::set<int> voxelFilteredIndex = filterWithVoxel(clusteredPoints);
   std::vector<glm::dvec3> voxelFilteredPoints, voxelFilteredNormals;
   for (int idx: voxelFilteredIndex) {
-    voxelFilteredPoints.push_back(mlsVertices[idx]);
-    voxelFilteredNormals.push_back(mlsNormals[idx]);
+    voxelFilteredPoints.push_back(clusteredPoints[idx]);
+    voxelFilteredNormals.push_back(clusteredNormals[idx]);
   }
 
   // Add the interpolated points.

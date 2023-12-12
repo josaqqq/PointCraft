@@ -47,13 +47,11 @@ std::set<int> Clustering::executeClustering(double eps, size_t minPoints, Cluste
 std::set<int> Clustering::executeDBSCAN(double eps, size_t minPoints, int basisIndex) {
   // Initialize points information
   int pointSize = pointsIndex->size();
-  std::vector<double> depths(pointSize);
 
-  for (int i = 0; i < pointSize; i++) {
-    int idx = (*pointsIndex)[i];
-
+  std::vector<double> depths;
+  for (int idx: *pointsIndex) {
     glm::dvec3 p = (*points)[idx];
-    depths[i] = glm::dot(orthogonalBases[basisIndex], p);
+    depths.push_back(glm::dot(orthogonalBases[basisIndex], p));
   }
 
   std::vector<int> labels(pointSize, -1);
@@ -141,32 +139,39 @@ std::set<int> Clustering::executeDBSCAN(double eps, size_t minPoints, int basisI
 
 
   std::set<int> basisPointsIndex;
-  for (int i = 0; i < pointSize; i++) {
-    if (labels[i] == selectedLabel) basisPointsIndex.insert((*pointsIndex)[i]);
+  auto labelsItr = labels.begin();
+  auto pointsIndexItr = pointsIndex->begin();
+  while (labelsItr != labels.end() && pointsIndexItr != pointsIndex->end()) {
+    int label = *labelsItr;
+    int idx = *pointsIndexItr;
+    if (label == selectedLabel) basisPointsIndex.insert(idx);
+    
+    labelsItr++;
+    pointsIndexItr++;
   }
 
   // Visualize the depth of points with labels.
-  visualizeCluster(basisIndex, *pointsIndex, labels);
+  visualizeCluster(basisIndex, labels);
 
   return basisPointsIndex;
 }
 
 void Clustering::visualizeCluster(
   int basisIndex,
-  std::vector<int> &pointsIndex,
   std::vector<int> &labels
 ) {
   // Remove previous point cloud.
   polyscope::removePointCloud(DBSCAN_Name);
 
-  int pointSize = pointsIndex.size();
-
   // Define label map
   std::map<int, std::vector<int>> labelToIndices;
   std::map<int, glm::dvec3>       labelToColors;
-  for (int i = 0; i < pointSize; i++) {
-    int label = labels[i];
 
+  auto labelsItr = labels.begin();
+  auto pointsIndexItr = pointsIndex->begin();
+  while (labelsItr != labels.end() && pointsIndexItr != pointsIndex->end()) {
+    int label = *labelsItr;
+    int idx = *pointsIndexItr;
     if (labelToIndices.count(label) == 0) {
       labelToColors[label] = glm::dvec3(
         polyscope::randomUnit(),
@@ -174,7 +179,10 @@ void Clustering::visualizeCluster(
         polyscope::randomUnit()
       );
     }
-    labelToIndices[label].push_back(pointsIndex[i]);
+    labelToIndices[label].push_back(idx);
+  
+    labelsItr++;
+    pointsIndexItr++;
   }
 
   // Register point and color information

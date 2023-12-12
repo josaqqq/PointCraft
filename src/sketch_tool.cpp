@@ -285,7 +285,7 @@ void SketchTool::findBasisPoints() {
   }
   const int castedPointSize = pointsMappedOntoScreen.size();
 
-  // Construct octree for the casted surface points
+  // Construct octree for the casted points
   pcl::PointCloud<pcl::PointXYZ>::Ptr castedCloud(new pcl::PointCloud<pcl::PointXYZ>);
   castedCloud->points.resize(castedPointSize);
   for (int i = 0; i < castedPointSize; i++) {
@@ -311,10 +311,10 @@ void SketchTool::findBasisPoints() {
   }
 
   const double      castedAverageDist = calcCastedAverageDist();
-  std::vector<int>  candidatePointsIndex;
+  std::set<int>     candidatePointsIndexSet;
   std::vector<glm::dvec3> hasCloserNeighborPoints;
   for (int idx: surfacePointsIndex) {
-    candidatePointsIndex.push_back(idx);
+    candidatePointsIndexSet.insert(idx);
   }
   for (double x = min_x; x < max_x; x += castedAverageDist) {
     for (double y = min_y; y < max_y; y += castedAverageDist) {
@@ -355,7 +355,7 @@ void SketchTool::findBasisPoints() {
         if (glm::dot(pn, p - cameraOrig) >= 0.0) continue;
 
         if (hitPointIdx == minDepthIdx) {
-          candidatePointsIndex.push_back(hitPointIdx);
+          candidatePointsIndexSet.insert(hitPointIdx);
         } else {
           hasCloserNeighborPoints.push_back(p);
         }
@@ -369,14 +369,13 @@ void SketchTool::findBasisPoints() {
   hasCloserNeighborCloud->setEnabled(false);
 
   // Depth detection with DBSCAN
-  Clustering clustering(&candidatePointsIndex, verticesPtr, "basis");
+  Clustering clustering(&candidatePointsIndexSet, verticesPtr, "basis");
   basisPointsIndex = clustering.executeClustering(
     DBSCAN_SearchRange*pointCloud->getAverageDistance(),
     DBSCAN_MinPoints,
     CLUSTER_MAX_SIZE
   );
 }
-
 
 // Find all basis points inside the sketch
 //  - Cast points of the point cloud onto the screen plane.
@@ -400,16 +399,16 @@ void SketchTool::findAllBasisPoints() {
   const int castedPointSize = pointsMappedOntoScreen.size();
 
   // Judge inside/outside of the sketch
-  std::vector<int> candidatePointsIndex;
+  std::set<int> candidatePointsIndexSet;
   for (int i = 0; i < castedPointSize; i++) {
     glm::dvec3 mapped_p = pointsMappedOntoScreen[i];
     if (!insideSketch(mapped_p.x, mapped_p.y)) continue;
 
-    candidatePointsIndex.push_back(i);
+    candidatePointsIndexSet.insert(i);
   }
 
   // Depth detection with DBSCAN
-  Clustering clustering(&candidatePointsIndex, verticesPtr, "basis");
+  Clustering clustering(&candidatePointsIndexSet, verticesPtr, "basis");
   basisPointsIndex = clustering.executeClustering(
     DBSCAN_SearchRange*pointCloud->getAverageDistance(),
     DBSCAN_MinPoints,
