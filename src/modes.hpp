@@ -26,6 +26,7 @@ enum SurfaceMode {
   SURFACE_MODE_NONE,
   SURFACE_MODE_PSEUDO,
   SURFACE_MODE_POISSON,
+  SURFACE_MODE_GREEDY,
 };
 
 struct ModeSelector {
@@ -54,7 +55,7 @@ struct ModeSelector {
     { 
       // Initialize current modes.
       *currentMode = MODE_NONE;
-      *currentSurfaceMode = SURFACE_MODE_PSEUDO;
+      *currentSurfaceMode = SURFACE_MODE_GREEDY;
     }
 
     ~ModeSelector() {}

@@ -24,7 +24,10 @@
 
 // Reconstruct new surface with Vertices and Normals and return them.
 //  - averageDistance: used to decide the resolution of Poisson Surface Reconstruction
-std::pair<std::vector<glm::dvec3>, std::vector<std::vector<size_t>>> Surface::reconstructPoissonSurface(double averageDistance) {
+std::pair<std::vector<glm::dvec3>, std::vector<std::vector<size_t>>> Surface::reconstructPoissonSurface(
+  double averageDistance,
+  bool enabled
+) {
   // Init point cloud
   pcl::PointCloud<pcl::PointNormal>::Ptr inputCloud(new pcl::PointCloud<pcl::PointNormal>);
   inputCloud->points.resize(Vertices->size());
@@ -98,10 +101,10 @@ std::pair<std::vector<glm::dvec3>, std::vector<std::vector<size_t>>> Surface::re
   // Register mesh
   polyscope::SurfaceMesh *poissonMesh = polyscope::registerSurfaceMesh(Name, meshV, meshF);
   poissonMesh->setSurfaceColor(PoissonColor);
-  poissonMesh->setBackFaceColor(PoissonBackgroundColor);
+  poissonMesh->setBackFaceColor(PoissonBackFaceColor);
   poissonMesh->setMaterial(PoissonMaterial);
   poissonMesh->setBackFacePolicy(PoissonBackFacePolicy);
-  poissonMesh->setEnabled(PoissonEnabled);
+  poissonMesh->setEnabled(enabled);
 
   // Output results
   std::cout << "\nFinished Poisson Surface Reconstruction!"                   << std::endl;
@@ -267,9 +270,91 @@ std::pair<std::vector<glm::dvec3>, std::vector<glm::dvec3>> Surface::reconstruct
   return { newV, newN };
 }
 
+void Surface::showGreedyProjection(
+  double averageDistance,
+  bool enabled
+) {
+  // Init point cloud
+  pcl::PointCloud<pcl::PointNormal>::Ptr inputCloud(new pcl::PointCloud<pcl::PointNormal>);
+  inputCloud->points.resize(Vertices->size());
+  for (size_t i = 0; i < Vertices->size(); i++) {
+    inputCloud->points[i].x = (*Vertices)[i].x;
+    inputCloud->points[i].y = (*Vertices)[i].y;
+    inputCloud->points[i].z = (*Vertices)[i].z;
+
+    inputCloud->points[i].normal_x = (*Normals)[i].x;
+    inputCloud->points[i].normal_y = (*Normals)[i].y;
+    inputCloud->points[i].normal_z = (*Normals)[i].z;
+  }
+
+  // Initialize kd-tree
+  pcl::search::KdTree<pcl::PointNormal>::Ptr kdTree(new pcl::search::KdTree<pcl::PointNormal>);
+  kdTree->setInputCloud(inputCloud);
+
+  // Initialize greedy projection object
+  pcl::GreedyProjectionTriangulation<pcl::PointNormal> gpt;
+  gpt.setInputCloud(inputCloud);
+  gpt.setSearchMethod(kdTree);
+
+  // Set parameters
+  gpt.setSearchRadius(averageDistance*GreedyProjSearchRadiusMult);  // The sphere radius that is to be used for determining the k-nearest neighbors used for triangulating.
+  gpt.setMu(GreedyProjMu);                                          // The multiplier of the nearest neighbor distance to obtain the final search radius for each point (this will make the algorithm adapt to different point densities in the cloud).
+  gpt.setMaximumNearestNeighbors(GreedyProjMaxNN);                  // The maximum number of nearest neighbors to be searched for.
+  gpt.setMaximumSurfaceAngle(GreedyProjMaxSurfaceAngle);            // Don't consider points for triangulation if their normal deviates more than this value from the query point's normal.
+  gpt.setMinimumAngle(GreedyProjMinAngle);                          // The minimum angle each triangle should have.
+  gpt.setMaximumAngle(GreedyProjMaxAngle);                          // Maximum angle each triangle can have.
+  gpt.setNormalConsistency(GreedyProjNormalConsistency);            // The flag if the input normals are oriented consistently.
+  gpt.setConsistentVertexOrdering(GreedyProjVertexConsistency);     // The flag to order the resulting triangle vertices consistently (positive direction around normal).
+
+  // Reconstruct surface
+  pcl::PolygonMesh mesh;
+  gpt.reconstruct(mesh);
+
+  // Extract vertex information
+  pcl::PointCloud<pcl::PointXYZ>::Ptr meshVertices(new pcl::PointCloud<pcl::PointXYZ>);
+  pcl::fromPCLPointCloud2(mesh.cloud, *meshVertices);
+  std::vector<glm::dvec3> meshV(meshVertices->size());
+  for (size_t i = 0; i < meshVertices->size(); i++) {
+    meshV[i] = glm::dvec3(
+      meshVertices->points[i].x,
+      meshVertices->points[i].y,
+      meshVertices->points[i].z
+    );
+  }
+
+  // Extract face information
+  std::vector<pcl::Vertices> meshFaces = mesh.polygons;
+  std::vector<std::vector<size_t>> meshF(meshFaces.size(), std::vector<size_t>(3));
+  for (size_t i = 0; i < meshFaces.size(); i++) {
+    pcl::Vertices face = meshFaces[i];
+    assert(face.vertices.size() == 3);
+    for (size_t j = 0; j < face.vertices.size(); j++) {
+      meshF[i][j] = face.vertices[j];
+    }
+  }
+
+  // Coloring hole boundary
+  // TODO: Implement here
+
+  // Register mesh
+  polyscope::SurfaceMesh *greedyMesh = polyscope::registerSurfaceMesh(Name, meshV, meshF);
+  greedyMesh->setSurfaceColor(GreedyProjColor);
+  greedyMesh->setBackFaceColor(GreedyProjBackFaceColor);
+  greedyMesh->setBackFacePolicy(GreedyProjBackFacePolicy);
+  greedyMesh->setMaterial(GreedyProjMaterial);
+  greedyMesh->setEnabled(enabled);
+
+  // Output results
+  std::cout << "\nFinished Greedy Projection Triangulation!"  << std::endl;
+  std::cout << "\tVertex num\t->\t" << meshV.size()           << std::endl;
+  std::cout << "\tFace num\t->\t"   << meshF.size()           << std::endl;
+  std::cout                                                   << std::endl;
+}
+
 // Show hexagons for each vertex as a pseudo surface.
 //  - averageDistance:  the radius of the shown hexagon.
-void Surface::showPseudoSurface(double averageDistance) {
+//  - enabled:  If true, enable the registered pseudo surface
+void Surface::showPseudoSurface(double averageDistance, bool enabled) {
   size_t N = Vertices->size();
   std::vector<glm::dvec3> meshV(N*7);
   std::vector<std::vector<size_t>> meshF(N*6);
@@ -307,9 +392,10 @@ void Surface::showPseudoSurface(double averageDistance) {
   // Register mesh
   polyscope::SurfaceMesh *pseudoSurface = polyscope::registerSurfaceMesh(Name, meshV, meshF);
   pseudoSurface->setSurfaceColor(PseudoSurfaceColor);
-  pseudoSurface->setBackFaceColor(PseudoSurfaceBackgroundColor);
+  pseudoSurface->setBackFaceColor(PseudoSurfaceBackFaceColor);
   pseudoSurface->setMaterial(PseudoSurfaceMaterial);
   pseudoSurface->setBackFacePolicy(PseudoSurfaceBackFacePolicy);
+  pseudoSurface->setEnabled(enabled);
 }
 
 pcl::MLSResult Surface::InitializeMLSSurface(double searchRadius) {

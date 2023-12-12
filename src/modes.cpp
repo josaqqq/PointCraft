@@ -55,22 +55,22 @@ void ModeSelector::enableModeSelection(ImGuiIO &io) {
     case MODE_INTERPOLATION_SKETCH:
       ImGui::Text("   Selected Tool: Sketch-Interpolation Tool");
       interpolationTool->launchToolOperation();
-      *currentSurfaceMode = SURFACE_MODE_PSEUDO;
+      *currentSurfaceMode = SURFACE_MODE_GREEDY;
       break;
     case MODE_INTERPOLATION_PAINT:
       ImGui::Text("   Selected Tool: Paint-Interpolation Tool");
       mlsSprayTool->launchToolOperation();
-      *currentSurfaceMode = SURFACE_MODE_PSEUDO;
+      *currentSurfaceMode = SURFACE_MODE_GREEDY;
       break;
     case MODE_DELETION_SKETCH:
       ImGui::Text("   Selected Tool: Sketch-Deletion Tool");
       deleteTool->launchToolOperation();
-      *currentSurfaceMode = SURFACE_MODE_PSEUDO;
+      *currentSurfaceMode = SURFACE_MODE_GREEDY;
       break;
     case MODE_DELETION_PAINT:
       ImGui::Text("   Selected Tool: Paint-Deletion Tool");
       deleteSprayTool->launchToolOperation();
-      *currentSurfaceMode = SURFACE_MODE_PSEUDO;
+      *currentSurfaceMode = SURFACE_MODE_GREEDY;
       break;
   }
 
@@ -79,8 +79,14 @@ void ModeSelector::enableModeSelection(ImGuiIO &io) {
   ImGui::Text("   "); ImGui::SameLine();
   if (ImGui::Button("Reconstrut Poisson Surface")) {
     Surface poissonSurface(PoissonName, pointCloud->getVertices(), pointCloud->getNormals());
-    poissonSurface.reconstructPoissonSurface(pointCloud->getAverageDistance());
+    poissonSurface.reconstructPoissonSurface(pointCloud->getAverageDistance(), true);
     *currentSurfaceMode = SURFACE_MODE_POISSON;
+  }
+  ImGui::Text("   "); ImGui::SameLine();
+  if (ImGui::Button("Reconstrut Greedy Surface")) {
+    Surface greedySurface(GreedyProjName, pointCloud->getVertices(), pointCloud->getNormals());
+    greedySurface.showGreedyProjection(pointCloud->getAverageDistance(), true);
+    *currentSurfaceMode = SURFACE_MODE_GREEDY;
   }
 
   // Surface Visualization
@@ -91,21 +97,32 @@ void ModeSelector::enableModeSelection(ImGuiIO &io) {
   ImGui::RadioButton("Pseudo Surface", currentSurfaceMode, SURFACE_MODE_PSEUDO);
   ImGui::Text("   "); ImGui::SameLine();
   ImGui::RadioButton("Poisson Surface", currentSurfaceMode, SURFACE_MODE_POISSON);
+  ImGui::Text("   "); ImGui::SameLine();
+  ImGui::RadioButton("Greedy Surface", currentSurfaceMode, SURFACE_MODE_GREEDY);
 
   polyscope::SurfaceMesh *pseudoSurface = polyscope::getSurfaceMesh(PseudoSurfaceName);
   polyscope::SurfaceMesh *poissonSurface = polyscope::getSurfaceMesh(PoissonName);
+  polyscope::SurfaceMesh *greedySurface = polyscope::getSurfaceMesh(GreedyProjName);
   switch (*currentSurfaceMode) {
     case SURFACE_MODE_NONE:
       pseudoSurface->setEnabled(false);
       poissonSurface->setEnabled(false);
+      greedySurface->setEnabled(false);
       break;
     case SURFACE_MODE_PSEUDO:
       pseudoSurface->setEnabled(true);
       poissonSurface->setEnabled(false);
+      greedySurface->setEnabled(false);
       break;
     case SURFACE_MODE_POISSON:
       pseudoSurface->setEnabled(false);
       poissonSurface->setEnabled(true);
+      greedySurface->setEnabled(false);
+      break;
+    case SURFACE_MODE_GREEDY:
+      pseudoSurface->setEnabled(false);
+      poissonSurface->setEnabled(false);
+      greedySurface->setEnabled(true);
       break;
   }
 }

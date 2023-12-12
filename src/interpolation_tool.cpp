@@ -69,7 +69,7 @@ void InterpolationTool::releasedEvent() {
   std::vector<glm::dvec3>           poissonPoints;
   std::vector<std::vector<size_t>>  poissonFaces;
   Surface poissonSurface("Interpolation: PSR", &basisPoints, &basisNormals);
-  std::tie(poissonPoints, poissonFaces) = poissonSurface.reconstructPoissonSurface(getPointCloud()->getAverageDistance());
+  std::tie(poissonPoints, poissonFaces) = poissonSurface.reconstructPoissonSurface(getPointCloud()->getAverageDistance(), false);
   if (poissonPoints.size() == 0) {
     std::cout << "WARNING: No mesh was reconstructed with Poisson Surface Reconstruction." << std::endl;
     removeCurveNetworkLine(SketchPrefix);

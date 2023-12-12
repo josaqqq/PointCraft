@@ -15,7 +15,11 @@ class Surface {
 
     // Reconstruct new surface with Vertices and Normals.
     //  - averageDistance: used to decide the resolution of Poisson Surface Reconstruction
-    std::pair<std::vector<glm::dvec3>, std::vector<std::vector<size_t>>> reconstructPoissonSurface(double averageDistance);
+    //  - enabled:  If true, enable the registered poisson surface
+    std::pair<std::vector<glm::dvec3>, std::vector<std::vector<size_t>>> reconstructPoissonSurface(
+      double averageDistance,
+      bool enabled
+    );
 
     // Compute an approximate surface using Vertices and Normals.
     // Then project points randomly onto the surface and return the projected points.
@@ -41,9 +45,15 @@ class Surface {
       double averageDistance
     );
 
+    // Compute Greedy Projection and then render the reconstructed mesh.
+    //  - averageDistance:  used to determin the search radius
+    //  - enabled:  If true, enable the registered greedy surface
+    void showGreedyProjection(double averageDistance, bool enabled);
+
     // Show hexagons for each vertex as a pseudo surface.
     //  - averageDistance:  the radius of the shown hexagon.
-    void showPseudoSurface(double averageDistance);
+    //  - enabled:  If true, enable the registered pseudo surface
+    void showPseudoSurface(double averageDistance, bool enabled);
 
   private:
     std::string     Name;

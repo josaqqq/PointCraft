@@ -56,11 +56,16 @@ void MLSSprayTool::draggingEvent() {
     MLS_SpraySize
   );
   assert(mlsVertices.size() == MLS_SpraySize);
+  assert(mlsNormals.size() == mlsVertices.size());
 
   // Filter the reconstructed surface with DBSCAN
   std::set<int> candidatePointsIndexSet;
   for (size_t i = 0; i < surfacePoints.size() + MLS_SpraySize; i++) {
     candidatePointsIndexSet.insert(i);
+
+    // Inside mlsVertices and mlsNormals 
+    //  -> <mlsVertices>-<surfacePoints>
+    //  -> <mlsNormals>-<dummy normals>
     if (i < surfacePoints.size()) {
       mlsVertices.push_back(surfacePoints[i]);
       mlsNormals.push_back(glm::dvec3(0.0, 0.0, 0.0));
@@ -75,6 +80,8 @@ void MLSSprayTool::draggingEvent() {
   );
   std::vector<glm::dvec3> clusteredPoints, clusteredNormals;
   for (int idx: clusteredPointsIndex) {
+    if (idx >= MLS_SpraySize) continue;
+
     clusteredPoints.push_back(mlsVertices[idx]);
     clusteredNormals.push_back(mlsNormals[idx]);
   }
