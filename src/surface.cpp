@@ -502,12 +502,10 @@ void Surface::flipFaces(
       }
     }
     averageNormal /= adjacentCount;
-
+    
     // Flip the face if averageNormal is inverted
     if (glm::dot(faceNormals[i], averageNormal) < 0.0) {
-      std::vector<size_t> reversedFace = meshF[i];
-      std::reverse(reversedFace.begin(), reversedFace.end());
-      meshF[i] = reversedFace;
+      std::swap(meshF[i][0], meshF[i][1]);
     }
   }
 }

@@ -93,7 +93,7 @@ const double GreedyProjHoleDetectMult = 5.0;
 
 const double GreedyProjMu = 2.5;                   
 const int GreedyProjMaxNN = 100;
-const double GreedyProjMaxSurfaceAngle = 17.0*M_PI/18.0;  // 170 degrees
+const double GreedyProjMaxSurfaceAngle = 9.0*M_PI/18.0;   // 90 degrees
 const double GreedyProjMinAngle = M_PI/18.0;              // 10 degrees
 const double GreedyProjMaxAngle = 17.0*M_PI/18.0;         // 170 degrees
 const bool GreedyProjNormalConsistency = true;
