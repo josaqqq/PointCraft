@@ -74,21 +74,6 @@ void ModeSelector::enableModeSelection(ImGuiIO &io) {
       break;
   }
 
-  // Surface Reconstruction
-  ImGui::Text("\nSurface Reconstruction:");
-  ImGui::Text("   "); ImGui::SameLine();
-  if (ImGui::Button("Reconstrut Poisson Surface")) {
-    Surface poissonSurface(PoissonName, pointCloud->getVertices(), pointCloud->getNormals());
-    poissonSurface.reconstructPoissonSurface(pointCloud->getAverageDistance(), true);
-    *currentSurfaceMode = SURFACE_MODE_POISSON;
-  }
-  ImGui::Text("   "); ImGui::SameLine();
-  if (ImGui::Button("Reconstrut Greedy Surface")) {
-    Surface greedySurface(GreedyProjName, pointCloud->getVertices(), pointCloud->getNormals());
-    greedySurface.showGreedyProjection(pointCloud->getAverageDistance(), true);
-    *currentSurfaceMode = SURFACE_MODE_GREEDY;
-  }
-
   // Surface Visualization
   ImGui::Text("\nSurface Visualization:");
   ImGui::Text("   "); ImGui::SameLine();
@@ -100,26 +85,60 @@ void ModeSelector::enableModeSelection(ImGuiIO &io) {
   ImGui::Text("   "); ImGui::SameLine();
   ImGui::RadioButton("Greedy Surface", currentSurfaceMode, SURFACE_MODE_GREEDY);
 
-  polyscope::SurfaceMesh *pseudoSurface = polyscope::getSurfaceMesh(PseudoSurfaceName);
-  polyscope::SurfaceMesh *poissonSurface = polyscope::getSurfaceMesh(PoissonName);
-  polyscope::SurfaceMesh *greedySurface = polyscope::getSurfaceMesh(GreedyProjName);
+  int currentVersion = pointCloud->getCurrentVersion();
+  polyscope::SurfaceMesh *pseudoSurface;
+  polyscope::SurfaceMesh *poissonSurface;
+  polyscope::SurfaceMesh *greedySurface;
   switch (*currentSurfaceMode) {
     case SURFACE_MODE_NONE:
+      pseudoSurface = polyscope::getSurfaceMesh(PseudoSurfaceName);
+      poissonSurface = polyscope::getSurfaceMesh(PoissonName);
+      greedySurface = polyscope::getSurfaceMesh(GreedyProjName);
       pseudoSurface->setEnabled(false);
       poissonSurface->setEnabled(false);
       greedySurface->setEnabled(false);
       break;
     case SURFACE_MODE_PSEUDO:
+      if (lastVersionPseudo != currentVersion) {
+        // Show Pseudo Surface
+        Surface pseudoSurface(PseudoSurfaceName, pointCloud->getVertices(), pointCloud->getNormals());
+        pseudoSurface.showPseudoSurface(pointCloud->getAverageDistance(), false);
+        lastVersionPseudo = currentVersion;
+      }
+
+      pseudoSurface = polyscope::getSurfaceMesh(PseudoSurfaceName);
+      poissonSurface = polyscope::getSurfaceMesh(PoissonName);
+      greedySurface = polyscope::getSurfaceMesh(GreedyProjName);
       pseudoSurface->setEnabled(true);
       poissonSurface->setEnabled(false);
       greedySurface->setEnabled(false);
       break;
     case SURFACE_MODE_POISSON:
+      if (lastVersionPoisson != currentVersion) {
+        // Show Poisson Surface
+        Surface poissonSurface(PoissonName, pointCloud->getVertices(), pointCloud->getNormals());
+        poissonSurface.reconstructPoissonSurface(pointCloud->getAverageDistance(), false);
+        lastVersionPoisson = currentVersion;
+      }
+
+      pseudoSurface = polyscope::getSurfaceMesh(PseudoSurfaceName);
+      poissonSurface = polyscope::getSurfaceMesh(PoissonName);
+      greedySurface = polyscope::getSurfaceMesh(GreedyProjName);
       pseudoSurface->setEnabled(false);
       poissonSurface->setEnabled(true);
       greedySurface->setEnabled(false);
       break;
     case SURFACE_MODE_GREEDY:
+      if (lastVersionGreedy != currentVersion) {
+        // Show Greedy Surface
+        Surface greedySurfacee(GreedyProjName, pointCloud->getVertices(), pointCloud->getNormals());
+        greedySurfacee.showGreedyProjection(pointCloud->getAverageDistance(), false);
+        lastVersionGreedy = currentVersion;
+      }
+
+      pseudoSurface = polyscope::getSurfaceMesh(PseudoSurfaceName);
+      poissonSurface = polyscope::getSurfaceMesh(PoissonName);
+      greedySurface = polyscope::getSurfaceMesh(GreedyProjName);
       pseudoSurface->setEnabled(false);
       poissonSurface->setEnabled(false);
       greedySurface->setEnabled(true);

@@ -92,10 +92,6 @@ int main(int argc, char **argv) {
   );
 
   // Reconstruct Surfaces
-  // Greedy Surface
-  Surface greedySurface(GreedyProjName, pointCloud.getVertices(), pointCloud.getNormals());
-  greedySurface.showGreedyProjection(pointCloud.getAverageDistance(), false);
-
   // Pseudo Surface
   Surface pseudoSurface(PseudoSurfaceName, pointCloud.getVertices(), pointCloud.getNormals());
   pseudoSurface.showPseudoSurface(pointCloud.getAverageDistance(), false);
@@ -103,6 +99,10 @@ int main(int argc, char **argv) {
   // Poisson Surface
   Surface poissonSurface(PoissonName, pointCloud.getVertices(), pointCloud.getNormals());
   poissonSurface.reconstructPoissonSurface(pointCloud.getAverageDistance(), false);
+
+  // Greedy Surface
+  Surface greedySurface(GreedyProjName, pointCloud.getVertices(), pointCloud.getNormals());
+  greedySurface.showGreedyProjection(pointCloud.getAverageDistance(), false);
 
   // Add the callback
   polyscope::state::userCallback = callback;

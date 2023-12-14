@@ -66,6 +66,12 @@ struct ModeSelector {
     int *currentMode;
     int *currentSurfaceMode;
 
+    // Variables that control the version of the point cloud 
+    // used for the final surface reconstruction.
+    int lastVersionPseudo = 0;
+    int lastVersionPoisson = 0;
+    int lastVersionGreedy = 0;
+
     PointCloud        *pointCloud;
 
     InterpolationTool *interpolationTool;

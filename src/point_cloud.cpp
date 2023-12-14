@@ -132,6 +132,9 @@ void PointCloud::setPointCloudNormalEnabled(bool flag) {
 //    - update octree
 //    - render points and normals
 void PointCloud::updatePointCloud(bool clearPostEnv) {
+  // Current Version
+  currentVersion++;
+
   // Push new environment
   prevEnvironments.push({ Vertices, Normals });
   if (clearPostEnv) postEnvironments = std::stack<std::pair<std::vector<glm::dvec3>, std::vector<glm::dvec3>>>();
@@ -147,18 +150,6 @@ void PointCloud::updatePointCloud(bool clearPostEnv) {
   NormalsBuffer.clear();
   polyscope::removeSurfaceMesh(TemporalPseudoSurfaceName);
 
-  // Reconstruct all surface for updated point cloud
-  // Greedy Surface
-  Surface greedySurfacee(GreedyProjName, &Vertices, &Normals);
-  greedySurfacee.showGreedyProjection(averageDistance, true);
-
-  // Pseudo Surface
-  Surface pseudoSurface(PseudoSurfaceName, &Vertices, &Normals);
-  pseudoSurface.showPseudoSurface(averageDistance, false);
-
-  // Poisson Surface
-  Surface poissonSurface(PoissonName, &Vertices, &Normals);
-  poissonSurface.reconstructPoissonSurface(averageDistance, false);
 
   // Register Points
   pointCloud = polyscope::registerPointCloud(PointName, Vertices);
@@ -179,6 +170,7 @@ void PointCloud::updatePointCloud(bool clearPostEnv) {
   std::cout << "\tNormal num\t\t->\t"           << Normals.size()       << std::endl;
   std::cout << "\tAverage Distance\t->\t"       << averageDistance      << std::endl;
   std::cout << "\tBoundng Box Side\t->\t"       << boundingBoxSide      << std::endl;
+  std::cout << "\tCurrent Version\t->\t"        << currentVersion       << std::endl;
   std::cout                                                             << std::endl;
 }
 
@@ -270,6 +262,9 @@ void PointCloud::executeRedo() {
 }
 
 // Return the pointer to member variables
+int PointCloud::getCurrentVersion() {
+  return currentVersion;
+}
 std::vector<glm::dvec3>* PointCloud::getVertices() {
   return &Vertices;
 }
