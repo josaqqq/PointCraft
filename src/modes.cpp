@@ -22,49 +22,47 @@ void ModeSelector::enableModeSelection(ImGuiIO &io) {
 
   // Tool Selection
   ImGui::Text("\nTool Selection:");
-  ImGui::Text("   "); ImGui::SameLine();
-  if (ImGui::Button("Reset Tool")) {
-    *currentMode = MODE_NONE;
-  }
-  ImGui::Text("   "); ImGui::SameLine();
-  if (ImGui::Button("Sketch Interpolation Tool")) {
-    *currentMode = MODE_SKETCH_INTERPOLATION;
-    sketchInterpolationTool->initSketch();
-  }
-  ImGui::Text("   "); ImGui::SameLine();
-  if (ImGui::Button("Spray Interpolation Tool")) {
-    *currentMode = MODE_SPRAY_INTERPOLATION;
-    sprayInterpolationTool->initSketch();
-  }
-  ImGui::Text("   "); ImGui::SameLine();
-  if (ImGui::Button("Delete Tool")) {
-    *currentMode = MODE_DELETION;
-    deleteTool->initSketch();
-  }
-
   switch (*currentMode) {
     case MODE_NONE:
       ImGui::Text("   Selected Tool: None");
       polyscope::view::moveScale = 1.0;
       break;
     case MODE_SKETCH_INTERPOLATION:
-      ImGui::Text("   Selected Tool: Sketch Interpolation Tool");
+      ImGui::Text("   Selected Tool: Sketch");
       sketchInterpolationTool->launchToolOperation();
       break;
     case MODE_SPRAY_INTERPOLATION:
-      ImGui::Text("   Selected Tool: Spray Interpolation Tool");
+      ImGui::Text("   Selected Tool: Spray");
       sprayInterpolationTool->launchToolOperation();
       break;
     case MODE_DELETION:
-      ImGui::Text("   Selected Tool: Delete Tool");
+      ImGui::Text("   Selected Tool: Delete");
       deleteTool->launchToolOperation();
       break;
   }
-
-  // Surface Visualization
-  ImGui::Text("\nSurface Visualization:");
   ImGui::Text("   "); ImGui::SameLine();
-  ImGui::RadioButton("None", currentSurfaceMode, SURFACE_MODE_NONE);
+  if (ImGui::Button("Reset")) {
+    *currentMode = MODE_NONE;
+  }
+  ImGui::SameLine();
+  if (ImGui::Button("Sketch")) {
+    *currentMode = MODE_SKETCH_INTERPOLATION;
+    sketchInterpolationTool->initSketch();
+  }
+  ImGui::SameLine();
+  if (ImGui::Button("Spray")) {
+    *currentMode = MODE_SPRAY_INTERPOLATION;
+    sprayInterpolationTool->initSketch();
+  }
+  ImGui::SameLine();
+  if (ImGui::Button("Delete")) {
+    *currentMode = MODE_DELETION;
+    deleteTool->initSketch();
+  }
+
+
+  // Surface Selection
+  ImGui::Text("\nSurface Selection:");
   ImGui::Text("   "); ImGui::SameLine();
   ImGui::RadioButton("Pseudo Surface", currentSurfaceMode, SURFACE_MODE_PSEUDO);
   ImGui::Text("   "); ImGui::SameLine();
@@ -73,10 +71,6 @@ void ModeSelector::enableModeSelection(ImGuiIO &io) {
   polyscope::SurfaceMesh *pseudoSurface = polyscope::getSurfaceMesh(PseudoSurfaceName);
   polyscope::SurfaceMesh *greedySurface = polyscope::getSurfaceMesh(GreedyProjName);
   switch (*currentSurfaceMode) {
-    case SURFACE_MODE_NONE:
-      pseudoSurface->setEnabled(false);
-      greedySurface->setEnabled(false);
-      break;
     case SURFACE_MODE_PSEUDO:
       pseudoSurface->setEnabled(true);
       greedySurface->setEnabled(false);
