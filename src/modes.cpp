@@ -55,22 +55,18 @@ void ModeSelector::enableModeSelection(ImGuiIO &io) {
     case MODE_INTERPOLATION_SKETCH:
       ImGui::Text("   Selected Tool: Sketch-Interpolation Tool");
       interpolationTool->launchToolOperation();
-      *currentSurfaceMode = SURFACE_MODE_GREEDY;
       break;
     case MODE_INTERPOLATION_PAINT:
       ImGui::Text("   Selected Tool: Paint-Interpolation Tool");
       mlsSprayTool->launchToolOperation();
-      *currentSurfaceMode = SURFACE_MODE_GREEDY;
       break;
     case MODE_DELETION_SKETCH:
       ImGui::Text("   Selected Tool: Sketch-Deletion Tool");
       deleteTool->launchToolOperation();
-      *currentSurfaceMode = SURFACE_MODE_GREEDY;
       break;
     case MODE_DELETION_PAINT:
       ImGui::Text("   Selected Tool: Paint-Deletion Tool");
       deleteSprayTool->launchToolOperation();
-      *currentSurfaceMode = SURFACE_MODE_GREEDY;
       break;
   }
 
@@ -81,21 +77,17 @@ void ModeSelector::enableModeSelection(ImGuiIO &io) {
   ImGui::Text("   "); ImGui::SameLine();
   ImGui::RadioButton("Pseudo Surface", currentSurfaceMode, SURFACE_MODE_PSEUDO);
   ImGui::Text("   "); ImGui::SameLine();
-  ImGui::RadioButton("Poisson Surface", currentSurfaceMode, SURFACE_MODE_POISSON);
-  ImGui::Text("   "); ImGui::SameLine();
   ImGui::RadioButton("Greedy Surface", currentSurfaceMode, SURFACE_MODE_GREEDY);
 
   int currentVersion = pointCloud->getCurrentVersion();
   polyscope::SurfaceMesh *pseudoSurface;
-  polyscope::SurfaceMesh *poissonSurface;
   polyscope::SurfaceMesh *greedySurface;
   switch (*currentSurfaceMode) {
     case SURFACE_MODE_NONE:
+      // Control whether enabled or not
       pseudoSurface = polyscope::getSurfaceMesh(PseudoSurfaceName);
-      poissonSurface = polyscope::getSurfaceMesh(PoissonName);
       greedySurface = polyscope::getSurfaceMesh(GreedyProjName);
       pseudoSurface->setEnabled(false);
-      poissonSurface->setEnabled(false);
       greedySurface->setEnabled(false);
       break;
     case SURFACE_MODE_PSEUDO:
@@ -106,26 +98,10 @@ void ModeSelector::enableModeSelection(ImGuiIO &io) {
         lastVersionPseudo = currentVersion;
       }
 
+      // Control whether enabled or not
       pseudoSurface = polyscope::getSurfaceMesh(PseudoSurfaceName);
-      poissonSurface = polyscope::getSurfaceMesh(PoissonName);
       greedySurface = polyscope::getSurfaceMesh(GreedyProjName);
       pseudoSurface->setEnabled(true);
-      poissonSurface->setEnabled(false);
-      greedySurface->setEnabled(false);
-      break;
-    case SURFACE_MODE_POISSON:
-      if (lastVersionPoisson != currentVersion) {
-        // Show Poisson Surface
-        Surface poissonSurface(PoissonName, pointCloud->getVertices(), pointCloud->getNormals());
-        poissonSurface.reconstructPoissonSurface(pointCloud->getAverageDistance(), false);
-        lastVersionPoisson = currentVersion;
-      }
-
-      pseudoSurface = polyscope::getSurfaceMesh(PseudoSurfaceName);
-      poissonSurface = polyscope::getSurfaceMesh(PoissonName);
-      greedySurface = polyscope::getSurfaceMesh(GreedyProjName);
-      pseudoSurface->setEnabled(false);
-      poissonSurface->setEnabled(true);
       greedySurface->setEnabled(false);
       break;
     case SURFACE_MODE_GREEDY:
@@ -136,11 +112,10 @@ void ModeSelector::enableModeSelection(ImGuiIO &io) {
         lastVersionGreedy = currentVersion;
       }
 
+      // Control whether enabled or not
       pseudoSurface = polyscope::getSurfaceMesh(PseudoSurfaceName);
-      poissonSurface = polyscope::getSurfaceMesh(PoissonName);
       greedySurface = polyscope::getSurfaceMesh(GreedyProjName);
       pseudoSurface->setEnabled(false);
-      poissonSurface->setEnabled(false);
       greedySurface->setEnabled(true);
       break;
   }

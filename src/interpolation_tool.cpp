@@ -48,9 +48,14 @@ void InterpolationTool::releasedEvent() {
   // Find basis points for the surface reconstruction.
   findBasisPoints();
   if (getBasisPointsIndex()->size() == 0) {
-    std::cout << "WARNING: No basis point was found." << std::endl;
+    // Remove:
+    //  - surface points
+    //  - sketch
+    removePointCloud(SurfacePointName);
     removeCurveNetworkLine(SketchPrefix);
+    // Reset all member variables.
     resetSketch();
+    std::cout << "WARNING: No basis point was found." << std::endl;
     return;
   }
   
@@ -71,9 +76,14 @@ void InterpolationTool::releasedEvent() {
   Surface poissonSurface("Interpolation: PSR", &basisPoints, &basisNormals);
   std::tie(poissonPoints, poissonFaces) = poissonSurface.reconstructPoissonSurface(getPointCloud()->getAverageDistance(), false);
   if (poissonPoints.size() == 0) {
-    std::cout << "WARNING: No mesh was reconstructed with Poisson Surface Reconstruction." << std::endl;
+    // Remove:
+    //  - surface points
+    //  - sketch
+    removePointCloud(SurfacePointName);
     removeCurveNetworkLine(SketchPrefix);
+    // Reset all member variables.
     resetSketch();
+    std::cout << "WARNING: No mesh was reconstructed with Poisson Surface Reconstruction." << std::endl;
     return;
   }
 
@@ -108,13 +118,12 @@ void InterpolationTool::releasedEvent() {
   removePointCloud(SurfacePointName);
   removeCurveNetworkLine(SketchPrefix);
   
-  // Add the interpolated points
-  getPointCloud()->addPoints(voxelFilteredPoints, voxelFilteredNormals);
-
-  // Update point cloud
+  // 1. Add the interpolated points
+  // 2. Update point cloud
   //    - update environments
   //    - update octree
   //    - render points and normals
+  getPointCloud()->addPoints(voxelFilteredPoints, voxelFilteredNormals);
   getPointCloud()->updatePointCloud(true);
 
   // Reset all member variables.

@@ -48,13 +48,12 @@ void DeleteTool::releasedEvent() {
   //  - sketch
   removeCurveNetworkLine(SketchPrefix);
 
-  // Delete basis points from point cloud
-  getPointCloud()->deletePoints(*getBasisPointsIndex());
-
-  // Update point cloud
+  // 1. Delete basis points from point cloud
+  // 2. Update point cloud
   //    - update environments
   //    - update octree
   //    - render points and normals
+  getPointCloud()->deletePoints(*getBasisPointsIndex());
   getPointCloud()->updatePointCloud(true);
 
   // Reset all member variables

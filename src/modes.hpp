@@ -25,7 +25,6 @@ enum VisualizationMode {
 enum SurfaceMode {
   SURFACE_MODE_NONE,
   SURFACE_MODE_PSEUDO,
-  SURFACE_MODE_POISSON,
   SURFACE_MODE_GREEDY,
 };
 

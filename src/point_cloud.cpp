@@ -170,7 +170,7 @@ void PointCloud::updatePointCloud(bool clearPostEnv) {
   std::cout << "\tNormal num\t\t->\t"           << Normals.size()       << std::endl;
   std::cout << "\tAverage Distance\t->\t"       << averageDistance      << std::endl;
   std::cout << "\tBoundng Box Side\t->\t"       << boundingBoxSide      << std::endl;
-  std::cout << "\tCurrent Version\t->\t"        << currentVersion       << std::endl;
+  std::cout << "\tCurrent Version\t\t->\t"      << currentVersion       << std::endl;
   std::cout                                                             << std::endl;
 }
 
