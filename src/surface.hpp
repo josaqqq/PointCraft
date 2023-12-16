@@ -8,67 +8,76 @@
 class Surface {
   public:
     Surface(
-      std::string Name,
       std::vector<glm::dvec3> *Vertices,
       std::vector<glm::dvec3> *Normals
-    ) : Name(Name), Vertices(Vertices), Normals(Normals) {}
+    ) : Vertices(Vertices), Normals(Normals) {}
 
     // Reconstruct new surface with Vertices and Normals.
+    //  - name: The name of the registered surface
     //  - averageDistance: used to decide the resolution of Poisson Surface Reconstruction
     //  - enabled:  If true, enable the registered poisson surface
     std::pair<std::vector<glm::dvec3>, std::vector<std::vector<size_t>>> reconstructPoissonSurface(
+      std::string name,
       double averageDistance,
       bool enabled
     );
 
     // Compute an approximate surface using Vertices and Normals.
     // Then project points randomly onto the surface and return the projected points.
-    //  - xPos: io.DisplayFramebufferScale.x * mousePos.x
-    //  - xPos: io.DisplayFramebufferScale.y * mousePos.y
+    //  - name: The name of the registered surface 
+    //  - mousePos: screen coordinates of the mouse position
     //  - searchRadius: the range of the nearest neighbor search
     //  - averageDistance:  the radius of the range where points are randomly added.
     //  - pointSize:        the size of randomly added points.
     std::pair<std::vector<glm::dvec3>, std::vector<glm::dvec3>> projectMLSSurface(
-      int xPos,
-      int yPos,
+      std::string name,
+      glm::dvec2 mousePos,
       double searchRadius,
       double averageDistance, 
       int pointSize
     );
 
-    // Compute an approximate surface using Vertices and Normals.
-    // Then project points inside of the range of basis points.
-    //  - searchRadius: the range of the nearest neighbor search
-    //  - averagedistance: the distance between points in the point cloud
-    std::pair<std::vector<glm::dvec3>, std::vector<glm::dvec3>> reconstructMLSSurface(
-      double searchRadius,
-      double averageDistance
+    // Render greedy surface and pseudo surface.
+    // Pseudo surface around holes in greedy surface is colored red.
+    //  - greedyName: The name for greedy surface
+    //  - pseudoname: The name for pseudo surface
+    //  - averageDistance:  
+    //      For greedy surface, used to determine the search radius
+    //      For pseudo surface, the radius of the shown hexagons
+    //  - enabled: If true, enable the registered pseudo surface
+    void renderPointCloudSurface(
+      std::string greedyName,
+      std::string pseudoName,
+      double averageDistance, 
+      bool enabled
     );
 
     // Compute Greedy Projection and then render the reconstructed mesh.
+    // Return the vertex indices on the hole boundaries.
+    //  - name: The name of the registered surface
     //  - averageDistance:  used to determin the search radius
     //  - enabled:  If true, enable the registered greedy surface
-    void showGreedyProjection(double averageDistance, bool enabled);
+    std::set<int> showGreedySurface(
+      std::string name,
+      double averageDistance, 
+      bool enabled
+    );
 
     // Show hexagons for each vertex as a pseudo surface.
+    //  - name: The name of the registered surface
     //  - averageDistance:  the radius of the shown hexagon.
     //  - enabled:  If true, enable the registered pseudo surface
-    void showPseudoSurface(double averageDistance, bool enabled);
+    //  - boundaryVerticesIdx: The indices of the vertices on the hole boundary.
+    void showPseudoSurface(
+      std::string name,
+      double averageDistance, 
+      bool enabled,
+      const std::set<int> &boundaryVerticesIdx = std::set<int>{}
+    );
 
   private:
-    std::string     Name;
     std::vector<glm::dvec3> *Vertices;
     std::vector<glm::dvec3> *Normals; 
-
-    // Initialize MLS and then return pcl::MLSResult
-    //  - searchRadius: the range of the nearest neighbor search
-    pcl::MLSResult InitializeMLSSurface(double searchRadius);
-
-    // Flip faces if the average of the adjacent faces are inversed.
-    void flipFaces(
-      std::vector<glm::dvec3> &meshV,
-      std::vector<std::vector<size_t>> &meshF
-    ); 
 
     // Detect the holes on the mesh
     //  1.  Detect the edges not shared by two faces

@@ -47,10 +47,10 @@ void SprayInterpolationTool::draggingEvent() {
   // Construct MLS surface and project random points onto the surface
   std::vector<glm::dvec3> dummyNormals;
   std::vector<glm::dvec3> mlsVertices, mlsNormals;
-  Surface mlsSurface(MLSName, &surfacePoints, &dummyNormals);
+  Surface mlsSurface(&surfacePoints, &dummyNormals);
   std::tie(mlsVertices, mlsNormals) = mlsSurface.projectMLSSurface(
-    xPos,
-    yPos,
+    MLSName,
+    glm::dvec2(xPos, yPos),
     getPointCloud()->getBoundingBoxSide(),
     getPointCloud()->getAverageDistance(),
     MLS_SpraySize

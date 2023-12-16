@@ -50,7 +50,7 @@ struct ModeSelector {
     { 
       // Initialize current modes.
       *currentMode = MODE_NONE;
-      *currentSurfaceMode = SURFACE_MODE_GREEDY;
+      *currentSurfaceMode = SURFACE_MODE_PSEUDO;
     }
 
     ~ModeSelector() {}
@@ -60,12 +60,6 @@ struct ModeSelector {
   private:
     int *currentMode;
     int *currentSurfaceMode;
-
-    // Variables that control the version of the point cloud 
-    // used for the final surface reconstruction.
-    int lastVersionPseudo = 0;
-    int lastVersionPoisson = 0;
-    int lastVersionGreedy = 0;
 
     PointCloud        *pointCloud;
 

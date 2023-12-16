@@ -73,8 +73,12 @@ void SketchInterpolationTool::releasedEvent() {
   // Compute Poisson Surface Reconstruction
   std::vector<glm::dvec3>           poissonPoints;
   std::vector<std::vector<size_t>>  poissonFaces;
-  Surface poissonSurface("Interpolation: PSR", &basisPoints, &basisNormals);
-  std::tie(poissonPoints, poissonFaces) = poissonSurface.reconstructPoissonSurface(getPointCloud()->getAverageDistance(), false);
+  Surface poissonSurface(&basisPoints, &basisNormals);
+  std::tie(poissonPoints, poissonFaces) = poissonSurface.reconstructPoissonSurface(
+    "Poisson Interpolation",
+    getPointCloud()->getAverageDistance(), 
+    false
+  );
   if (poissonPoints.size() == 0) {
     // Remove:
     //  - surface points

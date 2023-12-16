@@ -24,9 +24,12 @@
 #include "ray.hpp"
 #include "constants.hpp"
 
-// Reconstruct new surface with Vertices and Normals and return them.
+// Reconstruct new surface with Vertices and Normals.
+//  - name: The name of the registered surface
 //  - averageDistance: used to decide the resolution of Poisson Surface Reconstruction
+//  - enabled:  If true, enable the registered poisson surface
 std::pair<std::vector<glm::dvec3>, std::vector<std::vector<size_t>>> Surface::reconstructPoissonSurface(
+  std::string name,
   double averageDistance,
   bool enabled
 ) {
@@ -101,7 +104,7 @@ std::pair<std::vector<glm::dvec3>, std::vector<std::vector<size_t>>> Surface::re
   }
 
   // Register mesh
-  polyscope::SurfaceMesh *poissonMesh = polyscope::registerSurfaceMesh(Name, meshV, meshF);
+  polyscope::SurfaceMesh *poissonMesh = polyscope::registerSurfaceMesh(name, meshV, meshF);
   poissonMesh->setSurfaceColor(PoissonColor);
   poissonMesh->setBackFaceColor(PoissonBackFaceColor);
   poissonMesh->setMaterial(PoissonMaterial);
@@ -125,20 +128,53 @@ std::pair<std::vector<glm::dvec3>, std::vector<std::vector<size_t>>> Surface::re
 
 // Compute an approximate surface using Vertices and Normals.
 // Then project points randomly onto the surface and return the projected points.
-//  - xPos: io.DisplayFramebufferScale.x * mousePos.x
-//  - xPos: io.DisplayFramebufferScale.y * mousePos.y
+//  - name: The name of the registered surface 
+//  - mousePos: screen coordinates of the mouse position
 //  - searchRadius: the range of the nearest neighbor search
 //  - averageDistance:  the radius of the range where points are randomly added.
 //  - pointSize:        the size of randomly added points.
 std::pair<std::vector<glm::dvec3>, std::vector<glm::dvec3>> Surface::projectMLSSurface(
-  int xPos,
-  int yPos,
+  std::string name,
+  glm::dvec2 mousePos,
   double searchRadius,
   double averageDistance, 
   int pointSize
 ) {
-  // Initialize MLS surface
-  pcl::MLSResult mlsResult = InitializeMLSSurface(searchRadius);
+  // Calculate center point
+  glm::dvec3 g(0.0, 0.0, 0.0);
+  for (size_t i = 0; i < Vertices->size(); i++) g += (*Vertices)[i];
+  g /= Vertices->size();
+  Vertices->push_back(g);
+
+  // Init point cloud
+  pcl::PointCloud<pcl::PointXYZ>::Ptr inputCloud(new pcl::PointCloud<pcl::PointXYZ>);
+  inputCloud->points.resize(Vertices->size());
+  for (size_t i = 0; i < Vertices->size(); i++) {
+    inputCloud->points[i].x = (*Vertices)[i].x;
+    inputCloud->points[i].y = (*Vertices)[i].y;
+    inputCloud->points[i].z = (*Vertices)[i].z;
+  } 
+
+  // Create a KD-Tree 
+  pcl::search::KdTree<pcl::PointXYZ>::Ptr tree(new pcl::search::KdTree<pcl::PointXYZ>);
+
+  // Initialize Moving Least Squares
+  pcl::MovingLeastSquares<pcl::PointXYZ, pcl::PointNormal> mls;
+  mls.setComputeNormals(true);
+  mls.setInputCloud(inputCloud);
+  mls.setPolynomialOrder(MLSPolynomialOrder);
+  mls.setSearchMethod(tree);
+  mls.setSearchRadius(searchRadius);
+
+  // Execute MLS
+  pcl::PointCloud<pcl::PointNormal>::Ptr outputCloud(new pcl::PointCloud<pcl::PointNormal>);
+  mls.process(*outputCloud);
+  assert(inputCloud->points.size() == outputCloud->points.size());
+
+  // Compute the center point where the ray 
+  // intersects the approximate plane of MLS.
+  std::vector<pcl::MLSResult> mlsResults = mls.getMLSResults();
+  pcl::MLSResult mlsResult = mlsResults[Vertices->size() - 1];
 
   glm::dvec3 mlsCenter = glm::dvec3(mlsResult.mean.x(), mlsResult.mean.y(), mlsResult.mean.z());
   glm::dvec3 mlsPlaneNormal = glm::dvec3(mlsResult.plane_normal.x(), mlsResult.plane_normal.y(), mlsResult.plane_normal.z());
@@ -147,7 +183,7 @@ std::pair<std::vector<glm::dvec3>, std::vector<glm::dvec3>> Surface::projectMLSS
   
   // Cast a ray to the approximate plane
   Plane H(mlsCenter, mlsPlaneNormal);
-  Ray ray(xPos, yPos);
+  Ray ray(mousePos.x, mousePos.y);
   Ray::Hit hitInfo = ray.castPointToPlane(&H);
   if (!hitInfo.hit) return { std::vector<glm::dvec3>(), std::vector<glm::dvec3>() };
   
@@ -187,7 +223,7 @@ std::pair<std::vector<glm::dvec3>, std::vector<glm::dvec3>> Surface::projectMLSS
   }
 
   // Display points projected mls surface
-  polyscope::PointCloud *mlsPoints = polyscope::registerPointCloud(Name, newV);
+  polyscope::PointCloud *mlsPoints = polyscope::registerPointCloud(name, newV);
   mlsPoints->setPointRadius(PointRadius);
   mlsPoints->setEnabled(false);
 
@@ -200,79 +236,33 @@ std::pair<std::vector<glm::dvec3>, std::vector<glm::dvec3>> Surface::projectMLSS
   return { newV, newN };
 }
 
-// Compute an approximate surface using Vertices and Normals.
-// Then project points inside of the range of basis points.
-//  - searchRadius: the range of the nearest neighbor search
-//  - averagedistance: the distance between points in the point cloud
-std::pair<std::vector<glm::dvec3>, std::vector<glm::dvec3>> Surface::reconstructMLSSurface(
-  double searchRadius,
-  double averageDistance
+// Render greedy surface and pseudo surface.
+// Pseudo surface around holes in greedy surface is colored red.
+//  - greedyName: The name for greedy surface
+//  - pseudoname: The name for pseudo surface
+//  - averageDistance:  
+//      For greedy surface, used to determine the search radius
+//      For pseudo surface, the radius of the shown hexagons
+//  - enabled: If true, enable the registered pseudo surface
+void Surface::renderPointCloudSurface(
+  std::string greedyName,
+  std::string pseudoName,
+  double averageDistance, 
+  bool enabled
 ) {
-  // Initialize MLS Surface
-  pcl::MLSResult mlsResult = InitializeMLSSurface(searchRadius);
-
-  glm::dvec3 mlsCenter = glm::dvec3(mlsResult.mean.x(), mlsResult.mean.y(), mlsResult.mean.z());
-  glm::dvec3 mlsPlaneNormal = glm::dvec3(mlsResult.plane_normal.x(), mlsResult.plane_normal.y(), mlsResult.plane_normal.z());
-  glm::dvec3 mlsUAxis = glm::dvec3(mlsResult.u_axis.x(), mlsResult.u_axis.y(), mlsResult.u_axis.z());
-  glm::dvec3 mlsVAxis = glm::dvec3(mlsResult.v_axis.x(), mlsResult.v_axis.y(), mlsResult.v_axis.z());
-
-  // Cast all vertices to the MLS surface
-  Plane H(mlsCenter, mlsPlaneNormal);
-  const double INF = 1e5;
-  double min_x = INF, max_x = -INF;
-  double min_y = INF, max_y = -INF;
-  for (size_t i = 0; i < Vertices->size(); i++) {
-    glm::dvec3 mappedPoint = H.mapCoordinates((*Vertices)[i]);
-
-    min_x = std::min(min_x, mappedPoint.x);
-    max_x = std::max(max_x, mappedPoint.x);
-    min_y = std::min(min_y, mappedPoint.y);
-    max_y = std::max(max_y, mappedPoint.y);
-  }
-
-  // Project discretized point to the MLS surface
-  // Discretize in squares with averageDistance/2.0 on each side
-  std::vector<glm::dvec3> newV, newN;
-  const glm::dvec3 cameraOrig = polyscope::view::getCameraWorldPosition();
-  for (double x = min_x; x < max_x; x += averageDistance/2.0) {
-    for (double y = min_y; y < max_y; y += averageDistance/2.0) {
-      pcl::MLSResult::MLSProjectionResults 
-        projectedResult = mlsResult.projectPointSimpleToPolynomialSurface(x, y);
-      
-      glm::dvec3 p = glm::dvec3(
-        projectedResult.point.x(),
-        projectedResult.point.y(),
-        projectedResult.point.z()
-      );
-      glm::dvec3 pn = glm::dvec3(
-        projectedResult.normal.x(),
-        projectedResult.normal.y(),
-        projectedResult.normal.z()
-      );
-
-      // If the normal is not facing cameraOrig, then skip it
-      if (glm::dot(pn, p - cameraOrig) >= 0.0) continue;
-
-      newV.push_back(p);
-      newN.push_back(pn);
-    }
-  }
-
-  // Display points projected mls surface
-  polyscope::PointCloud *mlsPoints = polyscope::registerPointCloud(Name, newV);
-  mlsPoints->setPointRadius(PointRadius);
-  mlsPoints->setEnabled(false);
-
-  polyscope::PointCloudVectorQuantity *mlsVectorQuantity = mlsPoints->addVectorQuantity(NormalName, newN);
-  mlsVectorQuantity->setVectorColor(NormalColor);
-  mlsVectorQuantity->setVectorLengthScale(NormalLength);
-  mlsVectorQuantity->setVectorRadius(NormalRadius);
-  mlsVectorQuantity->setEnabled(NormalEnabled);
-
-  return { newV, newN };
+  // Greedy Surface
+  std::set<int> boundaryVerticesIdx = showGreedySurface(greedyName, averageDistance, enabled);
+  // Pseudo Surface
+  showPseudoSurface(pseudoName, averageDistance, enabled, boundaryVerticesIdx);
 }
 
-void Surface::showGreedyProjection(
+// Compute Greedy Projection and then render the reconstructed mesh.
+// Return the vertex indices on the hole boundaries.
+//  - name: The name of the registered surface
+//  - averageDistance:  used to determin the search radius
+//  - enabled:  If true, enable the registered greedy surface
+std::set<int> Surface::showGreedySurface(
+  std::string name,
   double averageDistance,
   bool enabled
 ) {
@@ -335,16 +325,16 @@ void Surface::showGreedyProjection(
     }
   }
 
-  // Flip faces if the adjacent face normals are inversed.
-  flipFaces(meshV, meshF);
-
   // Detect holes on the greedy projection surface and determine face colors
-  std::set<int> holeBoundaryFaces = detectHolesOnMesh(meshV, meshF, averageDistance*GreedyProjHoleDetectMult);
+  std::set<int> holeBoundaryFacesIdx = detectHolesOnMesh(meshV, meshF, averageDistance*GreedyProjHoleDetectMult);
+
+  std::set<int> boundaryVerticesIdx;
   std::vector<glm::dvec3> meshFC(meshF.size());
   for (size_t i = 0; i < meshF.size(); i++) {
-    if (holeBoundaryFaces.count(i)) {
+    if (holeBoundaryFacesIdx.count(i)) {
       // On the boundary
-      meshFC[i] = glm::dvec3(1.000, 0.000, 0.000);
+      for (int idx: meshF[i]) boundaryVerticesIdx.insert(idx);
+      meshFC[i] = GreedyProjBoundaryColor;
     } else {
       // Not on the boundary
       meshFC[i] = GreedyProjColor;
@@ -352,7 +342,7 @@ void Surface::showGreedyProjection(
   }
 
   // Register mesh
-  polyscope::SurfaceMesh *greedyMesh = polyscope::registerSurfaceMesh(Name, meshV, meshF);
+  polyscope::SurfaceMesh *greedyMesh = polyscope::registerSurfaceMesh(name, meshV, meshF);
   greedyMesh->setSurfaceColor(GreedyProjColor);
   greedyMesh->setBackFaceColor(GreedyProjBackFaceColor);
   greedyMesh->setBackFacePolicy(GreedyProjBackFacePolicy);
@@ -365,15 +355,26 @@ void Surface::showGreedyProjection(
   std::cout << "\tVertex num\t->\t" << meshV.size()           << std::endl;
   std::cout << "\tFace num\t->\t"   << meshF.size()           << std::endl;
   std::cout                                                   << std::endl;
+
+  return boundaryVerticesIdx;
 }
 
 // Show hexagons for each vertex as a pseudo surface.
+//  - name: The name of the registered surface
 //  - averageDistance:  the radius of the shown hexagon.
 //  - enabled:  If true, enable the registered pseudo surface
-void Surface::showPseudoSurface(double averageDistance, bool enabled) {
+//  - boundaryVerticesIdx: The indices of the vertices on the hole boundary.
+void Surface::showPseudoSurface(
+  std::string name,
+  double averageDistance,
+  bool enabled,
+  const std::set<int> &boundaryVerticesIdx
+) {
   size_t N = Vertices->size();
-  std::vector<glm::dvec3> meshV(N*7);
-  std::vector<std::vector<size_t>> meshF(N*6);
+  
+  std::vector<glm::dvec3> meshV(N*7);           // Mesh Vertices
+  std::vector<std::vector<size_t>> meshF(N*6);  // Mesh Faces
+  std::vector<glm::dvec3> meshFC(N*6, PseudoSurfaceColor); // Mesh Face Colors
 
   // Calculate rotation matrix
   double angleInDegrees = 60.0d;
@@ -403,111 +404,24 @@ void Surface::showPseudoSurface(double averageDistance, bool enabled) {
         ((j + 1)%6 + 1)*N + i
       };
     }
+
+    // Register face color
+    //  - If the vertex-i is on the hole boundaries, color it red.
+    if (boundaryVerticesIdx.count(i)) {
+      for (size_t j = 0; j < 6; j++) {
+        meshFC[i*6 + j] = PseudoSurfaceBoundaryColor;
+      }
+    }
   }
 
   // Register mesh
-  polyscope::SurfaceMesh *pseudoSurface = polyscope::registerSurfaceMesh(Name, meshV, meshF);
+  polyscope::SurfaceMesh *pseudoSurface = polyscope::registerSurfaceMesh(name, meshV, meshF);
   pseudoSurface->setSurfaceColor(PseudoSurfaceColor);
   pseudoSurface->setBackFaceColor(PseudoSurfaceBackFaceColor);
   pseudoSurface->setMaterial(PseudoSurfaceMaterial);
   pseudoSurface->setBackFacePolicy(PseudoSurfaceBackFacePolicy);
   pseudoSurface->setEnabled(enabled);
-}
-
-pcl::MLSResult Surface::InitializeMLSSurface(double searchRadius) {
-  // Calculate center point
-  glm::dvec3 g(0.0, 0.0, 0.0);
-  for (size_t i = 0; i < Vertices->size(); i++) g += (*Vertices)[i];
-  g /= Vertices->size();
-  Vertices->push_back(g);
-
-  // Init point cloud
-  pcl::PointCloud<pcl::PointXYZ>::Ptr inputCloud(new pcl::PointCloud<pcl::PointXYZ>);
-  inputCloud->points.resize(Vertices->size());
-  for (size_t i = 0; i < Vertices->size(); i++) {
-    inputCloud->points[i].x = (*Vertices)[i].x;
-    inputCloud->points[i].y = (*Vertices)[i].y;
-    inputCloud->points[i].z = (*Vertices)[i].z;
-  } 
-
-  // Create a KD-Tree 
-  pcl::search::KdTree<pcl::PointXYZ>::Ptr tree(new pcl::search::KdTree<pcl::PointXYZ>);
-
-  // Initialize Moving Least Squares
-  pcl::MovingLeastSquares<pcl::PointXYZ, pcl::PointNormal> mls;
-  mls.setComputeNormals(true);
-  mls.setInputCloud(inputCloud);
-  mls.setPolynomialOrder(MLSPolynomialOrder);
-  mls.setSearchMethod(tree);
-  mls.setSearchRadius(searchRadius);
-
-  // Execute MLS
-  pcl::PointCloud<pcl::PointNormal>::Ptr outputCloud(new pcl::PointCloud<pcl::PointNormal>);
-  mls.process(*outputCloud);
-  assert(inputCloud->points.size() == outputCloud->points.size());
-
-  // Compute the center point where the ray 
-  // intersects the approximate plane of MLS.
-  std::vector<pcl::MLSResult> mlsResults = mls.getMLSResults();
-  pcl::MLSResult mlsResult = mlsResults[Vertices->size() - 1];
-
-  return mlsResult;
-}
-
-// Flip faces if the average of the adjacent faces are inversed.
-void Surface::flipFaces(
-  std::vector<glm::dvec3> &meshV,
-  std::vector<std::vector<size_t>> &meshF
-) {
-  const int verticesSize = meshV.size();
-  const int facesSize = meshF.size();
-
-  // Compute edge-face adjacency and faces' normals
-  std::map<int, std::vector<std::pair<int, int>>> faceToAdjacentEdges;
-  std::map<std::pair<int, int>, std::vector<int>> edgeToAdjacentFaces;
-  std::vector<glm::dvec3> faceNormals(facesSize);
-  for (int i = 0; i < facesSize; i++) {
-    const int polySize = meshF[i].size();
-
-    // edge-face adjacency
-    for (int j = 0; j < polySize; j++) {
-      int u = meshF[i][j];
-      int v = meshF[i][(j + 1)%polySize];
-      std::pair<int, int> e = {u, v};
-      if (u >= v) std::swap(e.first, e.second);
-
-      // face -> edges
-      faceToAdjacentEdges[i].push_back(e);
-      // edge -> faces
-      edgeToAdjacentFaces[e].push_back(i);
-    }
-
-    // Calculate the normal of the face
-    glm::dvec3 u = meshV[meshF[i][0]];
-    glm::dvec3 v = meshV[meshF[i][1]];
-    glm::dvec3 w = meshV[meshF[i][polySize - 1]];
-    glm::dvec3 n = glm::normalize(glm::cross(v - u, w - u));
-    faceNormals[i] = n;
-  }
-  
-  // Flip faces if the normal of the adjacent faces are inversed
-  for (int i = 0; i < facesSize; i++) {
-    // Calculate the average normal of the adjacent faces
-    double adjacentCount = 0;
-    glm::dvec3 averageNormal = glm::dvec3(0.0, 0.0, 0.0);
-    for (std::pair<int, int> e: faceToAdjacentEdges[i]) {
-      for (int f: edgeToAdjacentFaces[e]) {
-        adjacentCount += 1.0;
-        averageNormal += faceNormals[f];
-      }
-    }
-    averageNormal /= adjacentCount;
-    
-    // Flip the face if averageNormal is inverted
-    if (glm::dot(faceNormals[i], averageNormal) < 0.0) {
-      std::swap(meshF[i][0], meshF[i][1]);
-    }
-  }
+  pseudoSurface->addFaceColorQuantity("face color", meshFC)->setEnabled(true);
 }
 
 // Detect the holes on the mesh
@@ -585,7 +499,7 @@ std::set<int> Surface::detectHolesOnMesh(
   }
 
   // Return the boundary faces' indices
-  std::set<int> boundaryFaces;
+  std::set<int> holeBoundaryFacesIdx;
   for (std::pair<int, double> i: rootToBoundaryLength) {
     int root = i.first;
     double length = i.second;
@@ -596,11 +510,11 @@ std::set<int> Surface::detectHolesOnMesh(
     for (int vertexIdx: rootToGroup[root]) {
       for (std::pair<int, int> edgeIdx: vertexToAdjacentEdges[vertexIdx]) {
         for (int faceIdx: edgeToAdjacentFaces[edgeIdx]) {
-          boundaryFaces.insert(faceIdx);
+          holeBoundaryFacesIdx.insert(faceIdx);
         }
       }
     }
   }
 
-  return boundaryFaces;
+  return holeBoundaryFacesIdx;
 }

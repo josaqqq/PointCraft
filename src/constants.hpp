@@ -58,7 +58,7 @@ const std::string SketchPrefix = "Sketch: ";
 //
 // Tools
 //
-const int SketchSurfacePointNum = 5;
+const int SketchSurfacePointNum = 10;
 const int SpraySurfacePointNum = 30;
 const int DeleteSurfacePointNum = 3;
 
@@ -100,6 +100,7 @@ const bool GreedyProjVertexConsistency = true;
 
 const glm::dvec3 GreedyProjColor = { 0.000, 0.196, 1.000 };
 const glm::dvec3 GreedyProjBackFaceColor = { 1.000, 0.686, 0.000 };
+const glm::dvec3 GreedyProjBoundaryColor = { 1.000, 0.039, 0.039 };
 const std::string GreedyProjMaterial = "clay";
 const polyscope::BackFacePolicy GreedyProjBackFacePolicy = polyscope::BackFacePolicy::Custom;
 
@@ -110,6 +111,7 @@ const std::string PseudoSurfaceName = "Pseudo Surface";
 const std::string TemporalPseudoSurfaceName = "Pseudo Surface (Temporal)";
 const glm::dvec3 PseudoSurfaceColor =  { 0.000, 0.196, 1.000 };
 const glm::dvec3 PseudoSurfaceBackFaceColor = { 1.000, 0.686, 0.000 };
+const glm::dvec3 PseudoSurfaceBoundaryColor = { 1.000, 0.039, 0.039 };
 const std::string PseudoSurfaceMaterial = "clay";
 const polyscope::BackFacePolicy PseudoSurfaceBackFacePolicy = polyscope::BackFacePolicy::Custom;
 

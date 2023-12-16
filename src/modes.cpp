@@ -32,7 +32,7 @@ void ModeSelector::enableModeSelection(ImGuiIO &io) {
     sketchInterpolationTool->initSketch();
   }
   ImGui::Text("   "); ImGui::SameLine();
-  if (ImGui::Button("Soray Interpolation Tool")) {
+  if (ImGui::Button("Spray Interpolation Tool")) {
     *currentMode = MODE_SPRAY_INTERPOLATION;
     sprayInterpolationTool->initSketch();
   }
@@ -70,42 +70,18 @@ void ModeSelector::enableModeSelection(ImGuiIO &io) {
   ImGui::Text("   "); ImGui::SameLine();
   ImGui::RadioButton("Greedy Surface", currentSurfaceMode, SURFACE_MODE_GREEDY);
 
-  int currentVersion = pointCloud->getCurrentVersion();
-  polyscope::SurfaceMesh *pseudoSurface;
-  polyscope::SurfaceMesh *greedySurface;
+  polyscope::SurfaceMesh *pseudoSurface = polyscope::getSurfaceMesh(PseudoSurfaceName);
+  polyscope::SurfaceMesh *greedySurface = polyscope::getSurfaceMesh(GreedyProjName);
   switch (*currentSurfaceMode) {
     case SURFACE_MODE_NONE:
-      // Control whether enabled or not
-      pseudoSurface = polyscope::getSurfaceMesh(PseudoSurfaceName);
-      greedySurface = polyscope::getSurfaceMesh(GreedyProjName);
       pseudoSurface->setEnabled(false);
       greedySurface->setEnabled(false);
       break;
     case SURFACE_MODE_PSEUDO:
-      if (lastVersionPseudo != currentVersion) {
-        // Show Pseudo Surface
-        Surface pseudoSurface(PseudoSurfaceName, pointCloud->getVertices(), pointCloud->getNormals());
-        pseudoSurface.showPseudoSurface(pointCloud->getAverageDistance(), false);
-        lastVersionPseudo = currentVersion;
-      }
-
-      // Control whether enabled or not
-      pseudoSurface = polyscope::getSurfaceMesh(PseudoSurfaceName);
-      greedySurface = polyscope::getSurfaceMesh(GreedyProjName);
       pseudoSurface->setEnabled(true);
       greedySurface->setEnabled(false);
       break;
     case SURFACE_MODE_GREEDY:
-      if (lastVersionGreedy != currentVersion) {
-        // Show Greedy Surface
-        Surface greedySurfacee(GreedyProjName, pointCloud->getVertices(), pointCloud->getNormals());
-        greedySurfacee.showGreedyProjection(pointCloud->getAverageDistance(), false);
-        lastVersionGreedy = currentVersion;
-      }
-
-      // Control whether enabled or not
-      pseudoSurface = polyscope::getSurfaceMesh(PseudoSurfaceName);
-      greedySurface = polyscope::getSurfaceMesh(GreedyProjName);
       pseudoSurface->setEnabled(false);
       greedySurface->setEnabled(true);
       break;

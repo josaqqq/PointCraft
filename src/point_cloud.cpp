@@ -150,6 +150,14 @@ void PointCloud::updatePointCloud(bool clearPostEnv) {
   NormalsBuffer.clear();
   polyscope::removeSurfaceMesh(TemporalPseudoSurfaceName);
 
+  // Render point cloud surface (pseudo surface and greedy surface)
+  Surface pointCloudSurface(&Vertices, &Normals);
+  pointCloudSurface.renderPointCloudSurface(
+    GreedyProjName,
+    PseudoSurfaceName,
+    averageDistance,
+    false
+  );
 
   // Register Points
   pointCloud = polyscope::registerPointCloud(PointName, Vertices);
@@ -198,8 +206,12 @@ void PointCloud::addPoints(std::vector<glm::dvec3> &newV, std::vector<glm::dvec3
   }
 
   // Render added points temporarily
-  Surface pseudoSurfaceTemporal(TemporalPseudoSurfaceName, &VerticesBuffer, &NormalsBuffer);
-  pseudoSurfaceTemporal.showPseudoSurface(averageDistance, true);
+  Surface pseudoSurfaceTemporal(&VerticesBuffer, &NormalsBuffer);
+  pseudoSurfaceTemporal.showPseudoSurface(
+    TemporalPseudoSurfaceName,
+    averageDistance, 
+    true
+  );
 }
 
 // Delete vertices by referencing the vertex indices
