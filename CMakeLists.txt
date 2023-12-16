@@ -82,9 +82,8 @@ add_executable(
     src/modes.cpp
     src/point_cloud.cpp
     src/sketch_tool.cpp
-    src/interpolation_tool.cpp
-    src/mls_spray_tool.cpp
-    src/delete_spray_tool.cpp
+    src/sketch_interpolation_tool.cpp
+    src/spray_interpolation_tool.cpp
     src/delete_tool.cpp
 )
 

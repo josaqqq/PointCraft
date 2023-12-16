@@ -110,9 +110,9 @@ void SketchTool::registerSketchPointsAsCurveNetworkLine(std::string name) {
   };
 
   polyscope::CurveNetwork* curveNetwork = polyscope::registerCurveNetworkLine(name, sketch);
-  curveNetwork->setColor(CurveNetworkColor);
-  curveNetwork->setRadius(CurveNetworkRadius);  
-  curveNetwork->setMaterial(CurveNetworkMaterial);
+  curveNetwork->setColor(SketchColor);
+  curveNetwork->setRadius(SketchRadius);  
+  curveNetwork->setMaterial(SketchMaterial);
 }
 void SketchTool::removeCurveNetworkLine(std::string name) {
   polyscope::removeCurveNetwork(name, false);
@@ -123,8 +123,8 @@ void SketchTool::removeCurveNetworkLine(std::string name) {
 // the same name is overwritten
 void SketchTool::registerSketchPointsAsCurveNetworkLoop(std::string name) {
   polyscope::CurveNetwork* curveNetwork = polyscope::registerCurveNetworkLoop(name, sketchPoints);
-  curveNetwork->setColor(CurveNetworkColor);
-  curveNetwork->setRadius(CurveNetworkRadius);
+  curveNetwork->setColor(SketchColor);
+  curveNetwork->setRadius(SketchRadius);
 }
 void SketchTool::removeCurveNetworkLoop(std::string name) {
   polyscope::removeCurveNetwork(name, false);
@@ -598,6 +598,9 @@ glm::dvec3 SketchTool::getCameraDir() {
 }
 Plane* SketchTool::getScreen() {
   return &screen;
+}
+int* SketchTool::getSurfacePointNumPtr() {
+  return &surfacePointNum;
 }
 std::set<int>* SketchTool::getSurfacePointsIndex() {
   return &surfacePointsIndex;

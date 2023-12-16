@@ -19,42 +19,32 @@ void DeleteTool::draggingEvent() {
   double xPos = io.DisplayFramebufferScale.x * mousePos.x;
   double yPos = io.DisplayFramebufferScale.y * mousePos.y;
 
-  // Cast a ray
+  // Cast a ray to screen
   Ray ray(xPos, yPos);
   Ray::Hit hitInfo = ray.castPointToPlane(getScreen());
-  if (hitInfo.hit) addSketchPoint(hitInfo.pos);
+  assert(hitInfo.hit);
+  addSketchPoint(hitInfo.pos);
 
-  // Register sketchPoints as curve network (LINE)
-  registerSketchPointsAsCurveNetworkLine(SketchPrefix);
+  // Update surfacePointsIndex
+  updateSurfacePoints(xPos, yPos, *getSurfacePointNumPtr());
+  removePointCloud(SurfacePointName);
+  registerSurfacePointsAsPointCloud(SurfacePointName);
 }
 
 void DeleteTool::releasedEvent() {
   if (getSketchPoints()->size() == 0) return;
-
-  // Find basis points for the surface reconstruction.
-  findAllBasisPoints();
-  if (getBasisPointsIndex()->size() == 0) {
-    std::cout << "WARNING: No basis point was found." << std::endl;
-    removeCurveNetworkLine(SketchPrefix);
-    resetSketch();
-    return;
-  }
-
-  // Register:
-  //  - basis points
-  registerBasisPointsAsPointCloud("Basis Points");
-
-  // Remove:
-  //  - sketch
-  removeCurveNetworkLine(SketchPrefix);
 
   // 1. Delete basis points from point cloud
   // 2. Update point cloud
   //    - update environments
   //    - update octree
   //    - render points and normals
-  getPointCloud()->deletePoints(*getBasisPointsIndex());
+  getPointCloud()->deletePoints(*getSurfacePointsIndex());
   getPointCloud()->updatePointCloud(true);
+
+  // Remove:
+  //  - surface points
+  removePointCloud(SurfacePointName);
 
   // Reset all member variables
   resetSketch();

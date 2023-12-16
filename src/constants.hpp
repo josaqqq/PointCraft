@@ -1,7 +1,7 @@
 #pragma once
 
 //
-// Scene parameters
+// Screen
 //
 const std::array<float, 4> BackgroundColor = { 0.025, 0.025, 0.025, 0.000 };
 const int WindowWidth = 1024;
@@ -9,7 +9,7 @@ const int WindowHeight = 1024;
 const double ScreenOffset = 10.0;
 
 //
-// Point Cloud parameters
+// Point Cloud
 //
 const double PointCloudBoundingBoxSide = 1.0d;
 const double PointCloudDownsampleVoxel = 0.010d;
@@ -25,26 +25,28 @@ const double NormalRadius = 0.001;
 const bool NormalEnabled = true;
 const std::string NormalMaterial = "flat";
 
-const std::string SurfacePointName = "Surface Points";
-const int SurfacePointNum = 10;
-
-//
-// Surface points
-//
-const glm::dvec3 SurfacePointColor = { 0.000, 1.000, 0.000 };
-const double SurfacePointRadius = 0.0025;
-const std::string SurfaceMaterial = "flat";
-
 //
 // Octree parameters
 //
 const double OctreeResolution = 0.025;  // The length of the smallest voxels at lowest octree level.
 
 //
-// Patch parameters
+// Surface points
+//
+const std::string SurfacePointName = "Surface Points";
+
+const glm::dvec3 SurfacePointColor = { 0.000, 1.000, 0.000 };
+const double SurfacePointRadius = 0.0025;
+const std::string SurfaceMaterial = "flat";
+
+//
+// Sketch
 //
 const std::string SketchPointName = "Sketch Points";
-const glm::dvec3 SketchPointColor = { 0.000, 0.000, 1.000 };
+
+const glm::dvec3 SketchColor = { 0.000, 1.000, 0.000 };
+const double SketchRadius  = 0.00020;
+const std::string SketchMaterial = "flat";
 
 const glm::dvec3 BasisPointColor = { 0.000, 1.000, 0.000 };
 const double BasisPointRadius = 0.0025;
@@ -54,11 +56,11 @@ const double BasisNormalRadius = 0.003;
 const std::string SketchPrefix = "Sketch: ";
 
 //
-//  Curve Network
+// Tools
 //
-const glm::dvec3 CurveNetworkColor = { 0.000, 1.000, 0.000 };
-const double CurveNetworkRadius   = 0.00020;
-const std::string CurveNetworkMaterial = "flat";
+const int SketchSurfacePointNum = 5;
+const int SpraySurfacePointNum = 30;
+const int DeleteSurfacePointNum = 3;
 
 //
 // Poisson Surface Reconstruction
@@ -75,10 +77,7 @@ const polyscope::BackFacePolicy PoissonBackFacePolicy = polyscope::BackFacePolic
 //
 // Moving Least Squares
 //
-const int MLS_SprayNearestNeighbors = 30;
 const int MLS_SpraySize = 5;
-const int MLS_DeleteSpraySize = 3;
-
 const int MLSPolynomialOrder = 2;
 
 const std::string MLSName = "Interpolation MLS";

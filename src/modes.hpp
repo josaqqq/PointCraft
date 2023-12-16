@@ -4,17 +4,15 @@
 
 #include "point_cloud.hpp"
 #include "sketch_tool.hpp"
-#include "interpolation_tool.hpp"
-#include "mls_spray_tool.hpp"
+#include "sketch_interpolation_tool.hpp"
+#include "spray_interpolation_tool.hpp"
 #include "delete_tool.hpp"
-#include "delete_spray_tool.hpp"
 
 enum Mode {
   MODE_NONE,
-  MODE_INTERPOLATION_SKETCH,
-  MODE_DELETION_SKETCH,
-  MODE_INTERPOLATION_PAINT,
-  MODE_DELETION_PAINT,
+  MODE_SKETCH_INTERPOLATION,
+  MODE_SPRAY_INTERPOLATION,
+  MODE_DELETION,
 };
 
 enum VisualizationMode {
@@ -37,20 +35,18 @@ struct ModeSelector {
 
       PointCloud *pointCloud,
       
-      InterpolationTool *interpolationTool,
-      MLSSprayTool *mlsSprayTool,
-      DeleteTool *deleteTool,
-      DeleteSprayTool *deleteSprayTool
+      SketchInterpolationTool *sketchInterpolationTool,
+      SprayInterpolationTool  *sprayInterpolationTool,
+      DeleteTool              *deleteTool
     ) 
     : currentMode(currentMode),
       currentSurfaceMode(currentSurfaceMode),
 
       pointCloud(pointCloud), 
       
-      interpolationTool(interpolationTool),
-      mlsSprayTool(mlsSprayTool),
-      deleteTool(deleteTool),
-      deleteSprayTool(deleteSprayTool)
+      sketchInterpolationTool(sketchInterpolationTool),
+      sprayInterpolationTool(sprayInterpolationTool),
+      deleteTool(deleteTool)
     { 
       // Initialize current modes.
       *currentMode = MODE_NONE;
@@ -73,8 +69,7 @@ struct ModeSelector {
 
     PointCloud        *pointCloud;
 
-    InterpolationTool *interpolationTool;
-    MLSSprayTool      *mlsSprayTool;
-    DeleteTool        *deleteTool;
-    DeleteSprayTool   *deleteSprayTool;
+    SketchInterpolationTool *sketchInterpolationTool;
+    SprayInterpolationTool  *sprayInterpolationTool;
+    DeleteTool              *deleteTool;
 };

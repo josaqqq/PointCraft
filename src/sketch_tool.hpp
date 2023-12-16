@@ -112,6 +112,7 @@ class SketchTool {
     glm::dvec3                getCameraOrig();
     glm::dvec3                getCameraDir();
     Plane*                    getScreen();
+    int *                     getSurfacePointNumPtr();
     std::set<int>*            getSurfacePointsIndex();
     std::vector<glm::dvec3>*  getSketchPoints();
     std::set<int>*            getBasisPointsIndex();
@@ -126,6 +127,8 @@ class SketchTool {
     glm::dvec3  cameraOrig;   // Camera position
     glm::dvec3  cameraDir;    // Camera direction
     Plane       screen;       // Plane on nearClip
+
+    int surfacePointNum;      // Nearest neighbors detected as surface.
 
     std::set<int>             surfacePointsIndex;     // The indices of surface points where the mouse is hovering
     std::vector<glm::dvec3>   sketchPoints;           // Sketched points on the camera screen

@@ -74,10 +74,9 @@ int main(int argc, char **argv) {
 
   PointCloud pointCloud(args::get(inFile), downsample);
 
-  InterpolationTool interpolationTool(&currentMode, &pointCloud);
-  MLSSprayTool      mlsSprayTool(&currentMode, &pointCloud);
-  DeleteTool        deleteTool(&currentMode, &pointCloud);
-  DeleteSprayTool   deleteSprayTool(&currentMode, &pointCloud);
+  SketchInterpolationTool sketchInterpolationTool(&currentMode, &pointCloud);
+  SprayInterpolationTool  sprayInterpolationtool(&currentMode, &pointCloud);
+  DeleteTool              deleteTool(&currentMode, &pointCloud);
 
   modeSelector = ModeSelector(
     &currentMode, 
@@ -85,10 +84,9 @@ int main(int argc, char **argv) {
 
     &pointCloud, 
     
-    &interpolationTool,
-    &mlsSprayTool,
-    &deleteTool,
-    &deleteSprayTool
+    &sketchInterpolationTool,
+    &sprayInterpolationtool,
+    &deleteTool
   );
 
   // Reconstruct Surfaces

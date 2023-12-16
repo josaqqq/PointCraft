@@ -27,24 +27,19 @@ void ModeSelector::enableModeSelection(ImGuiIO &io) {
     *currentMode = MODE_NONE;
   }
   ImGui::Text("   "); ImGui::SameLine();
-  if (ImGui::Button("Sketch-Interpolation Tool")) {
-    *currentMode = MODE_INTERPOLATION_SKETCH;
-    interpolationTool->initSketch();
+  if (ImGui::Button("Sketch Interpolation Tool")) {
+    *currentMode = MODE_SKETCH_INTERPOLATION;
+    sketchInterpolationTool->initSketch();
   }
   ImGui::Text("   "); ImGui::SameLine();
-  if (ImGui::Button("Paint-Interpolation Tool")) {
-    *currentMode = MODE_INTERPOLATION_PAINT;
-    mlsSprayTool->initSketch();
+  if (ImGui::Button("Soray Interpolation Tool")) {
+    *currentMode = MODE_SPRAY_INTERPOLATION;
+    sprayInterpolationTool->initSketch();
   }
   ImGui::Text("   "); ImGui::SameLine();
-  if (ImGui::Button("Sketch-Deletion Tool")) {
-    *currentMode = MODE_DELETION_SKETCH;
+  if (ImGui::Button("Delete Tool")) {
+    *currentMode = MODE_DELETION;
     deleteTool->initSketch();
-  }
-  ImGui::Text("   "); ImGui::SameLine();
-  if (ImGui::Button("Paint-Deletion Tool")) {
-    *currentMode = MODE_DELETION_PAINT;
-    deleteSprayTool->initSketch();
   }
 
   switch (*currentMode) {
@@ -52,21 +47,17 @@ void ModeSelector::enableModeSelection(ImGuiIO &io) {
       ImGui::Text("   Selected Tool: None");
       polyscope::view::moveScale = 1.0;
       break;
-    case MODE_INTERPOLATION_SKETCH:
-      ImGui::Text("   Selected Tool: Sketch-Interpolation Tool");
-      interpolationTool->launchToolOperation();
+    case MODE_SKETCH_INTERPOLATION:
+      ImGui::Text("   Selected Tool: Sketch Interpolation Tool");
+      sketchInterpolationTool->launchToolOperation();
       break;
-    case MODE_INTERPOLATION_PAINT:
-      ImGui::Text("   Selected Tool: Paint-Interpolation Tool");
-      mlsSprayTool->launchToolOperation();
+    case MODE_SPRAY_INTERPOLATION:
+      ImGui::Text("   Selected Tool: Spray Interpolation Tool");
+      sprayInterpolationTool->launchToolOperation();
       break;
-    case MODE_DELETION_SKETCH:
-      ImGui::Text("   Selected Tool: Sketch-Deletion Tool");
+    case MODE_DELETION:
+      ImGui::Text("   Selected Tool: Delete Tool");
       deleteTool->launchToolOperation();
-      break;
-    case MODE_DELETION_PAINT:
-      ImGui::Text("   Selected Tool: Paint-Deletion Tool");
-      deleteSprayTool->launchToolOperation();
       break;
   }
 
