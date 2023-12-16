@@ -21,13 +21,7 @@ ModeSelector modeSelector;
 
 void callback() {
   ImGuiIO &io = ImGui::GetIO();
-
-  ImGui::PushItemWidth(50);
-
-  // Enable mode selection
   modeSelector.enableModeSelection(io);
-
-  ImGui::PopItemWidth();
 }
 
 int main(int argc, char **argv) {
@@ -36,7 +30,10 @@ int main(int argc, char **argv) {
   args::ArgumentParser parser("Point cloud editor tool"
                               "");
   // args information
-  args::Flag downsample(parser, "downsample", "enable downsampling", {'d', "downsample"});
+  args::Flag downsample(parser, "downsample",   "execute downsampling during initialization",       {"downsample"});
+  args::Flag debugMode(parser,  "debug_mode",   "enable debug mode (display the left side panel)",  {"debug"});
+  args::Flag sketchMode(parser, "sketch_mode",  "enable sketch interpolation tool",                 {"sketch"});
+  args::Flag sprayMode(parser,  "spray_mode",   "enable spray interpolation tool",                  {"spray"});
   args::Positional<std::string> inFile(parser, "mesh", "input mesh");
 
   // Parse args
@@ -63,7 +60,10 @@ int main(int argc, char **argv) {
   polyscope::options::autoscaleStructures = false;
   polyscope::options::automaticallyComputeSceneExtents = false;
   polyscope::options::groundPlaneMode = polyscope::GroundPlaneMode::None;
-  // polyscope::options::buildDefaultGuiPanels = false;
+  
+  // Debug Mode
+  if (debugMode) polyscope::options::buildDefaultGuiPanels = true;
+  else polyscope::options::buildDefaultGuiPanels = false;
 
   // Initialize polyscope
   polyscope::init();
@@ -72,11 +72,21 @@ int main(int argc, char **argv) {
   int currentMode;
   int currentSurfaceMode;
 
+  // Poin Cloud Class
   PointCloud pointCloud(args::get(inFile), downsample);
 
+  // Sketch Interpolation Tool Class
   SketchInterpolationTool sketchInterpolationTool(&currentMode, &pointCloud);
+  SketchInterpolationTool* sketchInterpolationToolPtr = nullptr;
+  if (sketchMode) sketchInterpolationToolPtr = &sketchInterpolationTool;
+
+  // Spray Interpolation Tool Class
   SprayInterpolationTool  sprayInterpolationtool(&currentMode, &pointCloud);
-  DeleteTool              deleteTool(&currentMode, &pointCloud);
+  SprayInterpolationTool* sprayInterpolationToolPtr = nullptr;
+  if (sprayMode) sprayInterpolationToolPtr = &sprayInterpolationtool;
+
+  // Delete Tool Class
+  DeleteTool deleteTool(&currentMode, &pointCloud);
 
   modeSelector = ModeSelector(
     &currentMode, 
@@ -84,8 +94,8 @@ int main(int argc, char **argv) {
 
     &pointCloud, 
     
-    &sketchInterpolationTool,
-    &sprayInterpolationtool,
+    sketchInterpolationToolPtr,
+    sprayInterpolationToolPtr,
     &deleteTool
   );
 

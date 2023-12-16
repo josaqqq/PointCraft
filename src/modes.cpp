@@ -45,21 +45,24 @@ void ModeSelector::enableModeSelection(ImGuiIO &io) {
     *currentMode = MODE_NONE;
   }
   ImGui::SameLine();
-  if (ImGui::Button("Sketch")) {
-    *currentMode = MODE_SKETCH_INTERPOLATION;
-    sketchInterpolationTool->initSketch();
+  if (sketchInterpolationTool != nullptr) {
+    if (ImGui::Button("Sketch")) {
+      *currentMode = MODE_SKETCH_INTERPOLATION;
+      sketchInterpolationTool->initSketch();
+    }
+    ImGui::SameLine();
   }
-  ImGui::SameLine();
-  if (ImGui::Button("Spray")) {
-    *currentMode = MODE_SPRAY_INTERPOLATION;
-    sprayInterpolationTool->initSketch();
+  if (sprayInterpolationTool != nullptr) {
+    if (ImGui::Button("Spray")) {
+      *currentMode = MODE_SPRAY_INTERPOLATION;
+      sprayInterpolationTool->initSketch();
+    }
+    ImGui::SameLine();
   }
-  ImGui::SameLine();
   if (ImGui::Button("Delete")) {
     *currentMode = MODE_DELETION;
     deleteTool->initSketch();
   }
-
 
   // Surface Selection
   ImGui::Text("\nSurface Selection:");
