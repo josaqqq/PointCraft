@@ -151,6 +151,9 @@ void GuiManager::enableLogWindow() {
     deleteTool->exportLog(logFileName);
     
     std::cout << logFileName << " was exported!" << std::endl;
+
+    // Export completed point cloud
+    pointCloud->exportOBJFile();
   }
   
   // Set exportedLog flag
@@ -162,6 +165,6 @@ void GuiManager::enableLogWindow() {
   ImGui::SetNextWindowPos(ImVec2(WindowWidth/2 - LogWindowWidth/2, WindowHeight/2 - LogWindowHeight/2));
   ImGui::SetNextWindowSize(ImVec2(LogWindowWidth, LogWindowHeight));
   ImGui::Begin("Log Window");
-  ImGui::Text("Completed the task!!");
+  ImGui::Text("Task Completed!!");
   ImGui::End();
 }

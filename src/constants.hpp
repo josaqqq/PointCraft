@@ -60,7 +60,7 @@ const std::string SketchPrefix = "Sketch: ";
 //
 const int SketchSurfacePointNum = 10;
 const int SpraySurfacePointNum = 30;
-const int DeleteSurfacePointNum = 3;
+const int DeleteSurfacePointNum = 5;
 
 //
 // Poisson Surface Reconstruction
