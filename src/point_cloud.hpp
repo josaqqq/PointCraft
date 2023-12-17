@@ -35,7 +35,7 @@ class PointCloud {
     void executeRedo();
 
     // Return the pointer to member variables
-    int getCurrentVersion();
+    int getBoundaryPointNum();
     std::vector<glm::dvec3>* getVertices();
     std::vector<glm::dvec3>* getNormals();
     double getAverageDistance();
@@ -59,11 +59,11 @@ class PointCloud {
     double calcAverageDistance();
 
     // Point cloud information
-    int currentVersion = 0;
     std::vector<glm::dvec3> Vertices;
     std::vector<glm::dvec3> Normals;
-    double averageDistance;       // Average Distance between a point and the nearest neighbor
-    double boundingBoxSide;       // Side of bounding sphere of point cloud
+    double averageDistance = 0.0;   // Average Distance between a point and the nearest neighbor
+    double boundingBoxSide = 0.0;   // Side of bounding sphere of point cloud
+    int boundaryPointNum = -1;      // Number of the hole boundary points on the mesh reconstructed from the current point cloud.
 
     // std::vector<glm::dvec3> as buffer
     //  There is a lag between when the added points are

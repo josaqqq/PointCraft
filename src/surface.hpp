@@ -39,13 +39,14 @@ class Surface {
 
     // Render greedy surface and pseudo surface.
     // Pseudo surface around holes in greedy surface is colored red.
+    // Return the number of points on hole boundary.
     //  - greedyName: The name for greedy surface
     //  - pseudoname: The name for pseudo surface
     //  - averageDistance:  
     //      For greedy surface, used to determine the search radius
     //      For pseudo surface, the radius of the shown hexagons
     //  - enabled: If true, enable the registered pseudo surface
-    void renderPointCloudSurface(
+    int renderPointCloudSurface(
       std::string greedyName,
       std::string pseudoName,
       double averageDistance, 

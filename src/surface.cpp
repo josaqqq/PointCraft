@@ -238,13 +238,14 @@ std::pair<std::vector<glm::dvec3>, std::vector<glm::dvec3>> Surface::projectMLSS
 
 // Render greedy surface and pseudo surface.
 // Pseudo surface around holes in greedy surface is colored red.
+// Return the number of points on hole boundary.
 //  - greedyName: The name for greedy surface
 //  - pseudoname: The name for pseudo surface
 //  - averageDistance:  
 //      For greedy surface, used to determine the search radius
 //      For pseudo surface, the radius of the shown hexagons
 //  - enabled: If true, enable the registered pseudo surface
-void Surface::renderPointCloudSurface(
+int Surface::renderPointCloudSurface(
   std::string greedyName,
   std::string pseudoName,
   double averageDistance, 
@@ -254,6 +255,8 @@ void Surface::renderPointCloudSurface(
   std::set<int> boundaryVerticesIdx = showGreedySurface(greedyName, averageDistance, enabled);
   // Pseudo Surface
   showPseudoSurface(pseudoName, averageDistance, enabled, boundaryVerticesIdx);
+
+  return boundaryVerticesIdx.size();
 }
 
 // Compute Greedy Projection and then render the reconstructed mesh.

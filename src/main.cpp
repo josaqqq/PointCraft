@@ -20,8 +20,9 @@
 GuiManager guiManager;
 
 void callback() {
-  ImGuiIO &io = ImGui::GetIO();
-  guiManager.enableGuiTool(io);
+  guiManager.enableAdminToolWindow();   // Admin Tool Window
+  guiManager.enableEditingToolWindow(); // Editing Tool Window
+  guiManager.enableLogWindow();         // Log Window
 }
 
 int main(int argc, char **argv) {

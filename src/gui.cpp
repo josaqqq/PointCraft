@@ -7,36 +7,30 @@
 #include "surface.hpp"
 #include "constants.hpp"
 
-void GuiManager::enableGuiTool(ImGuiIO &io) {
+// Admin Tool Window
+void GuiManager::enableAdminToolWindow() {
   const int WindowWidth = polyscope::view::windowWidth;
-
-  const int AdminToolWindowWidth = 300;
-  const int AdminToolWindowHeight = 150;
-  const int MarginAdminEditing = 50;
-  const int EditingToolWindowWidth = 300;
-  const int EditingToolWindowHeight = 400;
-
-  // Admin Tool Window
-  //// Begin
   ImGui::SetNextWindowPos(ImVec2(WindowWidth - AdminToolWindowWidth, 0));
   ImGui::SetNextWindowSize(ImVec2(AdminToolWindowWidth, AdminToolWindowHeight));
   ImGui::Begin("Admin Tool");
 
   // Start Clock
   if (ImGui::Button("Start timer")) {
-
+    start_clock = clock();
   }
   ImGui::Text("");
+
   // Export .obj file
   if (ImGui::Button("Export .obj file")) {
     pointCloud->exportOBJFile();
   }
 
   ImGui::End();
-  //// End
+}
 
-  // Editing Tool Window
-  //// Begin
+// Editing Tool Window
+void GuiManager::enableEditingToolWindow() {
+  const int WindowWidth = polyscope::view::windowWidth;
   ImGui::SetNextWindowPos(ImVec2(WindowWidth - EditingToolWindowWidth, AdminToolWindowHeight + MarginAdminEditing));
   ImGui::SetNextWindowSize(ImVec2(EditingToolWindowWidth, EditingToolWindowHeight));
   ImGui::Begin("Editing Tool");
@@ -68,6 +62,7 @@ void GuiManager::enableGuiTool(ImGuiIO &io) {
       deleteTool->launchToolOperation();
       break;
   }
+
   ImGui::Text("   "); ImGui::SameLine();
   if (ImGui::Button("Reset")) {
     *currentMode = MODE_NONE;
@@ -112,6 +107,18 @@ void GuiManager::enableGuiTool(ImGuiIO &io) {
       break;
   }
 
-  //// End
+  ImGui::End();
+}
+
+// Log Window
+void GuiManager::enableLogWindow() {
+  const int WindowWidth = polyscope::view::windowWidth;
+  const int WindowHeight = polyscope::view::windowHeight;
+  ImGui::SetNextWindowPos(ImVec2(WindowWidth/2 - LogWindowWidth/2, WindowHeight/2 - LogWindowHeight/2));
+  ImGui::SetNextWindowSize(ImVec2(LogWindowWidth, LogWindowHeight));
+  ImGui::Begin("Log Window");
+
+  ImGui::Text("Log Window");
+
   ImGui::End();
 }

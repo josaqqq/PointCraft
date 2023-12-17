@@ -61,10 +61,6 @@ PointCloud::PointCloud(std::string filename, bool downsample)
     // TODO: We need to estimate points' normals here
   }
 
-  // Initialize member variables
-  averageDistance = 0.0;
-  boundingBoxSide = 0.0;
-
   // Scale the input point cloud
   // If downsample flag is set, then execute downsampling
   scalePointCloud();
@@ -132,9 +128,6 @@ void PointCloud::setPointCloudNormalEnabled(bool flag) {
 //    - update octree
 //    - render points and normals
 void PointCloud::updatePointCloud(bool clearPostEnv) {
-  // Current Version
-  currentVersion++;
-
   // Push new environment
   prevEnvironments.push({ Vertices, Normals });
   if (clearPostEnv) postEnvironments = std::stack<std::pair<std::vector<glm::dvec3>, std::vector<glm::dvec3>>>();
@@ -152,7 +145,7 @@ void PointCloud::updatePointCloud(bool clearPostEnv) {
 
   // Render point cloud surface (pseudo surface and greedy surface)
   Surface pointCloudSurface(&Vertices, &Normals);
-  pointCloudSurface.renderPointCloudSurface(
+  boundaryPointNum = pointCloudSurface.renderPointCloudSurface(
     GreedyProjName,
     PseudoSurfaceName,
     averageDistance,
@@ -178,7 +171,7 @@ void PointCloud::updatePointCloud(bool clearPostEnv) {
   std::cout << "\tNormal num\t\t->\t"           << Normals.size()       << std::endl;
   std::cout << "\tAverage Distance\t->\t"       << averageDistance      << std::endl;
   std::cout << "\tBoundng Box Side\t->\t"       << boundingBoxSide      << std::endl;
-  std::cout << "\tCurrent Version\t\t->\t"      << currentVersion       << std::endl;
+  std::cout << "\tBoundary Point Num\t->\t"     << boundaryPointNum     << std::endl;
   std::cout                                                             << std::endl;
 }
 
@@ -276,8 +269,8 @@ void PointCloud::executeRedo() {
 }
 
 // Return the pointer to member variables
-int PointCloud::getCurrentVersion() {
-  return currentVersion;
+int PointCloud::getBoundaryPointNum() {
+  return boundaryPointNum;
 }
 std::vector<glm::dvec3>* PointCloud::getVertices() {
   return &Vertices;

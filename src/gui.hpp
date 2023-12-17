@@ -54,15 +54,34 @@ struct GuiManager {
 
     ~GuiManager() {}
 
-    void enableGuiTool(ImGuiIO &io);
+    // Window handlers
+    void enableAdminToolWindow();   // Admin Tool Window
+    void enableEditingToolWindow(); // Editing Tool Window
+    void enableLogWindow();         // Log Window
   
   private:
+    // Button Manager
     int *currentMode;
     int *currentSurfaceMode;
 
-    PointCloud        *pointCloud;
+    // PointCloud
+    PointCloud* pointCloud;
 
-    SketchInterpolationTool *sketchInterpolationTool;
-    SprayInterpolationTool  *sprayInterpolationTool;
-    DeleteTool              *deleteTool;
+    // Editing Tools
+    SketchInterpolationTool*  sketchInterpolationTool;
+    SprayInterpolationTool*   sprayInterpolationTool;
+    DeleteTool*               deleteTool;
+
+    // Window Size
+    int AdminToolWindowWidth = 300;
+    int AdminToolWindowHeight = 150;
+    int MarginAdminEditing = 50;
+    int EditingToolWindowWidth = 300;
+    int EditingToolWindowHeight = 400;
+    int LogWindowHeight = 300;
+    int LogWindowWidth = 400;
+
+    // Variables for User Study
+    clock_t   start_clock;            // Clock when the task was started
+    bool      exportedLog = false;    // Whether already exported log. Log is exporeted only once.
 };
