@@ -3,12 +3,16 @@
 #include "polyscope/point_cloud.h"
 #include "polyscope/surface_mesh.h"
 
+#include <fstream>
+
 #include "gui.hpp"
 #include "surface.hpp"
 #include "constants.hpp"
 
 // Admin Tool Window
 void GuiManager::enableAdminToolWindow() {
+  if (exportedLog) return;
+
   const int WindowWidth = polyscope::view::windowWidth;
   ImGui::SetNextWindowPos(ImVec2(WindowWidth - AdminToolWindowWidth, 0));
   ImGui::SetNextWindowSize(ImVec2(AdminToolWindowWidth, AdminToolWindowHeight));
@@ -16,7 +20,7 @@ void GuiManager::enableAdminToolWindow() {
 
   // Start Clock
   if (ImGui::Button("Start timer")) {
-    start_clock = clock();
+    start_clock = std::chrono::high_resolution_clock::now();
   }
   ImGui::Text("");
 
@@ -30,6 +34,11 @@ void GuiManager::enableAdminToolWindow() {
 
 // Editing Tool Window
 void GuiManager::enableEditingToolWindow() {
+  if (exportedLog) {
+    polyscope::view::moveScale = 1.0;
+    return;
+  }
+
   const int WindowWidth = polyscope::view::windowWidth;
   ImGui::SetNextWindowPos(ImVec2(WindowWidth - EditingToolWindowWidth, AdminToolWindowHeight + MarginAdminEditing));
   ImGui::SetNextWindowSize(ImVec2(EditingToolWindowWidth, EditingToolWindowHeight));
@@ -112,13 +121,47 @@ void GuiManager::enableEditingToolWindow() {
 
 // Log Window
 void GuiManager::enableLogWindow() {
+  if (pointCloud->getBoundaryPointNum() != 0) return;
+
+  // Stop timer
+  auto end_clock = std::chrono::high_resolution_clock::now();
+
+  // If not exported the log yet, export the log
+  if (!exportedLog) {
+    // Determine log file name
+    int lastSlashIdx = -1;
+    for (size_t i = 0; i < inputFile.size(); i++) {
+      if (inputFile[i] == '/') lastSlashIdx = i;
+    }
+    std::string logFileName = inputFile.substr(lastSlashIdx + 1);
+    if (sprayInterpolationTool != nullptr) logFileName += "__spray";
+    if (sketchInterpolationTool != nullptr) logFileName += "__sketch";
+    logFileName += "__user-" + std::to_string(userID);
+
+    // Log elapsed time
+    std::ofstream logFile(logFileName);
+    auto totalDuration = std::chrono::duration_cast<std::chrono::milliseconds>(end_clock - start_clock);
+    logFile << "Total Elapsed Time (ms):\n" << totalDuration.count() << '\n';
+    logFile.close();
+
+    // Write logs to logFile (Add lines to the end of the file)
+    pointCloud->exportLog(logFileName);
+    if (sprayInterpolationTool != nullptr) sprayInterpolationTool->exportLog(logFileName);
+    if (sketchInterpolationTool != nullptr) sketchInterpolationTool->exportLog(logFileName);
+    deleteTool->exportLog(logFileName);
+    
+    std::cout << logFileName << " was exported!" << std::endl;
+  }
+  
+  // Set exportedLog flag
+  exportedLog = true;
+
+  // Render Log Window
   const int WindowWidth = polyscope::view::windowWidth;
   const int WindowHeight = polyscope::view::windowHeight;
   ImGui::SetNextWindowPos(ImVec2(WindowWidth/2 - LogWindowWidth/2, WindowHeight/2 - LogWindowHeight/2));
   ImGui::SetNextWindowSize(ImVec2(LogWindowWidth, LogWindowHeight));
   ImGui::Begin("Log Window");
-
-  ImGui::Text("Log Window");
-
+  ImGui::Text("Completed the task!!");
   ImGui::End();
 }

@@ -1,6 +1,8 @@
 #include "polyscope/polyscope.h"
 #include "polyscope/view.h"
 
+#include <fstream>
+
 #include "spray_interpolation_tool.hpp"
 #include "cluster.hpp"
 #include "surface.hpp"
@@ -14,6 +16,16 @@ void SprayInterpolationTool::launchToolOperation() {
   } else {
     releasedEvent();
   }
+}
+
+void SprayInterpolationTool::exportLog(std::string logFileName) {
+  // Open Log File
+  std::ofstream logFile(logFileName, std::ios::app);
+
+  logFile << "\nSpray Interpolation Tool Log:\n";
+
+  // close Log File
+  logFile.close();
 }
 
 void SprayInterpolationTool::draggingEvent() {

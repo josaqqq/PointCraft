@@ -1,5 +1,7 @@
 #include "polyscope/view.h"
 
+#include <fstream>
+
 #include "delete_tool.hpp"
 #include "constants.hpp"
 
@@ -11,6 +13,16 @@ void DeleteTool::launchToolOperation() {
   } else {
     releasedEvent();
   }
+}
+
+void DeleteTool::exportLog(std::string logFileName) {
+  // Open Log File
+  std::ofstream logFile(logFileName, std::ios::app);
+
+  logFile << "\nDelete Tool Log:\n";
+
+  // close Log File
+  logFile.close();
 }
 
 void DeleteTool::draggingEvent() {

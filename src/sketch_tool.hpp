@@ -24,6 +24,9 @@ class SketchTool {
     // Run the tool 
     virtual void launchToolOperation() {};
 
+    // Export log to logFile
+    virtual void exportLog(std::string logFileName) {};
+
     /*
       Viewer functions
     */

@@ -2,6 +2,8 @@
 
 #include "polyscope/polyscope.h"
 
+#include <chrono>
+
 #include "point_cloud.hpp"
 #include "sketch_tool.hpp"
 #include "sketch_interpolation_tool.hpp"
@@ -29,6 +31,9 @@ struct GuiManager {
   public:
     GuiManager() {}
     GuiManager(
+      std::string inputFile,
+      int userID,
+
       int *currentMode,
       int *currentSurfaceMode,
 
@@ -38,7 +43,10 @@ struct GuiManager {
       SprayInterpolationTool  *sprayInterpolationTool,
       DeleteTool              *deleteTool
     ) 
-    : currentMode(currentMode),
+    : inputFile(inputFile),
+      userID(userID),
+
+      currentMode(currentMode),
       currentSurfaceMode(currentSurfaceMode),
 
       pointCloud(pointCloud), 
@@ -50,6 +58,9 @@ struct GuiManager {
       // Initialize current modes.
       *currentMode = MODE_NONE;
       *currentSurfaceMode = SURFACE_MODE_PSEUDO;
+
+      // Initialize start_clock
+      start_clock = std::chrono::high_resolution_clock::now();
     }
 
     ~GuiManager() {}
@@ -60,6 +71,10 @@ struct GuiManager {
     void enableLogWindow();         // Log Window
   
   private:
+    // User Study Environment
+    std::string inputFile;
+    int userID;
+
     // Button Manager
     int *currentMode;
     int *currentSurfaceMode;
@@ -78,10 +93,10 @@ struct GuiManager {
     int MarginAdminEditing = 50;
     int EditingToolWindowWidth = 300;
     int EditingToolWindowHeight = 400;
-    int LogWindowHeight = 300;
-    int LogWindowWidth = 400;
+    int LogWindowWidth = 300;
+    int LogWindowHeight = 100;
 
     // Variables for User Study
-    clock_t   start_clock;            // Clock when the task was started
-    bool      exportedLog = false;    // Whether already exported log. Log is exporeted only once.
+    std::chrono::high_resolution_clock::time_point start_clock; // Clock when the task was started
+    bool exportedLog = false;    // When exported log -> exportedLog = true;
 };

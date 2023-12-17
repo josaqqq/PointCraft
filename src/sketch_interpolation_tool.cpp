@@ -4,6 +4,7 @@
 #include "polyscope/view.h"
 
 #include <map>
+#include <fstream>
 
 #include "constants.hpp"
 #include "sketch_interpolation_tool.hpp"
@@ -18,6 +19,16 @@ void SketchInterpolationTool::launchToolOperation() {
   } else {
     releasedEvent();
   }
+}
+
+void SketchInterpolationTool::exportLog(std::string logFileName) {
+  // Open Log File
+  std::ofstream logFile(logFileName, std::ios::app);
+
+  logFile << "\nSketch Interpolation Tool Log:\n";
+
+  // close Log File
+  logFile.close();
 }
 
 void SketchInterpolationTool::draggingEvent() {

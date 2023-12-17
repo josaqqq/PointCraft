@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+
 #include "sketch_tool.hpp"
 #include "constants.hpp"
 
@@ -13,6 +15,7 @@ class DeleteTool: public SketchTool {
     ~DeleteTool() {}
 
     void launchToolOperation() override;
+    void exportLog(std::string logFileName) override;
 
   private:
     void draggingEvent();

@@ -14,6 +14,9 @@ class PointCloud {
     // Output current Vertices and Normals as .obj file
     void exportOBJFile();
 
+    // Output log to logFile
+    void exportLog(std::string logFileName);
+
     // Enable or Disable the point cloud and normals
     void setPointCloudEnabled(bool flag);
     void setPointCloudNormalEnabled(bool flag);
@@ -35,11 +38,11 @@ class PointCloud {
     void executeRedo();
 
     // Return the pointer to member variables
-    int getBoundaryPointNum();
     std::vector<glm::dvec3>* getVertices();
     std::vector<glm::dvec3>* getNormals();
     double getAverageDistance();
     double getBoundingBoxSide();
+    int getBoundaryPointNum();
     pcl::octree::OctreePointCloudSearch<pcl::PointXYZ>* getOctree();
 
   private:

@@ -29,13 +29,17 @@ int main(int argc, char **argv) {
   // Configure the argument parser
   args::ArgumentParser parser("Point cloud editor tool"
                               "");
-  // args information
-  args::Positional<std::string> inFile(parser, "mesh", "input mesh");
 
+  // Flag arguments
+  args::HelpFlag help(parser, "help", "Display this help menu", {'h', "help"});
   args::Flag downsample(parser, "downsample", "execute downsampling during initialization", {"downsample"});  // --downsample
   args::Flag debugMode(parser, "debug_mode", "enable debug mode (display the left side panel)", {"debug"});   // --debug
   args::Flag sketchMode(parser, "sketch_mode", "enable sketch interpolation tool", {"sketch"});               // --sketch
   args::Flag sprayMode(parser, "spray_mode", "enable spray interpolation tool", {"spray"});                   // --spray
+
+  // Positional arguments
+  args::Positional<std::string> inFile(parser, "mesh", "input mesh position");
+  args::Positional<int> userID(parser, "userID", "userID position");
 
   // Parse args
   try {
@@ -45,7 +49,10 @@ int main(int argc, char **argv) {
     return 0;
   } catch (args::ParseError e) {
     std::cerr << e.what() << std::endl;
-
+    std::cerr << parser;
+    return 1;
+  } catch (args::ValidationError e) {
+    std::cerr << e.what() << std::endl;
     std::cerr << parser;
     return 1;
   }
@@ -97,6 +104,9 @@ int main(int argc, char **argv) {
   DeleteTool deleteTool(&currentMode, &pointCloud);
 
   guiManager = GuiManager(
+    args::get(inFile),
+    args::get(userID),
+
     &currentMode, 
     &currentSurfaceMode, 
 

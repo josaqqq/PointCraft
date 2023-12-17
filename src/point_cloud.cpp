@@ -84,16 +84,16 @@ PointCloud::PointCloud(std::string filename, bool downsample)
 
 // Output current Vertices and Normals as .obj file
 void PointCloud::exportOBJFile() {
-  std::ofstream objfile("./output.obj");
+  std::ofstream objFile("./output.obj");
 
-  if (objfile.is_open()) {
+  if (objFile.is_open()) {
     // Write vertex information to .obj
     for (glm::dvec3 p: Vertices) {
       std::string px = std::to_string(p.x);
       std::string py = std::to_string(p.y);
       std::string pz = std::to_string(p.z);
 
-      objfile << "v " << px << ' ' << py << ' ' << pz << '\n';
+      objFile << "v " << px << ' ' << py << ' ' << pz << '\n';
     }
 
     // Write normal information to .obj
@@ -102,17 +102,28 @@ void PointCloud::exportOBJFile() {
       std::string pn_y = std::to_string(pn.y);
       std::string pn_z = std::to_string(pn.z);
 
-      objfile << "vn " << pn_x << ' ' << pn_y << ' ' << pn_z << '\n';
+      objFile << "vn " << pn_x << ' ' << pn_y << ' ' << pn_z << '\n';
     }
 
-    // Close the file
-    objfile.close();
+    // Close objFile
+    objFile.close();
     std::cout << "./output.obj was exported!" << std::endl;
   } else {
     std::cout << "WARNING: ./output.obj was not opened." << std::endl;
   }
 
   return;
+}
+
+// Output log to logFile
+void PointCloud::exportLog(std::string logFileName) {
+  // Open Log File
+  std::ofstream logFile(logFileName, std::ios::app);
+
+  logFile << "\nPoint Cloud Log:\n";
+
+  // close Log File
+  logFile.close();
 }
 
 // Enable or Disable the point cloud and normals
@@ -269,9 +280,6 @@ void PointCloud::executeRedo() {
 }
 
 // Return the pointer to member variables
-int PointCloud::getBoundaryPointNum() {
-  return boundaryPointNum;
-}
 std::vector<glm::dvec3>* PointCloud::getVertices() {
   return &Vertices;
 }
@@ -283,6 +291,9 @@ double PointCloud::getAverageDistance() {
 }
 double PointCloud::getBoundingBoxSide() {
   return boundingBoxSide;
+}
+int PointCloud::getBoundaryPointNum() {
+  return boundaryPointNum;
 }
 pcl::octree::OctreePointCloudSearch<pcl::PointXYZ>* PointCloud::getOctree() {
   return &octree;

@@ -21,6 +21,7 @@ class SprayInterpolationTool : public SketchTool {
     ~SprayInterpolationTool() {}
 
     void launchToolOperation() override;
+    void exportLog(std::string logFileName) override;
 
   private:
     void draggingEvent();
