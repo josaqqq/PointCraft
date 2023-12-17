@@ -8,13 +8,41 @@
 #include "constants.hpp"
 
 void ModeSelector::enableModeSelection(ImGuiIO &io) {
+  const int WindowWidth = polyscope::view::windowWidth;
+
+  const int AdminToolWindowWidth = 300;
+  const int AdminToolWindowHeight = 150;
+  const int MarginAdminEditing = 50;
+  const int EditingToolWindowWidth = 300;
+  const int EditingToolWindowHeight = 400;
+
+  // Admin Tool Window
+  //// Begin
+  ImGui::SetNextWindowPos(ImVec2(WindowWidth - AdminToolWindowWidth, 0));
+  ImGui::SetNextWindowSize(ImVec2(AdminToolWindowWidth, AdminToolWindowHeight));
+  ImGui::Begin("Admin Tool");
+
+  // Start Clock
+  if (ImGui::Button("Start timer")) {
+
+  }
+
   // Export .obj file
-  ImGui::Text("Export file:");
-  ImGui::Text("   "); ImGui::SameLine();
-  if (ImGui::Button(".obj")) pointCloud->exportOBJFile();
+  if (ImGui::Button("Export .obj file")) {
+    pointCloud->exportOBJFile();
+  }
+
+  ImGui::End();
+  //// End
+
+  // Editing Tool Window
+  //// Begin
+  ImGui::SetNextWindowPos(ImVec2(WindowWidth - EditingToolWindowWidth, AdminToolWindowHeight + MarginAdminEditing));
+  ImGui::SetNextWindowSize(ImVec2(EditingToolWindowWidth, EditingToolWindowHeight));
+  ImGui::Begin("Editing Tool");
 
   // Undo/Redo
-  ImGui::Text("\nUndo/Redo:");
+  ImGui::Text("Undo/Redo:");
   ImGui::Text("   "); ImGui::SameLine();
   if (ImGui::Button("<< Undo")) pointCloud->executeUndo();
   ImGui::SameLine();
@@ -83,4 +111,7 @@ void ModeSelector::enableModeSelection(ImGuiIO &io) {
       greedySurface->setEnabled(true);
       break;
   }
+
+  //// End
+  ImGui::End();
 }
