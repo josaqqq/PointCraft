@@ -79,7 +79,7 @@ add_executable(
     src/ray.cpp
     src/plane.cpp
     src/cluster.cpp
-    src/modes.cpp
+    src/gui.cpp
     src/point_cloud.cpp
     src/sketch_tool.cpp
     src/sketch_interpolation_tool.cpp

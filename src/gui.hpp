@@ -25,10 +25,10 @@ enum SurfaceMode {
   SURFACE_MODE_GREEDY,
 };
 
-struct ModeSelector {
+struct GuiManager {
   public:
-    ModeSelector() {}
-    ModeSelector(
+    GuiManager() {}
+    GuiManager(
       int *currentMode,
       int *currentSurfaceMode,
 
@@ -52,9 +52,9 @@ struct ModeSelector {
       *currentSurfaceMode = SURFACE_MODE_PSEUDO;
     }
 
-    ~ModeSelector() {}
+    ~GuiManager() {}
 
-    void enableModeSelection(ImGuiIO &io);
+    void enableGuiTool(ImGuiIO &io);
   
   private:
     int *currentMode;

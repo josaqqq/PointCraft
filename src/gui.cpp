@@ -3,11 +3,11 @@
 #include "polyscope/point_cloud.h"
 #include "polyscope/surface_mesh.h"
 
-#include "modes.hpp"
+#include "gui.hpp"
 #include "surface.hpp"
 #include "constants.hpp"
 
-void ModeSelector::enableModeSelection(ImGuiIO &io) {
+void GuiManager::enableGuiTool(ImGuiIO &io) {
   const int WindowWidth = polyscope::view::windowWidth;
 
   const int AdminToolWindowWidth = 300;
@@ -26,7 +26,7 @@ void ModeSelector::enableModeSelection(ImGuiIO &io) {
   if (ImGui::Button("Start timer")) {
 
   }
-
+  ImGui::Text("");
   // Export .obj file
   if (ImGui::Button("Export .obj file")) {
     pointCloud->exportOBJFile();

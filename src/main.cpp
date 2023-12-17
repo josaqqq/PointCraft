@@ -13,28 +13,28 @@
 #include "json/json.hpp"
 
 #include "surface.hpp"
-#include "modes.hpp"
+#include "gui.hpp"
 #include "point_cloud.hpp"
 #include "constants.hpp"
 
-ModeSelector modeSelector;
+GuiManager guiManager;
 
 void callback() {
   ImGuiIO &io = ImGui::GetIO();
-  modeSelector.enableModeSelection(io);
+  guiManager.enableGuiTool(io);
 }
 
 int main(int argc, char **argv) {
   // Configure the argument parser
-  // -h or --help
   args::ArgumentParser parser("Point cloud editor tool"
                               "");
   // args information
-  args::Flag downsample(parser, "downsample",   "execute downsampling during initialization",       {"downsample"});
-  args::Flag debugMode(parser,  "debug_mode",   "enable debug mode (display the left side panel)",  {"debug"});
-  args::Flag sketchMode(parser, "sketch_mode",  "enable sketch interpolation tool",                 {"sketch"});
-  args::Flag sprayMode(parser,  "spray_mode",   "enable spray interpolation tool",                  {"spray"});
   args::Positional<std::string> inFile(parser, "mesh", "input mesh");
+
+  args::Flag downsample(parser, "downsample", "execute downsampling during initialization", {"downsample"});  // --downsample
+  args::Flag debugMode(parser, "debug_mode", "enable debug mode (display the left side panel)", {"debug"});   // --debug
+  args::Flag sketchMode(parser, "sketch_mode", "enable sketch interpolation tool", {"sketch"});               // --sketch
+  args::Flag sprayMode(parser, "spray_mode", "enable spray interpolation tool", {"spray"});                   // --spray
 
   // Parse args
   try {
@@ -95,7 +95,7 @@ int main(int argc, char **argv) {
   // Delete Tool Class
   DeleteTool deleteTool(&currentMode, &pointCloud);
 
-  modeSelector = ModeSelector(
+  guiManager = GuiManager(
     &currentMode, 
     &currentSurfaceMode, 
 
