@@ -99,9 +99,9 @@ void GuiManager::enableEditingToolWindow() {
   // Surface Selection
   ImGui::Text("\nSurface Selection:");
   ImGui::Text("   "); ImGui::SameLine();
-  ImGui::RadioButton("Pseudo Surface", currentSurfaceMode, SURFACE_MODE_PSEUDO);
+  ImGui::RadioButton("Point Cloud", currentSurfaceMode, SURFACE_MODE_PSEUDO);
   ImGui::Text("   "); ImGui::SameLine();
-  ImGui::RadioButton("Greedy Surface", currentSurfaceMode, SURFACE_MODE_GREEDY);
+  ImGui::RadioButton("Reconstructed Mesh", currentSurfaceMode, SURFACE_MODE_GREEDY);
 
   polyscope::SurfaceMesh *pseudoSurface = polyscope::getSurfaceMesh(PseudoSurfaceName);
   polyscope::SurfaceMesh *greedySurface = polyscope::getSurfaceMesh(GreedyProjName);
