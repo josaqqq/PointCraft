@@ -15,17 +15,10 @@ void DeleteTool::launchToolOperation() {
   }
 }
 
-void DeleteTool::exportLog(std::string logFileName) {
-  // Open Log File
-  std::ofstream logFile(logFileName, std::ios::app);
-
-  logFile << "\nDelete Tool Log:\n";
-
-  // close Log File
-  logFile.close();
-}
-
 void DeleteTool::draggingEvent() {
+  // Record start time
+  recordTimestamp(true);
+
   ImGuiIO &io = ImGui::GetIO();
   ImVec2 mousePos = ImGui::GetMousePos();
   double xPos = io.DisplayFramebufferScale.x * mousePos.x;
@@ -45,6 +38,9 @@ void DeleteTool::draggingEvent() {
 
 void DeleteTool::releasedEvent() {
   if (getSketchPoints()->size() == 0) return;
+
+  // Record end time
+  recordTimestamp(false);
 
   // 1. Delete basis points from point cloud
   // 2. Update point cloud

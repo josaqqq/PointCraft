@@ -2,6 +2,7 @@
 #include "polyscope/view.h"
 
 #include <fstream>
+#include <chrono>
 
 #include "spray_interpolation_tool.hpp"
 #include "cluster.hpp"
@@ -18,17 +19,10 @@ void SprayInterpolationTool::launchToolOperation() {
   }
 }
 
-void SprayInterpolationTool::exportLog(std::string logFileName) {
-  // Open Log File
-  std::ofstream logFile(logFileName, std::ios::app);
-
-  logFile << "\nSpray Interpolation Tool Log:\n";
-
-  // close Log File
-  logFile.close();
-}
-
 void SprayInterpolationTool::draggingEvent() {
+  // Record start time
+  recordTimestamp(true);
+
   ImGuiIO &io = ImGui::GetIO();
   ImVec2 mousePos = ImGui::GetMousePos();
   double xPos = io.DisplayFramebufferScale.x * mousePos.x;
@@ -112,6 +106,9 @@ void SprayInterpolationTool::draggingEvent() {
 
 void SprayInterpolationTool::releasedEvent() {
   if (getSketchPoints()->size() == 0) return;
+
+  // Record end time
+  recordTimestamp(false);
 
   // Remove:
   //  - surface points

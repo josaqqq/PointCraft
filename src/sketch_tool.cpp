@@ -9,6 +9,7 @@
 
 #include <glm/gtx/hash.hpp>
 
+#include <fstream>
 #include <stack>
 
 #include "sketch_tool.hpp"
@@ -45,6 +46,68 @@ void SketchTool::resetSketch() {
   resetSketchPoints();
   resetBasisPointsIndex();
   resetMappedBasisConvexHull();
+}
+
+// Record time stamps
+// startOrEnd is a flag for which to log the record as a start point or end point.
+// true means start and false means end.  
+void SketchTool::recordTimestamp(bool startOrEnd) {
+  int timestampsSize = timestamps.size();
+  auto timestamp = std::chrono::high_resolution_clock::now();
+
+  if (startOrEnd && timestampsSize % 2 == 0)        timestamps.push_back(timestamp);  // start point
+  else if (!startOrEnd && timestampsSize % 2 == 1)  timestamps.push_back(timestamp);  // end point
+}
+
+// Export log to logFile
+//  - Total elapsed time
+//  - Average elapsed time
+//  - Total times
+//  - All log
+void SketchTool::exportLog(
+  std::chrono::high_resolution_clock::time_point start_clock,
+  std::string logFileName,
+  std::string toolName
+) {
+  // If no log exists, then return
+  if (timestamps.size() == 0) return;
+
+  int timestampsSize = timestamps.size();
+  int totalTimes = timestampsSize/2;
+  assert(timestampsSize % 2 == 0);
+
+  // Compute total elapsed time and average elapsed time
+  std::vector<double> elapsedTime;
+  for (int i = 0; i < totalTimes; i++) {
+    auto timeDuration = std::chrono::duration_cast<std::chrono::milliseconds>(timestamps[i*2 + 1] - timestamps[i*2]);
+    elapsedTime.push_back(timeDuration.count());
+  }
+  double totalElapsedTime = 0;
+  for (int i = 0; i < totalTimes; i++) {
+    totalElapsedTime += elapsedTime[i];
+  }
+
+  // Open Log File
+  std::ofstream logFile(logFileName, std::ios::app);
+
+  // Output Log
+  logFile << "\n" << toolName << ":\n";
+  logFile << "\tTotal Elapsed Time (ms):\t" << totalElapsedTime << '\n';
+  logFile << "\tAverage Elapsed Time (ms):\t" << totalElapsedTime / totalTimes << '\n';
+  logFile << "\tTotal Times:\t" << totalTimes << '\n';
+
+  logFile << "\tAll Timestamp:\n";
+  for (int i = 0; i < timestampsSize; i++) {
+    auto timeDuration = std::chrono::duration_cast<std::chrono::milliseconds>(timestamps[i] - start_clock);
+    if (i % 2 == 0) {
+      logFile << '\t' << timeDuration.count() << ":\tEntered Tool\n";
+    } else {
+      logFile << '\t' << timeDuration.count() << ":\tExited Tool\n";
+    }
+  }
+
+  // Close Log File
+  logFile.close();
 }
 
 /*

@@ -107,7 +107,7 @@ void PointCloud::exportOBJFile() {
 
     // Close objFile
     objFile.close();
-    std::cout << "./output.obj was exported!" << std::endl;
+    std::cout << "Exported ./output.obj" << std::endl;
   } else {
     std::cout << "WARNING: ./output.obj was not opened." << std::endl;
   }
@@ -116,11 +116,32 @@ void PointCloud::exportOBJFile() {
 }
 
 // Output log to logFile
-void PointCloud::exportLog(std::string logFileName) {
+void PointCloud::exportLog(
+  std::chrono::high_resolution_clock::time_point start_clock,
+  std::string logFileName
+) {
+  int undoTimes = undoTimestamps.size();
+  int redoTimes = redoTimestamps.size();
+  
   // Open Log File
   std::ofstream logFile(logFileName, std::ios::app);
 
-  logFile << "\nPoint Cloud Log:\n";
+  // Output Log
+  logFile << "\nUndo Tool:\n";
+  logFile << "\tUndo Times:\t" << undoTimes << '\n';
+  logFile << "\tAll Timestamp:\n";
+  for (int i = 0; i < undoTimestamps.size(); i++) {
+    auto timeDuration = std::chrono::duration_cast<std::chrono::milliseconds>(undoTimestamps[i] - start_clock);
+    logFile << '\t' << timeDuration.count() << ":\tUndo Tool\n";
+  }
+
+  logFile << "\nRedo Tool:\n";
+  logFile << "\tRedo Times:\t" << redoTimes << '\n';
+  logFile << "\tAll Timestamp:\n";
+  for (int i = 0; i < redoTimestamps.size(); i++) {
+    auto timeDuration = std::chrono::duration_cast<std::chrono::milliseconds>(redoTimestamps[i] - start_clock);
+    logFile << '\t' << timeDuration.count() << ":\tRedo Tool\n";
+  }
 
   // close Log File
   logFile.close();
@@ -246,6 +267,10 @@ void PointCloud::deletePoints(std::set<int> &indices) {
 void PointCloud::executeUndo() {
   if (prevEnvironments.size() < 2) return;
 
+  // Record Timestamp
+  auto timestamp = std::chrono::high_resolution_clock::now();
+  undoTimestamps.push_back(timestamp);
+
   // Undo
   std::pair<std::vector<glm::dvec3>, std::vector<glm::dvec3>> currentEnv = prevEnvironments.top();
   prevEnvironments.pop();
@@ -264,6 +289,10 @@ void PointCloud::executeUndo() {
 }
 void PointCloud::executeRedo() {
   if (postEnvironments.size() < 1) return;
+
+  // Record Timestamp
+  auto timestamp = std::chrono::high_resolution_clock::now();
+  redoTimestamps.push_back(timestamp);
 
   // Redo
   std::pair<std::vector<glm::dvec3>, std::vector<glm::dvec3>> newEnv = postEnvironments.top();

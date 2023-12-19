@@ -2,6 +2,8 @@
 
 #include "polyscope/polyscope.h"
 
+#include <chrono>
+
 #include "ray.hpp"
 #include "plane.hpp"
 #include "point_cloud.hpp"
@@ -21,11 +23,24 @@ class SketchTool {
     // Reset all member variables.
     void resetSketch();
 
-    // Run the tool 
-    virtual void launchToolOperation() {};
+    // Record time stamps
+    // startOrEnd is a flag for which to log the record as a start point or end point.
+    // true means start and false means end.  
+    void recordTimestamp(bool startOrEnd);
 
     // Export log to logFile
-    virtual void exportLog(std::string logFileName) {};
+    //  - Total elapsed time
+    //  - Average elapsed time
+    //  - Total times
+    //  - All log
+    void exportLog(
+      std::chrono::high_resolution_clock::time_point start_clock,
+      std::string logFileName,
+      std::string toolName
+    );
+
+    // Run the tool 
+    virtual void launchToolOperation() {};
 
     /*
       Viewer functions
@@ -137,6 +152,8 @@ class SketchTool {
     std::vector<glm::dvec3>   sketchPoints;           // Sketched points on the camera screen
     std::set<int>             basisPointsIndex;       // The indices of selected basis points
     std::vector<glm::dvec2>   mappedBasisConvexHull;  // Convex hull of the basis points mapped onto screen
+
+    std::vector<std::chrono::high_resolution_clock::time_point> timestamps; // Timestamps of each event.
 
     // Extend sketched area by averageDistance casted onto the screen.
     void extendSketchedArea();

@@ -21,17 +21,10 @@ void SketchInterpolationTool::launchToolOperation() {
   }
 }
 
-void SketchInterpolationTool::exportLog(std::string logFileName) {
-  // Open Log File
-  std::ofstream logFile(logFileName, std::ios::app);
-
-  logFile << "\nSketch Interpolation Tool Log:\n";
-
-  // close Log File
-  logFile.close();
-}
-
 void SketchInterpolationTool::draggingEvent() {
+  // Record start time
+  recordTimestamp(true);
+
   ImGuiIO &io = ImGui::GetIO();
   ImVec2 mousePos = ImGui::GetMousePos();
   double xPos = io.DisplayFramebufferScale.x * mousePos.x;
@@ -55,6 +48,9 @@ void SketchInterpolationTool::draggingEvent() {
 
 void SketchInterpolationTool::releasedEvent() {
   if (getSketchPoints()->size() == 0) return;
+
+  // Record end time
+  recordTimestamp(false);
 
   // Find basis points for the surface reconstruction.
   findBasisPoints();

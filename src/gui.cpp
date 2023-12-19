@@ -145,12 +145,12 @@ void GuiManager::enableLogWindow() {
     logFile.close();
 
     // Write logs to logFile (Add lines to the end of the file)
-    pointCloud->exportLog(logFileName);
-    if (sprayInterpolationTool != nullptr) sprayInterpolationTool->exportLog(logFileName);
-    if (sketchInterpolationTool != nullptr) sketchInterpolationTool->exportLog(logFileName);
-    deleteTool->exportLog(logFileName);
+    pointCloud->exportLog(start_clock, logFileName);
+    if (sprayInterpolationTool != nullptr)  sprayInterpolationTool->exportLog(start_clock, logFileName, "Spray Interpolation Tool");
+    if (sketchInterpolationTool != nullptr) sketchInterpolationTool->exportLog(start_clock, logFileName, "Sketch Interpolation Tool");
+    deleteTool->exportLog(start_clock, logFileName, "Delete Tool");
     
-    std::cout << logFileName << " was exported!" << std::endl;
+    std::cout << "Exported " << logFileName << std::endl;
 
     // Export completed point cloud
     pointCloud->exportOBJFile();

@@ -2,6 +2,7 @@
 
 #include "polyscope/point_cloud.h"
 #include <pcl/octree/octree_search.h>
+#include <chrono>
 
 #include <string>
 #include <stack>
@@ -15,7 +16,10 @@ class PointCloud {
     void exportOBJFile();
 
     // Output log to logFile
-    void exportLog(std::string logFileName);
+    void exportLog(
+      std::chrono::high_resolution_clock::time_point start_clock,
+      std::string logFileName
+    );
 
     // Enable or Disable the point cloud and normals
     void setPointCloudEnabled(bool flag);
@@ -80,6 +84,8 @@ class PointCloud {
     // Undo/Redo stacks
     std::stack<std::pair<std::vector<glm::dvec3>, std::vector<glm::dvec3>>> prevEnvironments;
     std::stack<std::pair<std::vector<glm::dvec3>, std::vector<glm::dvec3>>> postEnvironments;
+    std::vector<std::chrono::high_resolution_clock::time_point> undoTimestamps; // Timestamps of each undo.
+    std::vector<std::chrono::high_resolution_clock::time_point> redoTimestamps; // Timestamps of each redo.
 
     pcl::PointCloud<pcl::PointXYZ>::Ptr inputCloud;
     pcl::octree::OctreePointCloudSearch<pcl::PointXYZ> octree;

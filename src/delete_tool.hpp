@@ -15,7 +15,6 @@ class DeleteTool: public SketchTool {
     ~DeleteTool() {}
 
     void launchToolOperation() override;
-    void exportLog(std::string logFileName) override;
 
   private:
     void draggingEvent();

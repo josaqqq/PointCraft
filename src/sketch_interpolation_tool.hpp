@@ -13,7 +13,6 @@ class SketchInterpolationTool : public SketchTool {
     ~SketchInterpolationTool() {}
 
     void launchToolOperation() override;
-    void exportLog(std::string logFileName) override;
 
   private:
     void draggingEvent();
