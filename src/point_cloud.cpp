@@ -130,7 +130,7 @@ void PointCloud::exportLog(
   logFile << "\nUndo Tool:\n";
   logFile << "\tUndo Times:\t" << undoTimes << '\n';
   logFile << "\tAll Timestamp:\n";
-  for (int i = 0; i < undoTimestamps.size(); i++) {
+  for (size_t i = 0; i < undoTimestamps.size(); i++) {
     auto timeDuration = std::chrono::duration_cast<std::chrono::milliseconds>(undoTimestamps[i] - start_clock);
     logFile << '\t' << timeDuration.count() << ":\tUndo Tool\n";
   }
@@ -138,7 +138,7 @@ void PointCloud::exportLog(
   logFile << "\nRedo Tool:\n";
   logFile << "\tRedo Times:\t" << redoTimes << '\n';
   logFile << "\tAll Timestamp:\n";
-  for (int i = 0; i < redoTimestamps.size(); i++) {
+  for (size_t i = 0; i < redoTimestamps.size(); i++) {
     auto timeDuration = std::chrono::duration_cast<std::chrono::milliseconds>(redoTimestamps[i] - start_clock);
     logFile << '\t' << timeDuration.count() << ":\tRedo Tool\n";
   }
