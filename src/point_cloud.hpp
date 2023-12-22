@@ -13,7 +13,7 @@ class PointCloud {
     ~PointCloud() {}
 
     // Output current Vertices and Normals as .obj file
-    void exportOBJFile();
+    void exportOBJFile(std::string logFileName);
 
     // Output log to logFile
     void exportLog(

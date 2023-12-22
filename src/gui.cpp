@@ -19,16 +19,24 @@ void GuiManager::enableAdminToolWindow() {
   ImGui::Begin("Admin Tool");
 
   // Start Clock
-  if (ImGui::Button("Start Timer")) {
-    polyscope::view::resetCameraToHomeView();
-    start_clock = std::chrono::high_resolution_clock::now();
+  if (!startedClock) {
+    if (ImGui::Button("Start Timer")) {
+      polyscope::view::resetCameraToHomeView();
+      start_clock = std::chrono::high_resolution_clock::now();
+      startedClock = true;
+    }
+    ImGui::Text("");
+  } else {
+    ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 0, 0, 255));
+    ImGui::Text("Timer Started.");
+    ImGui::PopStyleColor();
+    ImGui::Text("");
   }
-  ImGui::Text("");
 
   // Export .obj file
   if (debugMode) {
     if (ImGui::Button("Export .obj file")) {
-      pointCloud->exportOBJFile();
+      pointCloud->exportOBJFile("output");
     }
   }
 
@@ -48,34 +56,37 @@ void GuiManager::enableEditingToolWindow() {
   ImGui::Begin("Editing Tool");
 
   // Undo/Redo
-  ImGui::Text("Undo/Redo:");
-  ImGui::Text("   "); ImGui::SameLine();
   if (ImGui::Button("<< Undo")) pointCloud->executeUndo();
   ImGui::SameLine();
   if (ImGui::Button("Redo >>")) pointCloud->executeRedo();
+  ImGui::Text("");
 
   // Tool Selection
-  ImGui::Text("\nTool Selection:");
   switch (*currentMode) {
     case MODE_NONE:
-      ImGui::Text("   Selected Tool: None");
+      ImGui::Text("Selected Tool: None");
       polyscope::view::moveScale = 1.0;
       break;
     case MODE_SKETCH_INTERPOLATION:
-      ImGui::Text("   Selected Tool: Sketch");
+      ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(0, 255, 0, 255));
+      ImGui::Text("Selected Tool: Sketch");
+      ImGui::PopStyleColor();
       sketchInterpolationTool->launchToolOperation();
       break;
     case MODE_SPRAY_INTERPOLATION:
-      ImGui::Text("   Selected Tool: Spray");
+      ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(0, 255, 0, 255));
+      ImGui::Text("Selected Tool: Spray");
+      ImGui::PopStyleColor();
       sprayInterpolationTool->launchToolOperation();
       break;
     case MODE_DELETION:
-      ImGui::Text("   Selected Tool: Delete");
+      ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(0, 255, 0, 255));
+      ImGui::Text("Selected Tool: Delete");
+      ImGui::PopStyleColor();
       deleteTool->launchToolOperation();
       break;
   }
 
-  ImGui::Text("   "); ImGui::SameLine();
   if (sprayInterpolationTool != nullptr) {
     if (ImGui::Button("Spray")) {
       *currentMode = MODE_SPRAY_INTERPOLATION;
@@ -157,7 +168,7 @@ void GuiManager::enableLogWindow() {
     std::cout << "Exported " << logFileName << std::endl;
 
     // Export completed point cloud
-    pointCloud->exportOBJFile();
+    pointCloud->exportOBJFile(logFileName);
   }
   
   // Set exportedLog flag

@@ -83,8 +83,9 @@ PointCloud::PointCloud(std::string filename, bool downsample)
 } 
 
 // Output current Vertices and Normals as .obj file
-void PointCloud::exportOBJFile() {
-  std::ofstream objFile("./output.obj");
+void PointCloud::exportOBJFile(std::string logFileName) {
+  std::string logFileNameOBJ = logFileName + ".obj";
+  std::ofstream objFile(logFileNameOBJ);
 
   if (objFile.is_open()) {
     // Write vertex information to .obj
@@ -107,9 +108,9 @@ void PointCloud::exportOBJFile() {
 
     // Close objFile
     objFile.close();
-    std::cout << "Exported ./output.obj" << std::endl;
+    std::cout << "Exported " << logFileNameOBJ << std::endl;
   } else {
-    std::cout << "WARNING: ./output.obj was not opened." << std::endl;
+    std::cout << "WARNING: " << logFileNameOBJ << " was not opened." << std::endl;
   }
 
   return;

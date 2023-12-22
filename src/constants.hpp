@@ -28,7 +28,7 @@ const std::string NormalMaterial = "flat";
 //
 // Octree parameters
 //
-const double OctreeResolution = 0.025;  // The length of the smallest voxels at lowest octree level.
+const double OctreeResolution = 0.010;  // The length of the smallest voxels at lowest octree level.
 
 //
 // Surface points

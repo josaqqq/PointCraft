@@ -101,5 +101,6 @@ struct GuiManager {
 
     // Variables for User Study
     std::chrono::high_resolution_clock::time_point start_clock; // Clock when the task was started
+    bool startedClock = false;   // When the 'Start Timer' button is clicked -> startedClock = true;
     bool exportedLog = false;    // When exported log -> exportedLog = true;
 };
