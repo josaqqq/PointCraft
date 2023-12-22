@@ -20,6 +20,7 @@ void GuiManager::enableAdminToolWindow() {
 
   // Start Clock
   if (ImGui::Button("Start Timer")) {
+    polyscope::view::resetCameraToHomeView();
     start_clock = std::chrono::high_resolution_clock::now();
   }
   ImGui::Text("");
