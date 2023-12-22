@@ -19,14 +19,16 @@ void GuiManager::enableAdminToolWindow() {
   ImGui::Begin("Admin Tool");
 
   // Start Clock
-  if (ImGui::Button("Start timer")) {
+  if (ImGui::Button("Start Timer")) {
     start_clock = std::chrono::high_resolution_clock::now();
   }
   ImGui::Text("");
 
   // Export .obj file
-  if (ImGui::Button("Export .obj file")) {
-    pointCloud->exportOBJFile();
+  if (debugMode) {
+    if (ImGui::Button("Export .obj file")) {
+      pointCloud->exportOBJFile();
+    }
   }
 
   ImGui::End();
@@ -73,21 +75,17 @@ void GuiManager::enableEditingToolWindow() {
   }
 
   ImGui::Text("   "); ImGui::SameLine();
-  if (ImGui::Button("Reset")) {
-    *currentMode = MODE_NONE;
-  }
-  ImGui::SameLine();
-  if (sketchInterpolationTool != nullptr) {
-    if (ImGui::Button("Sketch")) {
-      *currentMode = MODE_SKETCH_INTERPOLATION;
-      sketchInterpolationTool->initSketch();
-    }
-    ImGui::SameLine();
-  }
   if (sprayInterpolationTool != nullptr) {
     if (ImGui::Button("Spray")) {
       *currentMode = MODE_SPRAY_INTERPOLATION;
       sprayInterpolationTool->initSketch();
+    }
+    ImGui::SameLine();
+  }
+  if (sketchInterpolationTool != nullptr) {
+    if (ImGui::Button("Sketch")) {
+      *currentMode = MODE_SKETCH_INTERPOLATION;
+      sketchInterpolationTool->initSketch();
     }
     ImGui::SameLine();
   }
@@ -97,23 +95,28 @@ void GuiManager::enableEditingToolWindow() {
   }
 
   // Surface Selection
-  ImGui::Text("\nSurface Selection:");
-  ImGui::Text("   "); ImGui::SameLine();
-  ImGui::RadioButton("Point Cloud", currentSurfaceMode, SURFACE_MODE_PSEUDO);
-  ImGui::Text("   "); ImGui::SameLine();
-  ImGui::RadioButton("Reconstructed Mesh", currentSurfaceMode, SURFACE_MODE_GREEDY);
-
   polyscope::SurfaceMesh *pseudoSurface = polyscope::getSurfaceMesh(PseudoSurfaceName);
   polyscope::SurfaceMesh *greedySurface = polyscope::getSurfaceMesh(GreedyProjName);
-  switch (*currentSurfaceMode) {
-    case SURFACE_MODE_PSEUDO:
-      pseudoSurface->setEnabled(true);
-      greedySurface->setEnabled(false);
-      break;
-    case SURFACE_MODE_GREEDY:
-      pseudoSurface->setEnabled(false);
-      greedySurface->setEnabled(true);
-      break;
+  if (debugMode) {
+    ImGui::Text("\nSurface Selection:");
+    ImGui::Text("   "); ImGui::SameLine();
+    ImGui::RadioButton("Point Cloud", currentSurfaceMode, SURFACE_MODE_PSEUDO);
+    ImGui::Text("   "); ImGui::SameLine();
+    ImGui::RadioButton("Reconstructed Mesh", currentSurfaceMode, SURFACE_MODE_GREEDY);
+
+    switch (*currentSurfaceMode) {
+      case SURFACE_MODE_PSEUDO:
+        pseudoSurface->setEnabled(true);
+        greedySurface->setEnabled(false);
+        break;
+      case SURFACE_MODE_GREEDY:
+        pseudoSurface->setEnabled(false);
+        greedySurface->setEnabled(true);
+        break;
+    }
+  } else {
+    pseudoSurface->setEnabled(true);
+    greedySurface->setEnabled(false);
   }
 
   ImGui::End();

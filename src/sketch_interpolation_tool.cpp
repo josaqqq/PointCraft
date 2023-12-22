@@ -50,7 +50,10 @@ void SketchInterpolationTool::releasedEvent() {
   if (getSketchPoints()->size() == 0) return;
 
   // Record end time
+  //  - timestamps
+  //  - sketch length
   recordTimestamp(false);
+  recordSketchLength();
 
   // Find basis points for the surface reconstruction.
   findBasisPoints();

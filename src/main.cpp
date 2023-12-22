@@ -68,7 +68,6 @@ int main(int argc, char **argv) {
   polyscope::options::autoscaleStructures = false;
   polyscope::options::automaticallyComputeSceneExtents = false;
   polyscope::options::groundPlaneMode = polyscope::GroundPlaneMode::None;
-  polyscope::options::buildGui = false;
   
   // Debug Mode
   if (debugMode) {
@@ -106,6 +105,7 @@ int main(int argc, char **argv) {
   guiManager = GuiManager(
     args::get(inFile),
     args::get(userID),
+    debugMode,
 
     &currentMode, 
     &currentSurfaceMode, 

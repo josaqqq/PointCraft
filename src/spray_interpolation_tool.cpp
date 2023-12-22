@@ -107,8 +107,11 @@ void SprayInterpolationTool::draggingEvent() {
 void SprayInterpolationTool::releasedEvent() {
   if (getSketchPoints()->size() == 0) return;
 
-  // Record end time
+  // Record 
+  //  - timestamps
+  //  - sketch length
   recordTimestamp(false);
+  recordSketchLength();
 
   // Remove:
   //  - surface points

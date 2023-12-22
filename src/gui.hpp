@@ -33,6 +33,7 @@ struct GuiManager {
     GuiManager(
       std::string inputFile,
       int userID,
+      bool debugMode,
 
       int *currentMode,
       int *currentSurfaceMode,
@@ -45,6 +46,7 @@ struct GuiManager {
     ) 
     : inputFile(inputFile),
       userID(userID),
+      debugMode(debugMode),
 
       currentMode(currentMode),
       currentSurfaceMode(currentSurfaceMode),
@@ -74,6 +76,7 @@ struct GuiManager {
     // User Study Environment
     std::string inputFile;
     int userID;
+    bool debugMode;
 
     // Button Manager
     int *currentMode;

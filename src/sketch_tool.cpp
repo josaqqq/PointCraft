@@ -59,6 +59,16 @@ void SketchTool::recordTimestamp(bool startOrEnd) {
   else if (!startOrEnd && timestampsSize % 2 == 1)  timestamps.push_back(timestamp);  // end point
 }
 
+// Record sketch length for each operation
+void SketchTool::recordSketchLength() {
+  const int sketchPointsSize = sketchPoints.size();
+  double sketchLength = 0.0;
+  for (int i = 0; i < sketchPointsSize - 1; i++) {
+    sketchLength += glm::length(sketchPoints[i] - sketchPoints[i + 1]);
+  }
+  sketchLengths.push_back(sketchLength);
+}
+
 // Export log to logFile
 //  - Total elapsed time
 //  - Average elapsed time
@@ -72,11 +82,11 @@ void SketchTool::exportLog(
   // If no log exists, then return
   if (timestamps.size() == 0) return;
 
+  // Compute total elapsed time and average elapsed time
   int timestampsSize = timestamps.size();
   int totalTimes = timestampsSize/2;
   assert(timestampsSize % 2 == 0);
 
-  // Compute total elapsed time and average elapsed time
   std::vector<double> elapsedTime;
   for (int i = 0; i < totalTimes; i++) {
     auto timeDuration = std::chrono::duration_cast<std::chrono::milliseconds>(timestamps[i*2 + 1] - timestamps[i*2]);
@@ -86,17 +96,25 @@ void SketchTool::exportLog(
   for (int i = 0; i < totalTimes; i++) {
     totalElapsedTime += elapsedTime[i];
   }
+  
+  // Compute total sketch length and average sketch length
+  int sketchLengthSize = sketchLengths.size();
+  double totalSketchLength = 0.0;
+  for (int i = 0; i < sketchLengthSize; i++) {
+    totalSketchLength += sketchLengths[i];
+  }
+  double averageSketchLength = totalSketchLength/sketchLengthSize;
 
   // Open Log File
   std::ofstream logFile(logFileName, std::ios::app);
 
-  // Output Log
+  // Output Log:
+  // Elapsed Time
   logFile << "\n" << toolName << ":\n";
   logFile << "\tTotal Elapsed Time (ms):\t" << totalElapsedTime << '\n';
   logFile << "\tAverage Elapsed Time (ms):\t" << totalElapsedTime / totalTimes << '\n';
   logFile << "\tTotal Times:\t" << totalTimes << '\n';
-
-  logFile << "\tAll Timestamp:\n";
+  logFile << "\tAll Timestamps:\n";
   for (int i = 0; i < timestampsSize; i++) {
     auto timeDuration = std::chrono::duration_cast<std::chrono::milliseconds>(timestamps[i] - start_clock);
     if (i % 2 == 0) {
@@ -104,6 +122,14 @@ void SketchTool::exportLog(
     } else {
       logFile << '\t' << timeDuration.count() << ":\tExited Tool\n";
     }
+  }
+
+  // Sketch Length
+  logFile << "\n\tTotal Length:\t" << totalSketchLength << '\n';
+  logFile << "\tAverage Length:\t" << averageSketchLength << '\n';
+  logFile << "\tAll Sketch Length:\n";
+  for (int i = 0; i < sketchLengthSize; i++) {
+    logFile << '\t' << sketchLengths[i] << '\n';
   }
 
   // Close Log File
