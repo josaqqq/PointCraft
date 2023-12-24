@@ -68,16 +68,8 @@ int main(int argc, char **argv) {
   polyscope::options::autoscaleStructures = false;
   polyscope::options::automaticallyComputeSceneExtents = false;
   polyscope::options::groundPlaneMode = polyscope::GroundPlaneMode::None;
-  
-  // Debug Mode
-  if (debugMode) {
-    polyscope::options::buildGui = true;
-    polyscope::options::buildDefaultGuiPanels = true;
-  }
-  else {
-    polyscope::options::buildGui = false;
-    polyscope::options::buildDefaultGuiPanels = false;
-  }
+  polyscope::options::buildGui = false;
+  polyscope::options::buildDefaultGuiPanels = false;
 
   // Initialize polyscope
   polyscope::init();

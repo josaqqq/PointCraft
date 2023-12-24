@@ -15,7 +15,7 @@
 #include "surface.hpp"
 
 PointCloud::PointCloud(std::string filename, bool downsample) 
-: inputCloud(new pcl::PointCloud<pcl::PointXYZ>), octree(OctreeResolution) {
+: filename(filename), inputCloud(new pcl::PointCloud<pcl::PointXYZ>), octree(OctreeResolution) {
   // Extract file format
   if (filename.length() < 3) exit(1);
   std::string fileFormat = filename.substr(filename.size() - 3);
@@ -332,6 +332,12 @@ pcl::octree::OctreePointCloudSearch<pcl::PointXYZ>* PointCloud::getOctree() {
 // Move points to set the gravity point to (0.0, 0.0, 0.0),
 // and then scale the point cloud so that the bounding box side is 1.0
 void PointCloud::scalePointCloud() {
+  double currentPointCloudBoundingBoxSide = PointCloudBoundingBoxSide;
+
+  // Resize for user study
+  if (filename[14] == 'p') currentPointCloudBoundingBoxSide *= 1.0d;
+  else currentPointCloudBoundingBoxSide *= 1.2d;
+
   glm::dvec3 center;
 
   // Move points to set the gravity point to (0.0, 0.0, 0.0),
@@ -352,9 +358,9 @@ void PointCloud::scalePointCloud() {
   for (size_t i = 0; i < Vertices.size(); i++) {
     // The bounding box is centered at the origin,
     // so it is normalized by multiplying by 0.t
-    Vertices[i] *= (PointCloudBoundingBoxSide/2.0d) / boundingBoxSide;
+    Vertices[i] *= (currentPointCloudBoundingBoxSide/2.0d) / boundingBoxSide;
   }
-  boundingBoxSide = PointCloudBoundingBoxSide;
+  boundingBoxSide = currentPointCloudBoundingBoxSide;
 }
 
 // Filter Vertices by selecting the candidate

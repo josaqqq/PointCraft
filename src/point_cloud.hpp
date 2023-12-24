@@ -66,6 +66,7 @@ class PointCloud {
     double calcAverageDistance();
 
     // Point cloud information
+    std::string filename;
     std::vector<glm::dvec3> Vertices;
     std::vector<glm::dvec3> Normals;
     double averageDistance = 0.0;   // Average Distance between a point and the nearest neighbor

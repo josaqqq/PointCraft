@@ -101,27 +101,39 @@ void GuiManager::enableEditingToolWindow() {
     }
     ImGui::SameLine();
   }
-  if (ImGui::Button("Delete")) {
-    *currentMode = MODE_DELETION;
-    deleteTool->initSketch();
+  if (debugMode) {
+    if (ImGui::Button("Delete")) {
+      *currentMode = MODE_DELETION;
+      deleteTool->initSketch();
+    }
   }
 
   // Surface Selection
+  polyscope::PointCloud *points = polyscope::getPointCloud(PointName);
   polyscope::SurfaceMesh *pseudoSurface = polyscope::getSurfaceMesh(PseudoSurfaceName);
   polyscope::SurfaceMesh *greedySurface = polyscope::getSurfaceMesh(GreedyProjName);
   if (debugMode) {
     ImGui::Text("\nSurface Selection:");
     ImGui::Text("   "); ImGui::SameLine();
-    ImGui::RadioButton("Point Cloud", currentSurfaceMode, SURFACE_MODE_PSEUDO);
+    ImGui::RadioButton("Point Cloud", currentSurfaceMode, SURFACE_MODE_POINT);
+    ImGui::Text("   "); ImGui::SameLine();
+    ImGui::RadioButton("Pseudo Surface", currentSurfaceMode, SURFACE_MODE_PSEUDO);
     ImGui::Text("   "); ImGui::SameLine();
     ImGui::RadioButton("Reconstructed Mesh", currentSurfaceMode, SURFACE_MODE_GREEDY);
 
     switch (*currentSurfaceMode) {
+      case SURFACE_MODE_POINT:
+        points->setEnabled(true);
+        pseudoSurface->setEnabled(false);
+        pseudoSurface->setEnabled(false);
+        break;
       case SURFACE_MODE_PSEUDO:
+        points->setEnabled(false);
         pseudoSurface->setEnabled(true);
         greedySurface->setEnabled(false);
         break;
       case SURFACE_MODE_GREEDY:
+        points->setEnabled(false);
         pseudoSurface->setEnabled(false);
         greedySurface->setEnabled(true);
         break;

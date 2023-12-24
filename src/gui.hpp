@@ -23,6 +23,7 @@ enum VisualizationMode {
 };
 
 enum SurfaceMode {
+  SURFACE_MODE_POINT,
   SURFACE_MODE_PSEUDO,
   SURFACE_MODE_GREEDY,
 };
