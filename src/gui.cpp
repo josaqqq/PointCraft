@@ -99,13 +99,6 @@ void GuiManager::enableEditingToolWindow() {
       *currentMode = MODE_SKETCH_INTERPOLATION;
       sketchInterpolationTool->initSketch();
     }
-    ImGui::SameLine();
-  }
-  if (debugMode) {
-    if (ImGui::Button("Delete")) {
-      *currentMode = MODE_DELETION;
-      deleteTool->initSketch();
-    }
   }
 
   // Surface Selection
