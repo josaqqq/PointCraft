@@ -25,7 +25,8 @@ Ray::Hit Ray::searchNearestNeighbor(PointCloud *pointCloud, double searchRadius)
   // Return value
   Hit hitInfo;
 
-  double currentDepth = 1e5;
+  const double MaxDepth = 1e5;
+  double currentDepth = MaxDepth;
   std::vector<glm::dvec3> *verticesPtr = pointCloud->getVertices();
   std::vector<glm::dvec3> *normalsPtr = pointCloud->getNormals();
   for (size_t i = 0; i < verticesPtr->size(); i++) {
@@ -48,6 +49,11 @@ Ray::Hit Ray::searchNearestNeighbor(PointCloud *pointCloud, double searchRadius)
       hitInfo.pos = p;
       hitInfo.normal = pn;
     } 
+  }
+
+  if (currentDepth == MaxDepth) {
+    hitInfo.hit = false;
+    return hitInfo;
   }
 
   // If the normal of the hit point does not face rayDir, then return false
