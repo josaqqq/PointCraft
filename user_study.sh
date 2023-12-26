@@ -4,7 +4,7 @@ echo "Please enter user id."
 read userID
 
 # for demonstration
-../bin/PointCraft ./point_cloud_practice.obj 0 --spray --sketch
+../bin/PointCraft ./point_cloud_practice.obj 0 --spray --sketch --debug
 
 if ! [[ $userID =~ ^[0-9]+$ ]]; then
   echo "Please input integer."
