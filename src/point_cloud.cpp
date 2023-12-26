@@ -178,11 +178,10 @@ void PointCloud::updatePointCloud(bool clearPostEnv) {
 
   // Render point cloud surface (pseudo surface and greedy surface)
   Surface pointCloudSurface(&Vertices, &Normals);
-  boundaryPointNum = pointCloudSurface.renderPointCloudSurface(
-    GreedyProjName,
+  pointCloudSurface.showPseudoSurface(
     PseudoSurfaceName,
     averageDistance,
-    false
+    true
   );
 
   // Register Points
@@ -204,7 +203,6 @@ void PointCloud::updatePointCloud(bool clearPostEnv) {
   std::cout << "\tNormal num\t\t->\t"           << Normals.size()       << std::endl;
   std::cout << "\tAverage Distance\t->\t"       << averageDistance      << std::endl;
   std::cout << "\tBoundng Box Side\t->\t"       << boundingBoxSide      << std::endl;
-  std::cout << "\tBoundary Point Num\t->\t"     << boundaryPointNum     << std::endl;
   std::cout                                                             << std::endl;
 }
 
@@ -321,9 +319,6 @@ double PointCloud::getAverageDistance() {
 }
 double PointCloud::getBoundingBoxSide() {
   return boundingBoxSide;
-}
-int PointCloud::getBoundaryPointNum() {
-  return boundaryPointNum;
 }
 pcl::octree::OctreePointCloudSearch<pcl::PointXYZ>* PointCloud::getOctree() {
   return &octree;

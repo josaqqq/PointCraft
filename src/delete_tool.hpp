@@ -7,8 +7,8 @@
 
 class DeleteTool: public SketchTool {
   public:
-    DeleteTool(int *currentMode, PointCloud *pointCloud)
-    : SketchTool(currentMode, pointCloud) {
+    DeleteTool(bool *enableSurfacePoints, int *currentMode, PointCloud *pointCloud)
+    : SketchTool(enableSurfacePoints, currentMode, pointCloud) {
       int* surfacePointNumPtr = getSurfacePointNumPtr();
       *surfacePointNumPtr = DeleteSurfacePointNum;
     }

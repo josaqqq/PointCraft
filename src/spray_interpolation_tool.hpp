@@ -13,8 +13,8 @@
 // In PBG (pp. 85-94).
 class SprayInterpolationTool : public SketchTool {
   public:
-    SprayInterpolationTool(int *currentMode, PointCloud *pointCloud)
-    : SketchTool(currentMode, pointCloud) {
+    SprayInterpolationTool(bool *enableSurfacePoints, int *currentMode, PointCloud *pointCloud)
+    : SketchTool(enableSurfacePoints, currentMode, pointCloud) {
       int* surfacePointNumPtr = getSurfacePointNumPtr();
       *surfacePointNumPtr = SpraySurfacePointNum;
     }

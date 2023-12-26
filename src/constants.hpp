@@ -22,7 +22,7 @@ const std::string NormalName = "normal vector";
 const glm::dvec3 NormalColor =  { 1.000, 1.000, 1.000 };
 const double NormalLength = 0.015;
 const double NormalRadius = 0.001;
-const bool NormalEnabled = true;
+const bool NormalEnabled = false;
 const std::string NormalMaterial = "flat";
 
 //

@@ -70,8 +70,7 @@ class PointCloud {
     std::vector<glm::dvec3> Normals;
     double averageDistance = 0.0;   // Average Distance between a point and the nearest neighbor
     double boundingBoxSide = 0.0;   // Side of bounding sphere of point cloud
-    int boundaryPointNum = -1;      // Number of the hole boundary points on the mesh reconstructed from the current point cloud.
-
+    
     // std::vector<glm::dvec3> as buffer
     //  There is a lag between when the added points are
     //  added to Vertices and Normals, and when they are

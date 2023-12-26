@@ -22,7 +22,6 @@ GuiManager guiManager;
 void callback() {
   guiManager.enableAdminToolWindow();   // Admin Tool Window
   guiManager.enableEditingToolWindow(); // Editing Tool Window
-  guiManager.enableLogWindow();         // Log Window
 }
 
 int main(int argc, char **argv) {
@@ -34,12 +33,9 @@ int main(int argc, char **argv) {
   args::HelpFlag help(parser, "help", "Display this help menu", {'h', "help"});
   args::Flag downsample(parser, "downsample", "execute downsampling during initialization", {"downsample"});  // --downsample
   args::Flag debugMode(parser, "debug_mode", "enable debug mode (display the left side panel)", {"debug"});   // --debug
-  args::Flag sketchMode(parser, "sketch_mode", "enable sketch interpolation tool", {"sketch"});               // --sketch
-  args::Flag sprayMode(parser, "spray_mode", "enable spray interpolation tool", {"spray"});                   // --spray
 
   // Positional arguments
   args::Positional<std::string> inFile(parser, "mesh", "input mesh position");
-  args::Positional<int> userID(parser, "userID", "userID position");
 
   // Parse args
   try {
@@ -82,48 +78,44 @@ int main(int argc, char **argv) {
   // Initialize polyscope
   polyscope::init();
 
-  // Initialize classes
+  // Declare varialbes to manage buttons
+  bool enableSurfacePoints;
   int currentMode;
   int currentSurfaceMode;
 
-  // Poin Cloud Class
+  // Point Cloud Class
   PointCloud pointCloud(args::get(inFile), downsample);
 
-  // Sketch Interpolation Tool Class
-  SketchInterpolationTool sketchInterpolationTool(&currentMode, &pointCloud);
-  SketchInterpolationTool* sketchInterpolationToolPtr = nullptr;
-  if (sketchMode) sketchInterpolationToolPtr = &sketchInterpolationTool;
-
-  // Spray Interpolation Tool Class
-  SprayInterpolationTool  sprayInterpolationtool(&currentMode, &pointCloud);
-  SprayInterpolationTool* sprayInterpolationToolPtr = nullptr;
-  if (sprayMode) sprayInterpolationToolPtr = &sprayInterpolationtool;
-
-  // Delete Tool Class
-  DeleteTool deleteTool(&currentMode, &pointCloud);
+  // Editing Tools
+  SketchInterpolationTool sketchInterpolationTool(&enableSurfacePoints, &currentMode, &pointCloud);
+  SprayInterpolationTool  sprayInterpolationTool(&enableSurfacePoints, &currentMode, &pointCloud);
+  DeleteTool deleteTool(&enableSurfacePoints, &currentMode, &pointCloud);
 
   guiManager = GuiManager(
+    // Input parameters
     args::get(inFile),
-    args::get(userID),
     debugMode,
 
+    // Button managers
+    &enableSurfacePoints,
     &currentMode, 
     &currentSurfaceMode, 
 
+    // Point cloud
     &pointCloud, 
-    
-    sketchInterpolationToolPtr,
-    sprayInterpolationToolPtr,
+
+    // Editing tools
+    &sketchInterpolationTool,
+    &sprayInterpolationTool,
     &deleteTool
   );
 
   // Render point cloud surface (pseudo surface and greedy surface)
   Surface pointCloudSurface(pointCloud.getVertices(), pointCloud.getNormals());
-  pointCloudSurface.renderPointCloudSurface(
-    GreedyProjName,
+  pointCloudSurface.showPseudoSurface(
     PseudoSurfaceName,
     pointCloud.getAverageDistance(),
-    false
+    true
   );
 
   // Add the callback

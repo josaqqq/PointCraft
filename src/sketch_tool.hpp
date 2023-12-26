@@ -10,8 +10,8 @@
 
 class SketchTool {
   public:
-    SketchTool(int *currentMode, PointCloud *pointCloud) 
-    : currentMode(currentMode), pointCloud(pointCloud) {}
+    SketchTool(bool *enableSurfacePoints, int *currentMode, PointCloud *pointCloud) 
+    : enableSurfacePoints(enableSurfacePoints), currentMode(currentMode), pointCloud(pointCloud) {}
     virtual ~SketchTool() {}
 
     /*
@@ -133,14 +133,15 @@ class SketchTool {
     glm::dvec3                getCameraOrig();
     glm::dvec3                getCameraDir();
     Plane*                    getScreen();
-    int *                     getSurfacePointNumPtr();
+    int*                      getSurfacePointNumPtr();
     std::set<int>*            getSurfacePointsIndex();
     std::vector<glm::dvec3>*  getSketchPoints();
     std::set<int>*            getBasisPointsIndex();
     std::vector<glm::dvec2>*  getMappedBasisConvexHull();
 
   private:
-    int *currentMode;         // Current selected mode
+    bool *enableSurfacePoints;  // Whether enable or disable surface points visualization
+    int *currentMode;           // Current selected mode
 
     PointCloud *pointCloud;   // Registered point cloud
 

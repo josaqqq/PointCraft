@@ -152,7 +152,7 @@ void SketchTool::registerSurfacePointsAsPointCloud(std::string name) {
   patchCloud->setPointColor(SurfacePointColor);
   patchCloud->setPointRadius(SurfacePointRadius);
   patchCloud->setMaterial(SurfaceMaterial);
-  patchCloud->setEnabled(true);
+  patchCloud->setEnabled(*enableSurfacePoints);
 }
 void SketchTool::registerSketchPointsAsPointCloud(std::string name) {
   // Show sketchPoints

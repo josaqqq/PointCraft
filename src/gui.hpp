@@ -22,9 +22,9 @@ enum VisualizationMode {
   MODE_SHOW
 };
 
-enum SurfaceMode {
-  SURFACE_MODE_PSEUDO,
-  SURFACE_MODE_GREEDY,
+enum RenderMode {
+  RENDER_MODE_POINT,
+  RENDER_MODE_PSEUDO,
 };
 
 struct GuiManager {
@@ -32,9 +32,9 @@ struct GuiManager {
     GuiManager() {}
     GuiManager(
       std::string inputFile,
-      int userID,
       bool debugMode,
 
+      bool *enableSurfacePoints,
       int *currentMode,
       int *currentSurfaceMode,
 
@@ -45,9 +45,9 @@ struct GuiManager {
       DeleteTool              *deleteTool
     ) 
     : inputFile(inputFile),
-      userID(userID),
       debugMode(debugMode),
 
+      enableSurfacePoints(enableSurfacePoints),
       currentMode(currentMode),
       currentSurfaceMode(currentSurfaceMode),
 
@@ -58,11 +58,9 @@ struct GuiManager {
       deleteTool(deleteTool)
     { 
       // Initialize current modes.
+      *enableSurfacePoints = false;
       *currentMode = MODE_NONE;
-      *currentSurfaceMode = SURFACE_MODE_PSEUDO;
-
-      // Initialize start_clock
-      start_clock = std::chrono::high_resolution_clock::now();
+      *currentSurfaceMode = RENDER_MODE_PSEUDO;
     }
 
     ~GuiManager() {}
@@ -70,15 +68,14 @@ struct GuiManager {
     // Window handlers
     void enableAdminToolWindow();   // Admin Tool Window
     void enableEditingToolWindow(); // Editing Tool Window
-    void enableLogWindow();         // Log Window
   
   private:
     // User Study Environment
     std::string inputFile;
-    int userID;
     bool debugMode;
 
     // Button Manager
+    bool *enableSurfacePoints;
     int *currentMode;
     int *currentSurfaceMode;
 
@@ -92,15 +89,10 @@ struct GuiManager {
 
     // Window Size
     int AdminToolWindowWidth = 300;
-    int AdminToolWindowHeight = 150;
+    int AdminToolWindowHeight = 300;
     int MarginAdminEditing = 50;
     int EditingToolWindowWidth = 300;
     int EditingToolWindowHeight = 400;
     int LogWindowWidth = 300;
     int LogWindowHeight = 100;
-
-    // Variables for User Study
-    std::chrono::high_resolution_clock::time_point start_clock; // Clock when the task was started
-    bool startedClock = false;   // When the 'Start Timer' button is clicked -> startedClock = true;
-    bool exportedLog = false;    // When exported log -> exportedLog = true;
 };

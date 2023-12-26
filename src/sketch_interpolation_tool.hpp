@@ -5,8 +5,8 @@
 
 class SketchInterpolationTool : public SketchTool {
   public:
-    SketchInterpolationTool(int *currentMode, PointCloud *pointCloud)
-    : SketchTool(currentMode, pointCloud) {
+    SketchInterpolationTool(bool *enableSurfacePoints, int *currentMode, PointCloud *pointCloud)
+    : SketchTool(enableSurfacePoints, currentMode, pointCloud) {
       int* surfacePointNumPtr = getSurfacePointNumPtr();
       *surfacePointNumPtr = SketchSurfacePointNum;
     }
