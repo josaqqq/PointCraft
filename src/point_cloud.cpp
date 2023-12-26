@@ -347,9 +347,9 @@ void PointCloud::scalePointCloud() {
   for (size_t i = 0; i < Vertices.size(); i++) {
     // The bounding box is centered at the origin,
     // so it is normalized by multiplying by 0.t
-    Vertices[i] *= (currentPointCloudBoundingBoxSide/2.0d) / boundingBoxSide;
+    Vertices[i] *= (PointCloudBoundingBoxSide/2.0d) / boundingBoxSide;
   }
-  boundingBoxSide = currentPointCloudBoundingBoxSide;
+  boundingBoxSide = PointCloudBoundingBoxSide;
 }
 
 // Filter Vertices by selecting the candidate
