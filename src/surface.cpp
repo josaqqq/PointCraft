@@ -28,7 +28,7 @@
 //  - name: The name of the registered surface
 //  - averageDistance: used to decide the resolution of Poisson Surface Reconstruction
 //  - enabled:  If true, enable the registered poisson surface
-std::pair<std::vector<glm::dvec3>, std::vector<std::vector<size_t>>> Surface::reconstructPoissonSurface(
+std::pair<std::vector<glm::dvec3>, std::vector<glm::dvec3>> Surface::reconstructPoissonSurface(
   std::string name,
   double averageDistance,
   bool enabled
@@ -103,6 +103,29 @@ std::pair<std::vector<glm::dvec3>, std::vector<std::vector<size_t>>> Surface::re
     }
   }
 
+  // Calculate the points' average normals
+  std::map<int, glm::dvec3> indexToNormalSum;
+  std::map<int, int>        indexToAdjacentCount;
+  // Normals of meshV
+  for (size_t i = 0; i < meshF.size(); i++) {
+    // Calculate the normal of the triangle
+    glm::dvec3 u = meshV[meshF[i][0]];
+    glm::dvec3 v = meshV[meshF[i][1]];
+    glm::dvec3 w = meshV[meshF[i][2]];
+
+    glm::dvec3 n = glm::normalize(glm::cross(v - u, w - u));
+    for (int j = 0; j < 3; j++) {
+      int vertexIdx = meshF[i][j];
+      indexToNormalSum[vertexIdx] += n;
+      indexToAdjacentCount[vertexIdx]++;
+    }
+  }
+
+  std::vector<glm::dvec3> meshN(meshV.size());
+  for (size_t i = 0; i < meshV.size(); i++) {
+    meshN[i] = indexToNormalSum[i]/(double)indexToAdjacentCount[i];
+  }
+
   // Register mesh
   polyscope::SurfaceMesh *poissonMesh = polyscope::registerSurfaceMesh(name, meshV, meshF);
   poissonMesh->setSurfaceColor(PoissonColor);
@@ -123,7 +146,7 @@ std::pair<std::vector<glm::dvec3>, std::vector<std::vector<size_t>>> Surface::re
   std::cout << "\tOutput Faces Size\t->\t"    << meshF.size()                 << std::endl;
   std::cout                                                                   << std::endl;
 
-  return { meshV, meshF };
+  return { meshV, meshN };
 }
 
 // Compute an approximate surface using Vertices and Normals.

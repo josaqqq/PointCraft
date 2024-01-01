@@ -1,7 +1,5 @@
 #pragma once
 
-#include <vector>
-
 #include "sketch_tool.hpp"
 #include "constants.hpp"
 

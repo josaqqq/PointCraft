@@ -20,9 +20,6 @@ void SprayInterpolationTool::launchToolOperation() {
 }
 
 void SprayInterpolationTool::draggingEvent() {
-  // Record start time
-  recordTimestamp(true);
-
   ImGuiIO &io = ImGui::GetIO();
   ImVec2 mousePos = ImGui::GetMousePos();
   double xPos = io.DisplayFramebufferScale.x * mousePos.x;
@@ -106,12 +103,6 @@ void SprayInterpolationTool::draggingEvent() {
 
 void SprayInterpolationTool::releasedEvent() {
   if (getSketchPoints()->size() == 0) return;
-
-  // Record 
-  //  - timestamps
-  //  - sketch length
-  recordTimestamp(false);
-  recordSketchLength();
 
   // Remove:
   //  - surface points

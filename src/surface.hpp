@@ -16,7 +16,7 @@ class Surface {
     //  - name: The name of the registered surface
     //  - averageDistance: used to decide the resolution of Poisson Surface Reconstruction
     //  - enabled:  If true, enable the registered poisson surface
-    std::pair<std::vector<glm::dvec3>, std::vector<std::vector<size_t>>> reconstructPoissonSurface(
+    std::pair<std::vector<glm::dvec3>, std::vector<glm::dvec3>> reconstructPoissonSurface(
       std::string name,
       double averageDistance,
       bool enabled

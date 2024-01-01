@@ -67,17 +67,23 @@ void GuiManager::enableEditingToolWindow() {
       ImGui::Text("Selected Tool: None");
       polyscope::view::moveScale = 1.0;
       break;
+    case MODE_SPRAY_INTERPOLATION:
+      ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(0, 255, 0, 255));
+      ImGui::Text("Selected Tool: Spray");
+      ImGui::PopStyleColor();
+      sprayInterpolationTool->launchToolOperation();
+      break;
     case MODE_SKETCH_INTERPOLATION:
       ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(0, 255, 0, 255));
       ImGui::Text("Selected Tool: Sketch");
       ImGui::PopStyleColor();
       sketchInterpolationTool->launchToolOperation();
       break;
-    case MODE_SPRAY_INTERPOLATION:
+    case MODE_FEATURE:
       ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(0, 255, 0, 255));
-      ImGui::Text("Selected Tool: Spray");
+      ImGui::Text("Selected Tool: Feature");
       ImGui::PopStyleColor();
-      sprayInterpolationTool->launchToolOperation();
+      featureTool->launchToolOperation();
       break;
     case MODE_DELETION:
       ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(0, 255, 0, 255));
@@ -95,6 +101,11 @@ void GuiManager::enableEditingToolWindow() {
   if (ImGui::Button("Sketch")) {
     *currentMode = MODE_SKETCH_INTERPOLATION;
     sketchInterpolationTool->initSketch();
+  }
+  ImGui::SameLine();
+  if (ImGui::Button("Feature")) {
+    *currentMode = MODE_FEATURE;
+    featureTool->initSketch();
   }
   ImGui::SameLine();
   if (ImGui::Button("Delete")) {

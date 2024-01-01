@@ -24,12 +24,6 @@ class SketchInterpolationTool : public SketchTool {
       std::vector<glm::dvec3> &newN
     );
 
-    // Calculate normals of the surface points
-    std::vector<glm::dvec3> calculateSurfaceNormals(
-      std::vector<glm::dvec3> &surfacePoints,
-      std::vector<std::vector<size_t>> &surfaceFaces
-    );
-
     // Filter the interpolated points with depth
     //  1. Cast interpolated points onto the screen plane.
     //  2. Construct octree for the casted interpolated points.

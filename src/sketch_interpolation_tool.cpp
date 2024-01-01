@@ -22,9 +22,6 @@ void SketchInterpolationTool::launchToolOperation() {
 }
 
 void SketchInterpolationTool::draggingEvent() {
-  // Record start time
-  recordTimestamp(true);
-
   ImGuiIO &io = ImGui::GetIO();
   ImVec2 mousePos = ImGui::GetMousePos();
   double xPos = io.DisplayFramebufferScale.x * mousePos.x;
@@ -48,12 +45,6 @@ void SketchInterpolationTool::draggingEvent() {
 
 void SketchInterpolationTool::releasedEvent() {
   if (getSketchPoints()->size() == 0) return;
-
-  // Record end time
-  //  - timestamps
-  //  - sketch length
-  recordTimestamp(false);
-  recordSketchLength();
 
   // Find basis points for the surface reconstruction.
   findBasisPoints();
@@ -81,10 +72,10 @@ void SketchInterpolationTool::releasedEvent() {
   }
 
   // Compute Poisson Surface Reconstruction
-  std::vector<glm::dvec3>           poissonPoints;
-  std::vector<std::vector<size_t>>  poissonFaces;
+  std::vector<glm::dvec3> poissonPoints;
+  std::vector<glm::dvec3> poissonNormals;
   Surface poissonSurface(&basisPoints, &basisNormals);
-  std::tie(poissonPoints, poissonFaces) = poissonSurface.reconstructPoissonSurface(
+  std::tie(poissonPoints, poissonNormals) = poissonSurface.reconstructPoissonSurface(
     "Poisson Interpolation",
     getPointCloud()->getAverageDistance(), 
     false
@@ -100,9 +91,6 @@ void SketchInterpolationTool::releasedEvent() {
     std::cout << "WARNING: No mesh was reconstructed with Poisson Surface Reconstruction." << std::endl;
     return;
   }
-
-  // Calculate the normals of the reconstructed surface.
-  std::vector<glm::dvec3> poissonNormals = calculateSurfaceNormals(poissonPoints, poissonFaces);
 
   // Filter the reconstructed surface with depth
   std::set<int> depthFilteredIndex = filterWithDepth(poissonPoints, poissonNormals);
@@ -160,40 +148,6 @@ void SketchInterpolationTool::renderInterpolatedPoints(
   interpolatedVectorQuantity->setVectorRadius(NormalRadius * 1.1);
   interpolatedVectorQuantity->setEnabled(NormalEnabled);
   interpolatedVectorQuantity->setMaterial(NormalMaterial);
-}
-
-// Calculate normals of the surface points
-std::vector<glm::dvec3> SketchInterpolationTool::calculateSurfaceNormals(
-  std::vector<glm::dvec3> &surfacePoints,
-  std::vector<std::vector<size_t>> &surfaceFaces
-) {
-  const int surfacePointsSize = surfacePoints.size();
-  const int surfaceFacesSize = surfaceFaces.size();
-
-  // Calculate the points' average normals
-  std::map<int, glm::dvec3> indexToNormalSum;
-  std::map<int, int>        indexToAdjacentCount;
-  // Normals of surfacePoints
-  for (int i = 0; i < surfaceFacesSize; i++) {
-    // Calculate the normal of the triangle
-    glm::dvec3 u = surfacePoints[surfaceFaces[i][0]];
-    glm::dvec3 v = surfacePoints[surfaceFaces[i][1]];
-    glm::dvec3 w = surfacePoints[surfaceFaces[i][2]];
-
-    glm::dvec3 n = glm::normalize(glm::cross(v - u, w - u));
-    for (int j = 0; j < 3; j++) {
-      int vertexIdx = surfaceFaces[i][j];
-      indexToNormalSum[vertexIdx] += n;
-      indexToAdjacentCount[vertexIdx]++;
-    }
-  }
-
-  std::vector<glm::dvec3> surfaceNormals(surfacePointsSize);
-  for (int i = 0; i < surfacePointsSize; i++) {
-    surfaceNormals[i] = indexToNormalSum[i]/(double)indexToAdjacentCount[i];
-  }
-
-  return surfaceNormals;
 }
 
 // Filter the interpolated points with depth

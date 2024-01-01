@@ -8,12 +8,14 @@
 #include "sketch_tool.hpp"
 #include "sketch_interpolation_tool.hpp"
 #include "spray_interpolation_tool.hpp"
+#include "feature_tool.hpp"
 #include "delete_tool.hpp"
 
 enum Mode {
   MODE_NONE,
   MODE_SKETCH_INTERPOLATION,
   MODE_SPRAY_INTERPOLATION,
+  MODE_FEATURE,
   MODE_DELETION,
 };
 
@@ -42,6 +44,7 @@ struct GuiManager {
       
       SketchInterpolationTool *sketchInterpolationTool,
       SprayInterpolationTool  *sprayInterpolationTool,
+      FeatureTool             *featureTool,
       DeleteTool              *deleteTool
     ) 
     : inputFile(inputFile),
@@ -55,6 +58,7 @@ struct GuiManager {
       
       sketchInterpolationTool(sketchInterpolationTool),
       sprayInterpolationTool(sprayInterpolationTool),
+      featureTool(featureTool),
       deleteTool(deleteTool)
     { 
       // Initialize current modes.
@@ -85,6 +89,7 @@ struct GuiManager {
     // Editing Tools
     SketchInterpolationTool*  sketchInterpolationTool;
     SprayInterpolationTool*   sprayInterpolationTool;
+    FeatureTool*              featureTool;
     DeleteTool*               deleteTool;
 
     // Window Size

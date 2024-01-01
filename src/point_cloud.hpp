@@ -15,12 +15,6 @@ class PointCloud {
     // Output current Vertices and Normals as .obj file
     void exportOBJFile(std::string logFileName);
 
-    // Output log to logFile
-    void exportLog(
-      std::chrono::high_resolution_clock::time_point start_clock,
-      std::string logFileName
-    );
-
     // Enable or Disable the point cloud and normals
     void setPointCloudEnabled(bool flag);
     void setPointCloudNormalEnabled(bool flag);
@@ -83,8 +77,6 @@ class PointCloud {
     // Undo/Redo stacks
     std::stack<std::pair<std::vector<glm::dvec3>, std::vector<glm::dvec3>>> prevEnvironments;
     std::stack<std::pair<std::vector<glm::dvec3>, std::vector<glm::dvec3>>> postEnvironments;
-    std::vector<std::chrono::high_resolution_clock::time_point> undoTimestamps; // Timestamps of each undo.
-    std::vector<std::chrono::high_resolution_clock::time_point> redoTimestamps; // Timestamps of each redo.
 
     pcl::PointCloud<pcl::PointXYZ>::Ptr inputCloud;
     pcl::octree::OctreePointCloudSearch<pcl::PointXYZ> octree;
