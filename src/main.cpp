@@ -90,6 +90,7 @@ int main(int argc, char **argv) {
   SketchInterpolationTool sketchInterpolationTool(&enableSurfacePoints, &currentMode, &pointCloud);
   SprayInterpolationTool  sprayInterpolationTool(&enableSurfacePoints, &currentMode, &pointCloud);
   FeatureTool featureTool(&enableSurfacePoints, &currentMode, &pointCloud);
+  ScratchTool scratchTool(&enableSurfacePoints, &currentMode, &pointCloud);
   DeleteTool deleteTool(&enableSurfacePoints, &currentMode, &pointCloud);
 
   guiManager = GuiManager(
@@ -109,6 +110,7 @@ int main(int argc, char **argv) {
     &sketchInterpolationTool,
     &sprayInterpolationTool,
     &featureTool,
+    &scratchTool,
     &deleteTool
   );
 

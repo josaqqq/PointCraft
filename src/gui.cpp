@@ -85,6 +85,12 @@ void GuiManager::enableEditingToolWindow() {
       ImGui::PopStyleColor();
       featureTool->launchToolOperation();
       break;
+    case MODE_SCRATCH:
+      ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(0, 255, 0, 255));
+      ImGui::Text("Selected Tool: Scratch");
+      ImGui::PopStyleColor();
+      scratchTool->launchToolOperation();
+      break;
     case MODE_DELETION:
       ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(0, 255, 0, 255));
       ImGui::Text("Selected Tool: Delete");
@@ -106,6 +112,11 @@ void GuiManager::enableEditingToolWindow() {
   if (ImGui::Button("Feature")) {
     *currentMode = MODE_FEATURE;
     featureTool->initSketch();
+  }
+  ImGui::SameLine();
+  if (ImGui::Button("Scratch")) {
+    *currentMode = MODE_SCRATCH;
+    scratchTool->initSketch();
   }
   ImGui::SameLine();
   if (ImGui::Button("Delete")) {

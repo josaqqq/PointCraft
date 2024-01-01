@@ -47,7 +47,7 @@ void SketchInterpolationTool::releasedEvent() {
   if (getSketchPoints()->size() == 0) return;
 
   // Find basis points for the surface reconstruction.
-  findBasisPoints();
+  findBasisPoints(true, CLUSTER_MAX_SIZE);
   if (getBasisPointsIndex()->size() == 0) {
     // Remove:
     //  - surface points

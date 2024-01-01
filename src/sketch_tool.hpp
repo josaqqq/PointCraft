@@ -6,6 +6,7 @@
 
 #include "ray.hpp"
 #include "plane.hpp"
+#include "cluster.hpp"
 #include "point_cloud.hpp"
 
 class SketchTool {
@@ -71,7 +72,13 @@ class SketchTool {
     //  - Search for a candidate point for each discretized grid.
     //    - Only points that their normals are directed to cameraOrig
     //  - Detect depth with DBSCAN
-    void findBasisPoints();
+    //
+    //  - addSurfacePoints: if true, add surfacePoints to basisPoints
+    //  - clusteringMode:   clustering mode for DBSCAN
+    void findBasisPoints(
+      bool addSurfacePoints, 
+      ClusteringMode clusteringMode
+    );
 
     // Find all basis points inside the sketch
     //  - Cast points of the point cloud onto the screen plane.

@@ -268,7 +268,13 @@ void SketchTool::addSketchPoint(glm::dvec3 p) {
 //  - Search for a candidate point for each discretized grid.
 //    - Only points that their normals are directed to cameraOrig
 //  - Detect depth with DBSCAN
-void SketchTool::findBasisPoints() {
+//
+//  - addSurfacePoints: if true, add surfacePoints to basisPoints
+//  - clusteringMode:   clustering mode for DBSCAN
+void SketchTool::findBasisPoints(
+  bool addSurfacePoints, 
+  ClusteringMode clusteringMode
+) {
   // Point cloud vertices and normals
   std::vector<glm::dvec3> *verticesPtr = pointCloud->getVertices();
   std::vector<glm::dvec3> *normalsPtr = pointCloud->getNormals();
@@ -314,8 +320,11 @@ void SketchTool::findBasisPoints() {
   const double      castedAverageDist = calcCastedAverageDist();
   std::set<int>     candidatePointsIndexSet;
   std::vector<glm::dvec3> hasCloserNeighborPoints;
-  for (int idx: surfacePointsIndex) {
-    candidatePointsIndexSet.insert(idx);
+  
+  if (addSurfacePoints) {
+    for (int idx: surfacePointsIndex) {
+      candidatePointsIndexSet.insert(idx);
+    }
   }
   for (double x = min_x; x < max_x; x += castedAverageDist) {
     for (double y = min_y; y < max_y; y += castedAverageDist) {
@@ -374,7 +383,7 @@ void SketchTool::findBasisPoints() {
   basisPointsIndex = clustering.executeClustering(
     DBSCAN_SearchRange*pointCloud->getAverageDistance(),
     DBSCAN_MinPoints,
-    CLUSTER_MAX_SIZE
+    clusteringMode
   );
 }
 
