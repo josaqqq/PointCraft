@@ -263,11 +263,10 @@ void SketchTool::addSketchPoint(glm::dvec3 p) {
 }
 
 // Find basis points.
-//  - Cast points of the point cloud onto the screen plane.
-//  - Construct octree for the casted surface points
-//  - Search for a candidate point for each discretized grid.
+//  1. Cast points of the point cloud onto the screen plane.
+//  2. Search for a candidate point for each discretized grid.
 //    - Only points that their normals are directed to cameraOrig
-//  - Detect depth with DBSCAN
+//  3. Detect depth with DBSCAN
 //
 //  - addSurfacePoints: if true, add surfacePoints to basisPoints
 //  - clusteringMode:   clustering mode for DBSCAN
@@ -278,10 +277,11 @@ void SketchTool::findBasisPoints(
   // Point cloud vertices and normals
   std::vector<glm::dvec3> *verticesPtr = pointCloud->getVertices();
   std::vector<glm::dvec3> *normalsPtr = pointCloud->getNormals();
+  const size_t pointsSize = verticesPtr->size();
 
   // Cast points of the point cloud onto the screen plane.
   std::vector<glm::dvec3> pointsMappedOntoScreen;
-  for (size_t i = 0; i < (*verticesPtr).size(); i++) {
+  for (size_t i = 0; i < pointsSize; i++) {
     glm::dvec3 p = (*verticesPtr)[i];
 
     // Cast a ray from p to cameraOrig onto screen.
@@ -290,93 +290,51 @@ void SketchTool::findBasisPoints(
     assert(hitInfo.hit == true);
     pointsMappedOntoScreen.push_back(screen.mapCoordinates(hitInfo.pos));
   }
-  const int castedPointSize = pointsMappedOntoScreen.size();
 
-  // Construct octree for the casted points
-  pcl::PointCloud<pcl::PointXYZ>::Ptr castedCloud(new pcl::PointCloud<pcl::PointXYZ>);
-  castedCloud->points.resize(castedPointSize);
-  for (int i = 0; i < castedPointSize; i++) {
-    castedCloud->points[i].x = pointsMappedOntoScreen[i].x;
-    castedCloud->points[i].y = pointsMappedOntoScreen[i].y;
-    castedCloud->points[i].z = pointsMappedOntoScreen[i].z;
-  }
-  pcl::octree::OctreePointCloudSearch<pcl::PointXYZ> octree(OctreeResolution);
-  octree.setInputCloud(castedCloud);
-  octree.addPointsFromInputCloud();
+  // Construct map from grid to the closest point's index
+  const double castedAverageDist = calcCastedAverageDist();
 
-  // Search for a candidate point for each discretized grid.
-  const double INF = 1e5;
-  double min_x = INF, max_x = -INF;
-  double min_y = INF, max_y = -INF;
-  for (size_t i = 0; i < sketchPoints.size(); i++) {
-    glm::dvec3 mappedSketchPoint = screen.mapCoordinates(sketchPoints[i]);
+  std::map<std::pair<int, int>, int> gridToClosestPointIndex;
+  for (size_t i = 0; i < pointsSize; i++) {
+    glm::dvec3 p = (*verticesPtr)[i];
+    glm::dvec3 mapped_p = pointsMappedOntoScreen[i];
 
-    min_x = std::min(min_x, mappedSketchPoint.x);
-    max_x = std::max(max_x, mappedSketchPoint.x);
-    min_y = std::min(min_y, mappedSketchPoint.y);
-    max_y = std::max(max_y, mappedSketchPoint.y);
+    // Compute the grid where mapped_p falls
+    int grid_x = std::floor(mapped_p.x/castedAverageDist);
+    int grid_y = std::floor(mapped_p.y/castedAverageDist);
+    std::pair<int, int> grid = {grid_x, grid_y};
+
+    if (gridToClosestPointIndex.count(grid)) {
+      int closestIndex = gridToClosestPointIndex[grid];
+      glm::dvec3 closest_p = (*verticesPtr)[closestIndex];
+      if (glm::length(p - cameraOrig) < glm::length(closest_p - cameraOrig)) {
+        gridToClosestPointIndex[grid] = i;
+      }
+    } else {
+      gridToClosestPointIndex[grid] = i;
+    }   
   }
 
-  const double      castedAverageDist = calcCastedAverageDist();
-  std::set<int>     candidatePointsIndexSet;
-  std::vector<glm::dvec3> hasCloserNeighborPoints;
-  
+  // Compute candidate points' index for each discretized grid.
+  std::set<int> candidatePointsIndexSet;
+
+  // If addSurfacePoints is true, add the surface points to candidate points
   if (addSurfacePoints) {
     for (int idx: surfacePointsIndex) {
       candidatePointsIndexSet.insert(idx);
     }
   }
-  for (double x = min_x; x < max_x; x += castedAverageDist) {
-    for (double y = min_y; y < max_y; y += castedAverageDist) {
-      if (!insideSketch(x, y)) continue;
+  for (auto i: gridToClosestPointIndex) {
+    int closestIndex = i.second;
+    glm::dvec3 p = (*verticesPtr)[closestIndex];
+    glm::dvec3 pn = (*normalsPtr)[closestIndex];
+    glm::dvec3 mapped_p = pointsMappedOntoScreen[closestIndex];
 
-      // Search for nearest neighbors with octree
-      std::vector<int>    hitPointIndices;
-      std::vector<float>  hitPointDistances;
-      int hitPointCount = octree.radiusSearch(
-        pcl::PointXYZ(x, y, 0.0),
-        castedAverageDist,
-        hitPointIndices,
-        hitPointDistances
-      );
+    if (!insideSketch(mapped_p.x, mapped_p.y)) continue;          // Inside or outside the sketch
+    if (glm::dot(pn, p - cameraOrig) >= 0.0) continue;            // Direction of normal vector
 
-      // Get the index of the min depth point
-      double minDepth = 1e5;
-      int minDepthIdx = -1;
-      for (int i = 0; i < hitPointCount; i++) {
-        int hitPointIdx = hitPointIndices[i];
-        glm::dvec3 p = (*verticesPtr)[hitPointIdx];
-        glm::dvec3 pn = (*normalsPtr)[hitPointIdx];
-
-        double curDepth = glm::length(p - cameraOrig);
-        if (curDepth < minDepth) {
-          minDepth = curDepth;
-          minDepthIdx = hitPointIdx;
-        }
-      }
-
-      // Update the buffer vectors
-      for (int i = 0; i < hitPointCount; i++) {
-        int hitPointIdx = hitPointIndices[i];
-        glm::dvec3 p = (*verticesPtr)[hitPointIdx];
-        glm::dvec3 pn = (*normalsPtr)[hitPointIdx];
-
-        // Discard points that their normals are not directed to cameraOrig.
-        if (glm::dot(pn, p - cameraOrig) >= 0.0) continue;
-
-        if (hitPointIdx == minDepthIdx) {
-          candidatePointsIndexSet.insert(hitPointIdx);
-        } else {
-          hasCloserNeighborPoints.push_back(p);
-        }
-      }
-    }
+    candidatePointsIndexSet.insert(closestIndex);
   }
-
-  // Register points that has closer nearest neighbors as point cloud.
-  polyscope::PointCloud* hasCloserNeighborCloud = polyscope::registerPointCloud("HasCloserNeighbor(basis)", hasCloserNeighborPoints);
-  hasCloserNeighborCloud->setPointRadius(BasisPointRadius);
-  hasCloserNeighborCloud->setEnabled(false);
 
   // Depth detection with DBSCAN
   Clustering clustering(&candidatePointsIndexSet, verticesPtr, "basis");
@@ -385,45 +343,9 @@ void SketchTool::findBasisPoints(
     DBSCAN_MinPoints,
     clusteringMode
   );
-}
 
-// Find all basis points inside the sketch
-//  - Cast points of the point cloud onto the screen plane.
-//  - Judge inside/outside of the sketch.
-//  - Detect depth with DBSCAN.
-void SketchTool::findAllBasisPoints() {
-  // Point cloud vertices
-  std::vector<glm::dvec3> *verticesPtr = pointCloud->getVertices();
-
-  // Cast points of the point cloud onto the screen plane.
-  std::vector<glm::dvec3> pointsMappedOntoScreen;
-  for (size_t i = 0; i < (*verticesPtr).size(); i++) {
-    glm::dvec3 p = (*verticesPtr)[i];
-
-    // Cast a ray from p to cameraOrig onto screen.
-    Ray ray(p, cameraOrig);
-    Ray::Hit hitInfo = ray.castPointToPlane(&screen);
-    assert(hitInfo.hit == true);
-    pointsMappedOntoScreen.push_back(screen.mapCoordinates(hitInfo.pos));
-  }
-  const int castedPointSize = pointsMappedOntoScreen.size();
-
-  // Judge inside/outside of the sketch
-  std::set<int> candidatePointsIndexSet;
-  for (int i = 0; i < castedPointSize; i++) {
-    glm::dvec3 mapped_p = pointsMappedOntoScreen[i];
-    if (!insideSketch(mapped_p.x, mapped_p.y)) continue;
-
-    candidatePointsIndexSet.insert(i);
-  }
-
-  // Depth detection with DBSCAN
-  Clustering clustering(&candidatePointsIndexSet, verticesPtr, "basis");
-  basisPointsIndex = clustering.executeClustering(
-    DBSCAN_SearchRange*pointCloud->getAverageDistance(),
-    DBSCAN_MinPoints,
-    CLUSTER_MIN_DEPTH
-  );
+  // Register basis points
+  registerBasisPointsAsPointCloud("Basis Points");
 }
 
 // Check whether (x, y) is inside or outside of the sketch.

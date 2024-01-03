@@ -67,11 +67,10 @@ class SketchTool {
     void addSketchPoint(glm::dvec3 p);
 
     // Find basis points.
-    //  - Cast points of the point cloud onto the screen plane.
-    //  - Construct octree for the casted surface points
-    //  - Search for a candidate point for each discretized grid.
+    //  1. Cast points of the point cloud onto the screen plane.
+    //  2. Search for a candidate point for each discretized grid.
     //    - Only points that their normals are directed to cameraOrig
-    //  - Detect depth with DBSCAN
+    //  3. Detect depth with DBSCAN
     //
     //  - addSurfacePoints: if true, add surfacePoints to basisPoints
     //  - clusteringMode:   clustering mode for DBSCAN
@@ -79,12 +78,6 @@ class SketchTool {
       bool addSurfacePoints, 
       ClusteringMode clusteringMode
     );
-
-    // Find all basis points inside the sketch
-    //  - Cast points of the point cloud onto the screen plane.
-    //  - Judge inside/outside of the sketch.
-    //  - Detect depth with DBSCAN.
-    void findAllBasisPoints();
 
     // Check whether (x, y) is inside or outside of the sketch.
     //  1.  Draw a half-line parallel to the x-axis from a point.

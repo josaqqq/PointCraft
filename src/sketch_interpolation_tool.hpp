@@ -26,10 +26,9 @@ class SketchInterpolationTool : public SketchTool {
 
     // Filter the interpolated points with depth
     //  1. Cast interpolated points onto the screen plane.
-    //  2. Construct octree for the casted interpolated points.
-    //  3. Search for a candidate point for each discretized grid.
+    //  2. Search for a candidate point for each discretized grid.
     //    - Only points that their normals are directed to cameraOrig.
-    //  4. Detect depth with DBSCAN
+    //  3. Detect depth with DBSCAN
     //
     //  - surfacePoints:  Positions of the interpolated surface points
     //  - surfaceNormals: Normals of the interpolated surface points

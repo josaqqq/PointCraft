@@ -90,11 +90,6 @@ void FeatureTool::releasedEvent() {
     return;
   }
 
-  // Register:
-  //  - basis points
-  //  - interpolated points
-  registerBasisPointsAsPointCloud("Basis Points");
-
   // Remove:
   //  - surface points
   //  - sketch
