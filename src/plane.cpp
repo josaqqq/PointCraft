@@ -3,15 +3,17 @@
 #include "plane.hpp"
 
 Plane::Plane(glm::dvec3 o, glm::dvec3 n) : o(o), n(n) {
-  // Initialize orthogonal basis by Gram-Schmidt process
+  const double eps = 0.01d;
   n /= glm::length(n);
-  glm::dvec3 e1 = glm::dvec3(1.0, 0.0, 0.0);
-  glm::dvec3 e2 = glm::dvec3(0.0, 1.0, 0.0);
 
-  // If the initial basis is parallel to the normal, then transform it.
-  const double eps = 0.1d;
-  if (std::abs(std::abs(glm::dot(e1, n)) - 1.0d) < eps) e1 = glm::dvec3(0.0, 0.0, 1.0);
-  if (std::abs(std::abs(glm::dot(e2, n)) - 1.0d) < eps) e2 = glm::dvec3(0.0, 0.0, 1.0);
+  // Initialize orthogonal basis by Gram-Schmidt process
+  glm:;dvec3 e1, e2;
+  e1 = glm::dvec3(1.0, 0.0, 0.0);
+  if (std::abs(std::abs(glm::dot(e1, n)) - 1.0d) < eps)  {
+    e1 = glm::dvec3(0.0, 1.0, 0.0);
+  }
+  e2 = glm::cross(n, e1);
+  e2 /= glm::length(e2);
 
   // Gram-Schmidt process
   u = e1 - glm::dot(e1, n)*n;
