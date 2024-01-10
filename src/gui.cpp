@@ -11,6 +11,12 @@
 
 // Admin Tool Window
 void GuiManager::enableAdminToolWindow() {
+  // Registered Objects
+  polyscope::SurfaceMesh  *pseudoSurfacePtr = polyscope::getSurfaceMesh(PseudoSurfaceName);
+  polyscope::PointCloud   *pointCloudPtr = polyscope::getPointCloud(PointName);
+  polyscope::SurfaceMesh  *reconstructedPtr = polyscope::getSurfaceMesh(GreedyProjName);
+
+  // Window Initialization
   const int WindowWidth = polyscope::view::windowWidth;
   ImGui::SetNextWindowPos(ImVec2(WindowWidth - AdminToolWindowWidth, 0));
   ImGui::SetNextWindowSize(ImVec2(AdminToolWindowWidth, AdminToolWindowHeight));
@@ -25,23 +31,34 @@ void GuiManager::enableAdminToolWindow() {
   // Enable Surface Visualization
   ImGui::Checkbox("Enable Surface Points", enableSurfacePoints);
 
+  // Visualize Holes on SurfaceMesh
+  ImGui::Checkbox("Visualize Holes", visualizeHoles);
+  pseudoSurfacePtr->getQuantity(PseudoSurfaceFaceColorName)->setEnabled(*visualizeHoles);
+  reconstructedPtr->getQuantity(GreedyProjFaceColorName)->setEnabled(*visualizeHoles);
+
   // Render Mode Selection
   ImGui::Text("\nRender Mode Selection:");
   ImGui::Text("   "); ImGui::SameLine();
   ImGui::RadioButton("Pseudo Surface", currentSurfaceMode, RENDER_MODE_PSEUDO);
   ImGui::Text("   "); ImGui::SameLine();
   ImGui::RadioButton("Point Cloud", currentSurfaceMode, RENDER_MODE_POINT);
-
-  polyscope::SurfaceMesh *pseudoSurfacePtr = polyscope::getSurfaceMesh(PseudoSurfaceName);
-  polyscope::PointCloud *pointCloudPtr = polyscope::getPointCloud(PointName);
+  ImGui::Text("   "); ImGui::SameLine();
+  ImGui::RadioButton("Reconstructed Surface", currentSurfaceMode, RENDER_MODE_SURFACE);
   switch (*currentSurfaceMode) {
     case RENDER_MODE_PSEUDO:
       pointCloudPtr->setEnabled(false);
       pseudoSurfacePtr->setEnabled(true);
+      reconstructedPtr->setEnabled(false);
       break;
     case RENDER_MODE_POINT:
       pointCloudPtr->setEnabled(true);
       pseudoSurfacePtr->setEnabled(false);
+      reconstructedPtr->setEnabled(false);
+      break;
+    case RENDER_MODE_SURFACE:
+      pointCloudPtr->setEnabled(false);
+      pseudoSurfacePtr->setEnabled(false);
+      reconstructedPtr->setEnabled(true);
       break;
   }
 

@@ -87,6 +87,7 @@ const glm::dvec3 MLSColor = { 0.000, 0.000, 1.000 };
 //
 // Greedy Projection
 const std::string GreedyProjName = "Greedy Projection Triangulation";
+const std::string GreedyProjFaceColorName = "Greedy Projection Face Color";
 
 const double GreedyProjSearchRadiusMult = 5.0;
 const double GreedyProjHoleDetectMult = 10.0;
@@ -110,6 +111,8 @@ const polyscope::BackFacePolicy GreedyProjBackFacePolicy = polyscope::BackFacePo
 //
 const std::string PseudoSurfaceName = "Pseudo Surface";
 const std::string TemporalPseudoSurfaceName = "Pseudo Surface (Temporal)";
+const std::string PseudoSurfaceFaceColorName = "Pseudo Surface Face Color";
+
 const glm::dvec3 PseudoSurfaceColor =  { 0.000, 0.196, 1.000 };
 const glm::dvec3 PseudoSurfaceBackFaceColor = { 1.000, 0.686, 0.000 };
 const glm::dvec3 PseudoSurfaceBoundaryColor = { 1.000, 0.039, 0.039 };

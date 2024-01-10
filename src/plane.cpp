@@ -7,7 +7,7 @@ Plane::Plane(glm::dvec3 o, glm::dvec3 n) : o(o), n(n) {
   n /= glm::length(n);
 
   // Initialize orthogonal basis by Gram-Schmidt process
-  glm:;dvec3 e1, e2;
+  glm::dvec3 e1, e2;
   e1 = glm::dvec3(1.0, 0.0, 0.0);
   if (std::abs(std::abs(glm::dot(e1, n)) - 1.0d) < eps)  {
     e1 = glm::dvec3(0.0, 1.0, 0.0);

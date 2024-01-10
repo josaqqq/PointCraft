@@ -146,10 +146,11 @@ void PointCloud::updatePointCloud(bool clearPostEnv) {
 
   // Render point cloud surface (pseudo surface and greedy surface)
   Surface pointCloudSurface(&Vertices, &Normals);
-  pointCloudSurface.showPseudoSurface(
+  pointCloudSurface.renderPointCloudSurface(
+    GreedyProjName,
     PseudoSurfaceName,
     averageDistance,
-    true
+    false
   );
 
   // Register Points
@@ -199,7 +200,7 @@ void PointCloud::addPoints(std::vector<glm::dvec3> &newV, std::vector<glm::dvec3
 
   // Render added points temporarily
   Surface pseudoSurfaceTemporal(&VerticesBuffer, &NormalsBuffer);
-  pseudoSurfaceTemporal.showPseudoSurface(
+  pseudoSurfaceTemporal.renderPseudoSurface(
     TemporalPseudoSurfaceName,
     averageDistance, 
     true

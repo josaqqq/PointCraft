@@ -80,6 +80,7 @@ int main(int argc, char **argv) {
 
   // Declare varialbes to manage buttons
   bool enableSurfacePoints;
+  bool visualizeHoles;
   int currentMode;
   int currentSurfaceMode;
 
@@ -100,6 +101,7 @@ int main(int argc, char **argv) {
 
     // Button managers
     &enableSurfacePoints,
+    &visualizeHoles,
     &currentMode, 
     &currentSurfaceMode, 
 
@@ -116,10 +118,11 @@ int main(int argc, char **argv) {
 
   // Render point cloud surface (pseudo surface and greedy surface)
   Surface pointCloudSurface(pointCloud.getVertices(), pointCloud.getNormals());
-  pointCloudSurface.showPseudoSurface(
+  pointCloudSurface.renderPointCloudSurface(
+    GreedyProjName,
     PseudoSurfaceName,
     pointCloud.getAverageDistance(),
-    true
+    false
   );
 
   // Add the callback

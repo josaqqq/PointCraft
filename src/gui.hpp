@@ -29,6 +29,7 @@ enum VisualizationMode {
 enum RenderMode {
   RENDER_MODE_POINT,
   RENDER_MODE_PSEUDO,
+  RENDER_MODE_SURFACE
 };
 
 struct GuiManager {
@@ -39,6 +40,7 @@ struct GuiManager {
       bool debugMode,
 
       bool *enableSurfacePoints,
+      bool *visualizeHoles,
       int *currentMode,
       int *currentSurfaceMode,
 
@@ -54,6 +56,7 @@ struct GuiManager {
       debugMode(debugMode),
 
       enableSurfacePoints(enableSurfacePoints),
+      visualizeHoles(visualizeHoles),
       currentMode(currentMode),
       currentSurfaceMode(currentSurfaceMode),
 
@@ -67,6 +70,7 @@ struct GuiManager {
     { 
       // Initialize current modes.
       *enableSurfacePoints = false;
+      *visualizeHoles = false;
       *currentMode = MODE_NONE;
       *currentSurfaceMode = RENDER_MODE_PSEUDO;
     }
@@ -84,6 +88,7 @@ struct GuiManager {
 
     // Button Manager
     bool *enableSurfacePoints;
+    bool *visualizeHoles;
     int *currentMode;
     int *currentSurfaceMode;
 
@@ -99,7 +104,7 @@ struct GuiManager {
 
     // Window Size
     int AdminToolWindowWidth = 400;
-    int AdminToolWindowHeight = 300;
+    int AdminToolWindowHeight = 400;
     int MarginAdminEditing = 50;
     int EditingToolWindowWidth = 400;
     int EditingToolWindowHeight = 400;
