@@ -45,7 +45,7 @@ const std::string SurfaceMaterial = "flat";
 const std::string SketchPointName = "Sketch Points";
 
 const glm::dvec3 SketchColor = { 0.000, 1.000, 0.000 };
-const double SketchRadius  = 0.00020;
+const double SketchRadius  = 0.00010;
 const std::string SketchMaterial = "flat";
 
 const glm::dvec3 BasisPointColor = { 0.000, 1.000, 0.000 };
@@ -125,5 +125,5 @@ const polyscope::BackFacePolicy PseudoSurfaceBackFacePolicy = polyscope::BackFac
 const double DBSCAN_SearchRange = 1.0;
 const int DBSCAN_MinPoints = 1;
 
-const std::string DBSCAN_Name = "DBSCAN Labeling: ";
+const std::string DBSCAN_Name = "DBSCAN Labeling";
 const bool DBSCAN_Enabled = false;

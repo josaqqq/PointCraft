@@ -31,14 +31,13 @@ class Clustering {
     std::vector<glm::dvec3> *points;
     std::string             name;
 
+    glm::dvec3 cameraDir;
+
     // Calculated three orthogonal bases with PCA
     std::vector<glm::dvec3> orthogonalBases;
 
     // Execute DBSCAN and return selected basis points's index
-    std::set<int> executeDBSCAN(double eps, size_t minPoints, int basisIndex);
+    std::set<int> executeDBSCAN(double eps, size_t minPoints);
 
-    void visualizeCluster(
-      int basisIndex,
-      std::vector<int> &labels
-    );
+    void visualizeCluster(std::vector<int> &labels);
 };

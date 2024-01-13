@@ -27,6 +27,7 @@ enum VisualizationMode {
 };
 
 enum RenderMode {
+  RENDER_MODE_NONE,
   RENDER_MODE_POINT,
   RENDER_MODE_PSEUDO,
   RENDER_MODE_SURFACE

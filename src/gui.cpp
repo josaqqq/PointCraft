@@ -39,12 +39,19 @@ void GuiManager::enableAdminToolWindow() {
   // Render Mode Selection
   ImGui::Text("\nRender Mode Selection:");
   ImGui::Text("   "); ImGui::SameLine();
+  ImGui::RadioButton("None", currentSurfaceMode, RENDER_MODE_NONE);
+  ImGui::Text("   "); ImGui::SameLine();
   ImGui::RadioButton("Pseudo Surface", currentSurfaceMode, RENDER_MODE_PSEUDO);
   ImGui::Text("   "); ImGui::SameLine();
   ImGui::RadioButton("Point Cloud", currentSurfaceMode, RENDER_MODE_POINT);
   ImGui::Text("   "); ImGui::SameLine();
   ImGui::RadioButton("Reconstructed Surface", currentSurfaceMode, RENDER_MODE_SURFACE);
   switch (*currentSurfaceMode) {
+    case RENDER_MODE_NONE:
+      pointCloudPtr->setEnabled(false);
+      pseudoSurfacePtr->setEnabled(false);
+      reconstructedPtr->setEnabled(false);
+      break;
     case RENDER_MODE_PSEUDO:
       pointCloudPtr->setEnabled(false);
       pseudoSurfacePtr->setEnabled(true);

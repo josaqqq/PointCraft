@@ -20,40 +20,28 @@ std::set<int> Clustering::executeClustering(double eps, size_t minPoints, Cluste
   // Set ClusteringMode
   clusteringMode = mode;
 
-  // Add camera direction
-  glm::dvec3 cameraDir = polyscope::view::screenCoordsToWorldRay(
+  // Set camera direction
+  cameraDir = polyscope::view::screenCoordsToWorldRay(
     glm::vec2(polyscope::view::windowWidth/2, polyscope::view::windowHeight/2)
   );
-  orthogonalBases.push_back(cameraDir);
 
-  // orthogonalBases must be directed to the camera direction
-  for (size_t i = 0; i < orthogonalBases.size(); i++) {
-    if (glm::dot(cameraDir, orthogonalBases[i]) < 0.0) {
-      orthogonalBases[i] *= -1.0;
-    }
-  }
-
-  // Execute DBSCAN for each basis
-  std::set<int> selectedCluster;
-  for (size_t i = 0; i < orthogonalBases.size(); i++) {
-    selectedCluster = executeDBSCAN(eps, minPoints, i);
-  }
-
-  return selectedCluster;
+  // Execute DBSCAN and return hit indices
+  return executeDBSCAN(eps, minPoints);
 }
 
 // Execute DBSCAN and return selected basis points
 // implemented referencing https://en.wikipedia.org/wiki/DBSCAN
-std::set<int> Clustering::executeDBSCAN(double eps, size_t minPoints, int basisIndex) {
-  // Initialize points information
-  int pointSize = pointsIndex->size();
+std::set<int> Clustering::executeDBSCAN(double eps, size_t minPoints) {
+  const int pointSize = pointsIndex->size();
 
+  // Compute the depth of each point
   std::vector<double> depths;
   for (int idx: *pointsIndex) {
     glm::dvec3 p = (*points)[idx];
-    depths.push_back(glm::dot(orthogonalBases[basisIndex], p));
+    depths.push_back(glm::dot(cameraDir, p));
   }
 
+  // Execute DBSCAN
   std::vector<int> labels(pointSize, -1);
   int label = 0;
   for (int i = 0; i < pointSize; i++) {
@@ -105,6 +93,7 @@ std::set<int> Clustering::executeDBSCAN(double eps, size_t minPoints, int basisI
     }
   }
 
+  // Aggregate DBSCAN result
   std::map<int, int> labelToCount;
   std::map<int, double> labelToDepth;
   for (int i = 0; i < pointSize; i++) {
@@ -112,7 +101,7 @@ std::set<int> Clustering::executeDBSCAN(double eps, size_t minPoints, int basisI
     labelToDepth[labels[i]] += depths[i];
   }
 
-
+  // Determine the label to be selected
   int selectedLabel = -1;
   int maxSize = 0;
   double minDepth = 1e5;
@@ -137,7 +126,7 @@ std::set<int> Clustering::executeDBSCAN(double eps, size_t minPoints, int basisI
       break;
   }
 
-
+  // Compute return value
   std::set<int> basisPointsIndex;
   auto labelsItr = labels.begin();
   auto pointsIndexItr = pointsIndex->begin();
@@ -151,19 +140,16 @@ std::set<int> Clustering::executeDBSCAN(double eps, size_t minPoints, int basisI
   }
 
   // Visualize the depth of points with labels.
-  visualizeCluster(basisIndex, labels);
+  visualizeCluster(labels);
 
   return basisPointsIndex;
 }
 
-void Clustering::visualizeCluster(
-  int basisIndex,
-  std::vector<int> &labels
-) {
+void Clustering::visualizeCluster(std::vector<int> &labels) {
   // Remove previous point cloud.
   polyscope::removePointCloud(DBSCAN_Name);
 
-  // Define label map
+  // Compute mapping from label to index and color
   std::map<int, std::vector<int>> labelToIndices;
   std::map<int, glm::dvec3>       labelToColors;
 
@@ -186,31 +172,36 @@ void Clustering::visualizeCluster(
   }
 
   // Register point and color information
-  std::vector<glm::dvec3> labelPoints;
-  std::vector<glm::dvec3> labelColors;
+  std::vector<glm::dvec3> labeledPoints;
+  std::vector<glm::dvec3> castedPoints;
+  std::vector<glm::dvec3> labeledColor;
   for (auto i: labelToIndices) {
     int label = i.first;
 
     for (int idx: i.second) {
       // point and point casted on camera line.
       glm::dvec3 p = (*points)[idx];
-      glm::dvec3 basis = orthogonalBases[basisIndex];
-      glm::dvec3 casted_p = glm::dot(basis, p)*basis;
+      glm::dvec3 casted_p = glm::dot(cameraDir, p)*cameraDir;
 
-      labelPoints.push_back(p);
-      labelPoints.push_back(casted_p);
+      labeledPoints.push_back(p);
+      castedPoints.push_back(casted_p);
 
       glm::dvec3 col = labelToColors[label];
-      labelColors.push_back(col);
-      labelColors.push_back(col);
+      labeledColor.push_back(col);
     }
   }
 
-  // Register point cloud
-  polyscope::PointCloud* depthCloud = polyscope::registerPointCloud(DBSCAN_Name + " : " + name, labelPoints);
-  depthCloud->setPointRadius(PointRadius);
-  depthCloud->setEnabled(DBSCAN_Enabled);
-  
-  polyscope::PointCloudColorQuantity* depthColor = depthCloud->addColorQuantity("label color", labelColors);
-  depthColor->setEnabled(true);
+  // Register labeled points in 3D coordinate
+  polyscope::PointCloud* labeldCloud = polyscope::registerPointCloud(DBSCAN_Name+":"+name+":labeled points", labeledPoints);
+  labeldCloud->setPointRadius(PointRadius);
+  labeldCloud->setEnabled(DBSCAN_Enabled);
+  polyscope::PointCloudColorQuantity* labeledColorPtr = labeldCloud->addColorQuantity("label color", labeledColor);
+  labeledColorPtr->setEnabled(true);
+
+  // Register casted points onto the camera ray
+  polyscope::PointCloud* castedCloud = polyscope::registerPointCloud(DBSCAN_Name+":"+name+":casted points", castedPoints);
+  castedCloud->setPointRadius(PointRadius);
+  castedCloud->setEnabled(DBSCAN_Enabled);
+  polyscope::PointCloudColorQuantity* castedColorPtr = castedCloud->addColorQuantity("label color", labeledColor);
+  castedColorPtr->setEnabled(true);
 }
