@@ -28,12 +28,12 @@ void DeleteTool::draggingEvent() {
 
   // Update surfacePointsIndex
   updateSurfacePoints(xPos, yPos, *getSurfacePointNumPtr());
-  removePointCloud(SurfacePointName);
-  registerSurfacePointsAsPointCloud(SurfacePointName);
+  disablePointCloud(SurfacePointName);
+  registerSurfacePoints(SurfacePointName);
 
   // Register:
   //  - sketch
-  registerSketchPointsAsCurveNetworkLine(SketchPrefix);
+  registerSketch(SketchPrefix);
 }
 
 void DeleteTool::releasedEvent() {
@@ -42,11 +42,11 @@ void DeleteTool::releasedEvent() {
   // Find basis points for the surface reconstruction.
   findBasisPoints(false, CLUSTER_MIN_DEPTH);
   if (getBasisPointsIndex()->size() == 0) {
-    // Remove:
+    // Disable:
     //  - surface points
     //  - sketch
-    removePointCloud(SurfacePointName);
-    removeCurveNetworkLine(SketchPrefix);
+    disablePointCloud(SurfacePointName);
+    disableSketch(SketchPrefix);
     // Reset all member variables.
     resetSketch();
     std::cout << "WARNING: No basis point was found." << std::endl;
@@ -104,11 +104,11 @@ void DeleteTool::releasedEvent() {
   getPointCloud()->deletePoints(deletedPointsIndex);
   getPointCloud()->updatePointCloud(true);
 
-  // Remove:
+  // Disable:
   //  - surface points
   //  - sketch
-  removePointCloud(SurfacePointName);
-  removeCurveNetworkLine(SketchPrefix);
+  disablePointCloud(SurfacePointName);
+  disableSketch(SketchPrefix);
 
   // Reset all member variables
   resetSketch();

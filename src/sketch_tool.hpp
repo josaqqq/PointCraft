@@ -30,25 +30,18 @@ class SketchTool {
     /*
       Viewer functions
     */
-    // Register/Remove point cloud with name.
+    // Register/Disable point cloud with name.
     // Be aware that the point cloud with 
     // the same name is overwritten.
-    void registerSurfacePointsAsPointCloud(std::string name);
-    void registerSketchPointsAsPointCloud(std::string name);
-    void registerBasisPointsAsPointCloud(std::string name);
-    void removePointCloud(std::string name);
+    void registerSurfacePoints(std::string name);
+    void registerBasisPoints(std::string name);
+    void disablePointCloud(std::string name);
 
-    // Register/Remove curve network line with name.
-    // Be aware that the curve network with 
+    // Register/Disable sketch with name.
+    // Be aware that the sketch with 
     // the same name is overwritten
-    void registerSketchPointsAsCurveNetworkLine(std::string name);
-    void removeCurveNetworkLine(std::string name);
-
-    // Register/Remove curve network loop with name.
-    // Be aware that the curve network with 
-    // the same name is overwritten
-    void registerSketchPointsAsCurveNetworkLoop(std::string name);
-    void removeCurveNetworkLoop(std::string name);
+    void registerSketch(std::string name);
+    void disableSketch(std::string name);
 
     // Display voxels for each specified point.
     void displayVoxels(std::vector<glm::dvec3> &points);

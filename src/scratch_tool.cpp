@@ -27,8 +27,8 @@ void ScratchTool::draggingEvent() {
 
   // Update surfacePointsIndex
   updateSurfacePoints(xPos, yPos, *getSurfacePointNumPtr());
-  removePointCloud(SurfacePointName);
-  registerSurfacePointsAsPointCloud(SurfacePointName);
+  disablePointCloud(SurfacePointName);
+  registerSurfacePoints(SurfacePointName);
 }
 
 void ScratchTool::releasedEvent() {
@@ -42,9 +42,9 @@ void ScratchTool::releasedEvent() {
   getPointCloud()->deletePoints(*getSurfacePointsIndex());
   getPointCloud()->updatePointCloud(true);
 
-  // Remove:
+  // Disable:
   //  - surface points
-  removePointCloud(SurfacePointName);
+  disablePointCloud(SurfacePointName);
 
   // Reset all member variables
   resetSketch();

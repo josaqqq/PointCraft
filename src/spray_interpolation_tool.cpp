@@ -34,8 +34,8 @@ void SprayInterpolationTool::draggingEvent() {
   // Update surfacePointsIndex
   resetSurfacePointsIndex();
   updateSurfacePoints(xPos, yPos, *getSurfacePointNumPtr());
-  removePointCloud(SurfacePointName);
-  registerSurfacePointsAsPointCloud(SurfacePointName);
+  disablePointCloud(SurfacePointName);
+  registerSurfacePoints(SurfacePointName);
 
   // Fetch actual points' positions from the point cloud
   // If no point was selected, then return.
@@ -104,9 +104,9 @@ void SprayInterpolationTool::draggingEvent() {
 void SprayInterpolationTool::releasedEvent() {
   if (getSketchPoints()->size() == 0) return;
 
-  // Remove:
+  // Disable:
   //  - surface points
-  removePointCloud(SurfacePointName);
+  disablePointCloud(SurfacePointName);
   
   // Update point cloud
   //    - update environments

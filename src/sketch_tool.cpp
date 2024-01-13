@@ -51,7 +51,10 @@ void SketchTool::resetSketch() {
 /*
   Viewer functions
 */
-void SketchTool::registerSurfacePointsAsPointCloud(std::string name) {
+// Register/Disable point cloud with name.
+// Be aware that the point cloud with 
+// the same name is overwritten.
+void SketchTool::registerSurfacePoints(std::string name) {
   // Show surfacePoints
   std::vector<glm::dvec3> points;
 
@@ -60,20 +63,13 @@ void SketchTool::registerSurfacePointsAsPointCloud(std::string name) {
     points.push_back((*verticesPtr)[idx]);
   }
 
-  polyscope::PointCloud* patchCloud = polyscope::registerPointCloud(name, points);
+  polyscope::PointCloud* patchCloud = polyscope::registerPointCloud("Sketch::" + name, points);
   patchCloud->setPointColor(SurfacePointColor);
   patchCloud->setPointRadius(SurfacePointRadius);
   patchCloud->setMaterial(SurfaceMaterial);
   patchCloud->setEnabled(*enableSurfacePoints);
 }
-void SketchTool::registerSketchPointsAsPointCloud(std::string name) {
-  // Show sketchPoints
-  polyscope::PointCloud* patchCloud = polyscope::registerPointCloud(name, sketchPoints);
-  patchCloud->setPointColor(BasisPointColor);
-  patchCloud->setPointRadius(BasisPointRadius);
-  patchCloud->setEnabled(false);
-}
-void SketchTool::registerBasisPointsAsPointCloud(std::string name) {
+void SketchTool::registerBasisPoints(std::string name) {
   // Show basisPoints
   std::vector<glm::dvec3> points;
   std::vector<glm::dvec3> normals;
@@ -85,7 +81,7 @@ void SketchTool::registerBasisPointsAsPointCloud(std::string name) {
     normals.push_back((*normalsPtr)[idx]);
   }
 
-  polyscope::PointCloud* patchCloud = polyscope::registerPointCloud(name, points);
+  polyscope::PointCloud* patchCloud = polyscope::registerPointCloud("Sketch::" + name, points);
   patchCloud->setPointColor(BasisPointColor);
   patchCloud->setPointRadius(pointCloud->getAverageDistance()/2.0);
   patchCloud->setEnabled(false);
@@ -97,38 +93,50 @@ void SketchTool::registerBasisPointsAsPointCloud(std::string name) {
   patchVectorQuantity->setEnabled(NormalEnabled);
   patchVectorQuantity->setMaterial(NormalMaterial);
 }
-void SketchTool::removePointCloud(std::string name) {
-  polyscope::removePointCloud(name, false);
+void SketchTool::disablePointCloud(std::string name) {
+  std::string pointCloudName = "Sketch::" + name;
+
+  if (!polyscope::hasPointCloud(pointCloudName)) return;
+  polyscope::PointCloud *pointCloudPtr = polyscope::getPointCloud(pointCloudName);
+  pointCloudPtr->setEnabled(false);
 }
 
-// Register/Remove curve network line with name.
-// Be aware that the curve network with 
+// Register/Disable sketch with name.
+// Be aware that the sketch with 
 // the same name is overwritten
-void SketchTool::registerSketchPointsAsCurveNetworkLine(std::string name) {
+void SketchTool::registerSketch(std::string name) {
+  std::string sketchPointName = name + "::PointCloud";
+  std::string sketchCurveNetworkName = name + "::CurveNetwork";
+
+  // Show sketchPoints
+  polyscope::PointCloud* sketchCloud = polyscope::registerPointCloud(sketchPointName, sketchPoints);
+  sketchCloud->setPointColor(SketchColor);
+  sketchCloud->setPointRadius(SketchRadius);
+  sketchCloud->setMaterial(SketchMaterial);
+  sketchCloud->setEnabled(false);
+
+  // Show sketch curve network
   std::vector<glm::dvec3> sketch = sketchPoints;
   if (sketchPoints.size() == 1) {
     sketch.push_back(sketchPoints[0]);
   };
+  polyscope::CurveNetwork* sketchCurve = polyscope::registerCurveNetworkLine(sketchCurveNetworkName, sketch);
+  sketchCurve->setColor(SketchColor);
+  sketchCurve->setRadius(SketchRadius);  
+  sketchCurve->setMaterial(SketchMaterial);
+  sketchCurve->setEnabled(true);
+}
+void SketchTool::disableSketch(std::string name) {
+  std::string sketchPointName = name + "::PointCloud";
+  std::string sketchCurveNetworkName = name + "::CurveNetwork";
 
-  polyscope::CurveNetwork* curveNetwork = polyscope::registerCurveNetworkLine(name, sketch);
-  curveNetwork->setColor(SketchColor);
-  curveNetwork->setRadius(SketchRadius);  
-  curveNetwork->setMaterial(SketchMaterial);
-}
-void SketchTool::removeCurveNetworkLine(std::string name) {
-  polyscope::removeCurveNetwork(name, false);
-}
+  if (!polyscope::hasPointCloud(sketchPointName)) return; 
+  polyscope::PointCloud *pointCloudPtr = polyscope::getPointCloud(sketchPointName);
+  pointCloudPtr->setEnabled(false);
 
-// Register/Remove curve network loop with name.
-// Be aware that the curve network with 
-// the same name is overwritten
-void SketchTool::registerSketchPointsAsCurveNetworkLoop(std::string name) {
-  polyscope::CurveNetwork* curveNetwork = polyscope::registerCurveNetworkLoop(name, sketchPoints);
-  curveNetwork->setColor(SketchColor);
-  curveNetwork->setRadius(SketchRadius);
-}
-void SketchTool::removeCurveNetworkLoop(std::string name) {
-  polyscope::removeCurveNetwork(name, false);
+  if (!polyscope::hasCurveNetwork(sketchCurveNetworkName)) return;
+  polyscope::CurveNetwork *curveNetworkPtr = polyscope::getCurveNetwork(sketchCurveNetworkName);
+  curveNetworkPtr->setEnabled(false);
 }
 
 // Display voxels for each specified point.
@@ -345,7 +353,100 @@ void SketchTool::findBasisPoints(
   );
 
   // Register basis points
-  registerBasisPointsAsPointCloud("Basis Points");
+  registerBasisPoints("Basis");
+
+  ////////////////////////////////////////////////////
+  //// Debug Visualization Part
+  ////
+
+  // auto renderPoints = [&](
+  //   std::vector<glm::dvec3> points,
+  //   std::string name,
+  //   glm::dvec3 color
+  // ) {
+  //   polyscope::PointCloud* renderedCloud = polyscope::registerPointCloud("Sketch::" + name, points);
+  //   renderedCloud->setPointColor(color);
+  //   renderedCloud->setPointRadius(SketchRadius);
+  //   renderedCloud->setEnabled(false);
+  // };
+  // auto renderCurveNetwork = [&](
+  //   std::vector<glm::dvec3> nodes,
+  //   std::vector<std::array<size_t, 2>> edges,
+  //   std::string name,
+  //   glm::dvec3 color
+  // ) {
+  //   polyscope::CurveNetwork* renderedCurve = polyscope::registerCurveNetwork("Sketch::" + name, nodes, edges);
+  //   renderedCurve->setColor(color);
+  //   renderedCurve->setRadius(SketchRadius / 2.0);
+  //   renderedCurve->setEnabled(false);
+  // };
+  
+  // // Render casted points
+  // std::vector<glm::dvec3> castedPoints;
+  // for (size_t i = 0; i < pointsSize; i++) {
+  //   glm::dvec3 mapped_p = pointsMappedOntoScreen[i];
+  //   glm::dvec3 casted_p = screen.unmapCoordinates(mapped_p);
+  //   castedPoints.push_back(casted_p);
+  // }
+  // renderPoints(castedPoints, "Casted", glm::dvec3(1.0, 1.0, 1.0));
+
+  // // Render discretization process
+  // std::vector<glm::dvec3> discretizedPoints;
+  // for (auto i: gridToClosestPointIndex) {
+  //   std::pair<int, int> grid = i.first;
+  //   int closestIndex = i.second;
+
+  //   glm::dvec3 p = (*verticesPtr)[closestIndex];
+  //   glm::dvec3 pn = (*normalsPtr)[closestIndex];
+  //   glm::dvec3 mapped_p = pointsMappedOntoScreen[closestIndex];
+  //   glm::dvec3 casted_p = screen.unmapCoordinates(mapped_p);
+
+  //   discretizedPoints.push_back(casted_p);
+  // }
+  // renderPoints(discretizedPoints, "Discretized", glm::dvec3(1.0, 1.0, 1.0));
+
+  // std::vector<glm::dvec3> discretizedNodes;
+  // std::vector<std::array<size_t, 2>> discretizedEdges;
+  // for (auto i: gridToClosestPointIndex) {
+  //   std::pair<int, int> grid = i.first;
+
+  //   int currentNodesSize = discretizedNodes.size();
+  //   double dx[4] = {0.0, 1.0, 1.0, 0.0};
+  //   double dy[4] = {0.0, 0.0, 1.0, 1.0};
+  //   for (size_t i = 0; i < 4; i++) {
+  //     glm::dvec3 grid_p = glm::dvec3(
+  //       grid.first*castedAverageDist + castedAverageDist*dx[i],
+  //       grid.second*castedAverageDist + castedAverageDist*dy[i],
+  //       0.0
+  //     );
+  //     discretizedNodes.push_back(screen.unmapCoordinates(grid_p));
+  //   }
+  //   for (size_t i = 0; i < 4; i++) {
+  //     std::array<size_t, 2> edge = {currentNodesSize + i, currentNodesSize + (i + 1)%4};
+  //     discretizedEdges.push_back(edge);
+  //   }
+  // }
+  // renderCurveNetwork(discretizedNodes, discretizedEdges, "Grid", glm::dvec3(1.0, 0.0, 0.0));
+
+  // // Render only points inside sketch
+  // std::vector<glm::dvec3> pointsInsideSketch;
+  // for (auto i: gridToClosestPointIndex) {
+  //   std::pair<int, int> grid = i.first;
+  //   int closestIndex = i.second;
+
+  //   glm::dvec3 p = (*verticesPtr)[closestIndex];
+  //   glm::dvec3 pn = (*normalsPtr)[closestIndex];
+  //   glm::dvec3 mapped_p = pointsMappedOntoScreen[closestIndex];
+  //   glm::dvec3 casted_p = screen.unmapCoordinates(mapped_p);
+
+  //   if (!insideSketch(mapped_p.x, mapped_p.y)) continue;          // Inside or outside the sketch
+  //   if (glm::dot(pn, p - cameraOrig) >= 0.0) continue;            // Direction of normal vector
+
+  //   pointsInsideSketch.push_back(casted_p);
+  // }
+  // renderPoints(pointsInsideSketch, "InsideSketch", glm::dvec3(1.0, 1.0, 1.0));
+
+  ////////////////////////////////////////////////////
 }
 
 // Check whether (x, y) is inside or outside of the sketch.

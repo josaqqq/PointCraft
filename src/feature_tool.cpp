@@ -28,12 +28,12 @@ void FeatureTool::draggingEvent() {
 
   // Update surfacePointsIndex
   updateSurfacePoints(xPos, yPos, *getSurfacePointNumPtr());
-  removePointCloud(SurfacePointName);
-  registerSurfacePointsAsPointCloud(SurfacePointName);
+  disablePointCloud(SurfacePointName);
+  registerSurfacePoints(SurfacePointName);
 
   // Register:
   //  - sketch
-  registerSketchPointsAsCurveNetworkLine(SketchPrefix);
+  registerSketch(SketchPrefix);
 }
 
 void FeatureTool::releasedEvent() {
@@ -42,11 +42,11 @@ void FeatureTool::releasedEvent() {
   // Find basis points for the surface reconstruction.
   findBasisPoints(true, CLUSTER_MAX_SIZE);
   if (getBasisPointsIndex()->size() == 0) {
-    // Remove:
+    // Disable:
     //  - surface points
     //  - sketch
-    removePointCloud(SurfacePointName);
-    removeCurveNetworkLine(SketchPrefix);
+    disablePointCloud(SurfacePointName);
+    disableSketch(SketchPrefix);
     // Reset all member variables.
     resetSketch();
     std::cout << "WARNING: No basis point was found." << std::endl;
@@ -79,22 +79,22 @@ void FeatureTool::releasedEvent() {
     true
   );
   if (poissonPoints.size() == 0) {
-    // Remove:
+    // Disable:
     //  - surface points
     //  - sketch
-    removePointCloud(SurfacePointName);
-    removeCurveNetworkLine(SketchPrefix);
+    disablePointCloud(SurfacePointName);
+    disableSketch(SketchPrefix);
     // Reset all member variables.
     resetSketch();
     std::cout << "WARNING: No mesh was reconstructed with Poisson Surface Reconstruction." << std::endl;
     return;
   }
 
-  // Remove:
+  // Disable:
   //  - surface points
   //  - sketch
-  removePointCloud(SurfacePointName);
-  removeCurveNetworkLine(SketchPrefix);
+  disablePointCloud(SurfacePointName);
+  disableSketch(SketchPrefix);
 
   // Reset all member variables.
   resetSketch();

@@ -35,12 +35,12 @@ void SketchInterpolationTool::draggingEvent() {
 
   // Update surfacePointsIndex
   updateSurfacePoints(xPos, yPos, *getSurfacePointNumPtr());
-  removePointCloud(SurfacePointName);
-  registerSurfacePointsAsPointCloud(SurfacePointName);
+  disablePointCloud(SurfacePointName);
+  registerSurfacePoints(SurfacePointName);
 
   // Register:
   //  - sketch
-  registerSketchPointsAsCurveNetworkLine(SketchPrefix);
+  registerSketch(SketchPrefix);
 }
 
 void SketchInterpolationTool::releasedEvent() {
@@ -49,11 +49,11 @@ void SketchInterpolationTool::releasedEvent() {
   // Find basis points for the surface reconstruction.
   findBasisPoints(true, CLUSTER_MAX_SIZE);
   if (getBasisPointsIndex()->size() == 0) {
-    // Remove:
+    // Disable:
     //  - surface points
     //  - sketch
-    removePointCloud(SurfacePointName);
-    removeCurveNetworkLine(SketchPrefix);
+    disablePointCloud(SurfacePointName);
+    disableSketch(SketchPrefix);
     // Reset all member variables.
     resetSketch();
     std::cout << "WARNING: No basis point was found." << std::endl;
@@ -81,11 +81,11 @@ void SketchInterpolationTool::releasedEvent() {
     false
   );
   if (poissonPoints.size() == 0) {
-    // Remove:
+    // Disable:
     //  - surface points
     //  - sketch
-    removePointCloud(SurfacePointName);
-    removeCurveNetworkLine(SketchPrefix);
+    disablePointCloud(SurfacePointName);
+    disableSketch(SketchPrefix);
     // Reset all member variables.
     resetSketch();
     std::cout << "WARNING: No mesh was reconstructed with Poisson Surface Reconstruction." << std::endl;
@@ -112,11 +112,11 @@ void SketchInterpolationTool::releasedEvent() {
   //  - interpolated points
   renderInterpolatedPoints(voxelFilteredPoints, voxelFilteredNormals);
 
-  // Remove:
+  // Disable:
   //  - surface points
   //  - sketch
-  removePointCloud(SurfacePointName);
-  removeCurveNetworkLine(SketchPrefix);
+  disablePointCloud(SurfacePointName);
+  disableSketch(SketchPrefix);
   
   // 1. Add the interpolated points
   // 2. Update point cloud
@@ -135,7 +135,7 @@ void SketchInterpolationTool::renderInterpolatedPoints(
   std::vector<glm::dvec3> &newV,
   std::vector<glm::dvec3> &newN
 ) {
-  polyscope::PointCloud* interpolatedCloud = polyscope::registerPointCloud("Interpolated Points", newV);
+  polyscope::PointCloud* interpolatedCloud = polyscope::registerPointCloud("Interpolation::Interpolated", newV);
   interpolatedCloud->setPointColor(glm::dvec3(1.0, 0.0, 0.0));
   interpolatedCloud->setPointRadius(BasisPointRadius);
   interpolatedCloud->setEnabled(false);

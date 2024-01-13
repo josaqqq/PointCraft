@@ -33,7 +33,7 @@ const double OctreeResolution = 0.010;  // The length of the smallest voxels at 
 //
 // Surface points
 //
-const std::string SurfacePointName = "Surface Points";
+const std::string SurfacePointName = "Surface";
 
 const glm::dvec3 SurfacePointColor = { 0.000, 1.000, 0.000 };
 const double SurfacePointRadius = 0.0025;
@@ -42,8 +42,6 @@ const std::string SurfaceMaterial = "flat";
 //
 // Sketch
 //
-const std::string SketchPointName = "Sketch Points";
-
 const glm::dvec3 SketchColor = { 0.000, 1.000, 0.000 };
 const double SketchRadius  = 0.00010;
 const std::string SketchMaterial = "flat";
@@ -53,7 +51,7 @@ const double BasisPointRadius = 0.0025;
 const double BasisNormalLength = 0.05;
 const double BasisNormalRadius = 0.003;
 
-const std::string SketchPrefix = "Sketch: ";
+const std::string SketchPrefix = "Sketch";
 
 //
 // Tools
@@ -125,5 +123,5 @@ const polyscope::BackFacePolicy PseudoSurfaceBackFacePolicy = polyscope::BackFac
 const double DBSCAN_SearchRange = 1.0;
 const int DBSCAN_MinPoints = 1;
 
-const std::string DBSCAN_Name = "DBSCAN Labeling";
+const std::string DBSCAN_Name = "DBSCAN";
 const bool DBSCAN_Enabled = false;
