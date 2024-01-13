@@ -192,14 +192,14 @@ void Clustering::visualizeCluster(std::vector<int> &labels) {
   }
 
   // Register labeled points in 3D coordinate
-  polyscope::PointCloud* labeldCloud = polyscope::registerPointCloud(DBSCAN_Name+":"+name+":labeled points", labeledPoints);
+  polyscope::PointCloud* labeldCloud = polyscope::registerPointCloud(DBSCAN_Name+"::"+name+"::labeled points", labeledPoints);
   labeldCloud->setPointRadius(PointRadius);
   labeldCloud->setEnabled(DBSCAN_Enabled);
   polyscope::PointCloudColorQuantity* labeledColorPtr = labeldCloud->addColorQuantity("label color", labeledColor);
   labeledColorPtr->setEnabled(true);
 
   // Register casted points onto the camera ray
-  polyscope::PointCloud* castedCloud = polyscope::registerPointCloud(DBSCAN_Name+":"+name+":casted points", castedPoints);
+  polyscope::PointCloud* castedCloud = polyscope::registerPointCloud(DBSCAN_Name+"::"+name+"::casted points", castedPoints);
   castedCloud->setPointRadius(PointRadius);
   castedCloud->setEnabled(DBSCAN_Enabled);
   polyscope::PointCloudColorQuantity* castedColorPtr = castedCloud->addColorQuantity("label color", labeledColor);
