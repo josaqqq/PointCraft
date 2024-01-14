@@ -142,7 +142,10 @@ void PointCloud::updatePointCloud(bool clearPostEnv) {
   // Clear the buffer data and remove temporal pseudo surface
   VerticesBuffer.clear();
   NormalsBuffer.clear();
-  polyscope::removeSurfaceMesh(TemporalPseudoSurfaceName);
+  if (polyscope::hasSurfaceMesh(TemporalPseudoSurfaceName)) {
+    polyscope::SurfaceMesh *temporalPseudoSurface = polyscope::getSurfaceMesh(TemporalPseudoSurfaceName);
+    temporalPseudoSurface->setEnabled(false);
+  }
 
   // Render point cloud surface (pseudo surface and greedy surface)
   Surface pointCloudSurface(&Vertices, &Normals);

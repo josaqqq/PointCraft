@@ -756,6 +756,30 @@ void SketchTool::calcBasisConvexHull() {
     pointStack.pop();
   }
   std::reverse(mappedBasisConvexHull.begin(), mappedBasisConvexHull.end());
+
+
+  ////////////////////////////////////////////////////
+  //// Debug Visualization Part
+  ////
+  // auto renderCurveNetworkLoop = [&](
+  //   std::vector<glm::dvec3> nodes,
+  //   std::string name,
+  //   glm::dvec3 color
+  // ) {
+  //   polyscope::CurveNetwork* renderedCurve = polyscope::registerCurveNetworkLoop("Sketch::" + name, nodes);
+  //   renderedCurve->setColor(color);
+  //   renderedCurve->setRadius(SketchRadius / 2.0);
+  //   renderedCurve->setEnabled(false);
+  // };
+
+  // std::vector<glm::dvec3> unmappedBasisConvexHull;
+  // for (glm::dvec2 mapped_p: mappedBasisConvexHull) {
+  //   glm::dvec3 p = screen.unmapCoordinates(glm::dvec3(mapped_p.x, mapped_p.y, 0.0));
+  //   unmappedBasisConvexHull.push_back(p);
+  // }
+  // renderCurveNetworkLoop(unmappedBasisConvexHull, "BasisConvexHull", glm::dvec3(1.0, 0.0, 0.0));
+
+  ////////////////////////////////////////////////////
 }
 
 // Return whether half-line from (x, y) crosses u-v.
