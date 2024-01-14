@@ -104,9 +104,15 @@ void SprayInterpolationTool::draggingEvent() {
 void SprayInterpolationTool::releasedEvent() {
   if (getSketchPoints()->size() == 0) return;
 
+  // Register:
+  //  - sketch
+  registerSketch(SketchPrefix);
+
   // Disable:
   //  - surface points
+  //  - sketch
   disablePointCloud(SurfacePointName);
+  disableSketch(SketchPrefix);
   
   // Update point cloud
   //    - update environments
