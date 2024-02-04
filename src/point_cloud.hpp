@@ -35,13 +35,17 @@ class PointCloud {
     void executeUndo();
     void executeRedo();
 
-    // Return the pointer to member variables
+    // Get values of member variables
+    bool getPointCloudUpdated();
     std::vector<glm::dvec3>* getVertices();
     std::vector<glm::dvec3>* getNormals();
     double getAverageDistance();
     double getBoundingBoxSide();
     int getBoundaryPointNum();
     pcl::octree::OctreePointCloudSearch<pcl::PointXYZ>* getOctree();
+
+    // Set values to member variables
+    void setPointCloudUpdated(bool newval);
 
   private:
     // Move points to set the gravity point to (0.0, 0.0, 0.0),
@@ -71,6 +75,7 @@ class PointCloud {
     //  actually rendered. VerticesBuffer and NormalsBuffer
     //  are used to hold data until the added points are 
     //  actually rendered.
+    bool pointCloudUpdated = false;
     std::vector<glm::dvec3> VerticesBuffer;
     std::vector<glm::dvec3> NormalsBuffer;
 

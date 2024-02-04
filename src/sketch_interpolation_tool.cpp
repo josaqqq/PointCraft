@@ -77,7 +77,6 @@ void SketchInterpolationTool::releasedEvent() {
   Surface poissonSurface(&basisPoints, &basisNormals);
   std::tie(poissonPoints, poissonNormals) = poissonSurface.reconstructPoissonSurface(
     "Poisson Interpolation",
-    getPointCloud()->getAverageDistance(), 
     false
   );
   if (poissonPoints.size() == 0) {

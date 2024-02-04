@@ -130,6 +130,7 @@ void PointCloud::setPointCloudNormalEnabled(bool flag) {
 //    - render points and normals
 void PointCloud::updatePointCloud(bool clearPostEnv) {
   // Push new environment
+  setPointCloudUpdated(true);
   prevEnvironments.push({ Vertices, Normals });
   if (clearPostEnv) postEnvironments = std::stack<std::pair<std::vector<glm::dvec3>, std::vector<glm::dvec3>>>();
 
@@ -153,7 +154,8 @@ void PointCloud::updatePointCloud(bool clearPostEnv) {
     GreedyProjName,
     PseudoSurfaceName,
     averageDistance,
-    false
+    false,
+    true
   );
 
   // Register Points
@@ -271,7 +273,10 @@ void PointCloud::executeRedo() {
   updatePointCloud(false);
 }
 
-// Return the pointer to member variables
+// Get values of member variables
+bool PointCloud::getPointCloudUpdated() {
+  return pointCloudUpdated;
+}
 std::vector<glm::dvec3>* PointCloud::getVertices() {
   return &Vertices;
 }
@@ -286,6 +291,11 @@ double PointCloud::getBoundingBoxSide() {
 }
 pcl::octree::OctreePointCloudSearch<pcl::PointXYZ>* PointCloud::getOctree() {
   return &octree;
+}
+
+// Set values to member variables
+void PointCloud::setPointCloudUpdated(bool newval) {
+  pointCloudUpdated = newval;
 }
 
 // Move points to set the gravity point to (0.0, 0.0, 0.0),

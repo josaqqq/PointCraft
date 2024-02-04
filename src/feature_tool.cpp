@@ -75,7 +75,6 @@ void FeatureTool::releasedEvent() {
   Surface poissonSurface(&basisPoints, &basisNormals);
   std::tie(poissonPoints, poissonNormals) = poissonSurface.reconstructPoissonSurface(
     poissonName,
-    getPointCloud()->getAverageDistance(), 
     true
   );
   if (poissonPoints.size() == 0) {

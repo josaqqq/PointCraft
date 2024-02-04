@@ -122,6 +122,13 @@ int main(int argc, char **argv) {
     GreedyProjName,
     PseudoSurfaceName,
     pointCloud.getAverageDistance(),
+    false,
+    true
+  );
+
+  Surface poissonSurface(pointCloud.getVertices(), pointCloud.getNormals());
+  poissonSurface.reconstructPoissonSurface(
+    PoissonSurfaceName,
     false
   );
 

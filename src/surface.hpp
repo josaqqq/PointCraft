@@ -18,7 +18,6 @@ class Surface {
     //  - enabled:  If true, enable the registered poisson surface
     std::pair<std::vector<glm::dvec3>, std::vector<glm::dvec3>> reconstructPoissonSurface(
       std::string name,
-      double averageDistance,
       bool enabled
     );
 
@@ -45,12 +44,14 @@ class Surface {
     //  - averageDistance:  
     //      For greedy surface, used to determine the search radius
     //      For pseudo surface, the radius of the shown hexagons
-    //  - enabled: If true, enable the registered greedy surface and pseudo surface
+    //  - greedyEnabled: If true, enable the registered greedy surface
+    //  - pseudoEnabled: If true, enable the registered pseudo surface
     int renderPointCloudSurface(
       std::string greedyName,
       std::string pseudoName,
       double averageDistance, 
-      bool enabled
+      bool greedyEnabled,
+      bool pseudoEnabled
     );
 
     // Compute Greedy Projection and then render the reconstructed mesh.

@@ -15,6 +15,7 @@ void GuiManager::enableAdminToolWindow() {
   polyscope::SurfaceMesh  *pseudoSurfacePtr = polyscope::getSurfaceMesh(PseudoSurfaceName);
   polyscope::PointCloud   *pointCloudPtr = polyscope::getPointCloud(PointName);
   polyscope::SurfaceMesh  *reconstructedPtr = polyscope::getSurfaceMesh(GreedyProjName);
+  polyscope::SurfaceMesh  *poissonSurfacePtr = polyscope::getSurfaceMesh(PoissonSurfaceName);
 
   // Window Initialization
   const int WindowWidth = polyscope::view::windowWidth;
@@ -46,26 +47,48 @@ void GuiManager::enableAdminToolWindow() {
   ImGui::RadioButton("Point Cloud", currentSurfaceMode, RENDER_MODE_POINT);
   ImGui::Text("   "); ImGui::SameLine();
   ImGui::RadioButton("Reconstructed Surface", currentSurfaceMode, RENDER_MODE_SURFACE);
+  ImGui::Text("   "); ImGui::SameLine();
+  ImGui::RadioButton("Poisson Surface", currentSurfaceMode, RENDER_MODE_POISSON);
   switch (*currentSurfaceMode) {
     case RENDER_MODE_NONE:
       pointCloudPtr->setEnabled(false);
       pseudoSurfacePtr->setEnabled(false);
       reconstructedPtr->setEnabled(false);
+      poissonSurfacePtr->setEnabled(false);
       break;
     case RENDER_MODE_PSEUDO:
       pointCloudPtr->setEnabled(false);
       pseudoSurfacePtr->setEnabled(true);
       reconstructedPtr->setEnabled(false);
+      poissonSurfacePtr->setEnabled(false);
       break;
     case RENDER_MODE_POINT:
       pointCloudPtr->setEnabled(true);
       pseudoSurfacePtr->setEnabled(false);
       reconstructedPtr->setEnabled(false);
+      poissonSurfacePtr->setEnabled(false);
       break;
     case RENDER_MODE_SURFACE:
       pointCloudPtr->setEnabled(false);
       pseudoSurfacePtr->setEnabled(false);
       reconstructedPtr->setEnabled(true);
+      poissonSurfacePtr->setEnabled(false);
+      break;
+    case RENDER_MODE_POISSON:
+      if (pointCloud->getPointCloudUpdated()) {
+        pointCloud->setPointCloudUpdated(false);
+
+        Surface poissonSurface(pointCloud->getVertices(), pointCloud->getNormals());
+        poissonSurface.reconstructPoissonSurface(
+          PoissonSurfaceName,
+          true
+        );
+        poissonSurfacePtr = polyscope::getSurfaceMesh(PoissonSurfaceName);
+      }
+      pointCloudPtr->setEnabled(false);
+      pseudoSurfacePtr->setEnabled(false);
+      reconstructedPtr->setEnabled(false);
+      poissonSurfacePtr->setEnabled(true);
       break;
   }
 

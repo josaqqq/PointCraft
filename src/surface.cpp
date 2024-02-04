@@ -30,7 +30,6 @@
 //  - enabled:  If true, enable the registered poisson surface
 std::pair<std::vector<glm::dvec3>, std::vector<glm::dvec3>> Surface::reconstructPoissonSurface(
   std::string name,
-  double averageDistance,
   bool enabled
 ) {
   // Init point cloud
@@ -46,34 +45,9 @@ std::pair<std::vector<glm::dvec3>, std::vector<glm::dvec3>> Surface::reconstruct
     inputCloud->points[i].normal_z = (*Normals)[i].z;
   }
 
-  // Calculate bounding box size
-  const double INF = 1e5;
-  double min_x = INF, max_x = -INF;
-  double min_y = INF, max_y = -INF;
-  double min_z = INF, max_z = -INF;
-  for (size_t i = 0; i < Vertices->size(); i++) {
-    min_x = std::min(min_x, (*Vertices)[i].x);
-    max_x = std::max(max_x, (*Vertices)[i].x);
-    min_y = std::min(min_y, (*Vertices)[i].y);
-    max_y = std::max(max_y, (*Vertices)[i].y);
-    min_z = std::min(min_z, (*Vertices)[i].z);
-    max_z = std::max(max_z, (*Vertices)[i].z);
-  }
-  // Grid the bounding box with voxels ((averageDistance/2.0)^3)
-  double voxelEdge = averageDistance / 2.0;
-  int voxelNum = ((max_x - min_x)*(max_y - min_y)*(max_z - min_z))/(voxelEdge*voxelEdge*voxelEdge);
-
-  int maxDepth = PoissonMaxDepth;
-  for (int i = 0; i <= PoissonMaxDepth; i++) {
-    if (voxelNum <= pow(2, i*3)) {
-      maxDepth = i;
-      break;
-    }
-  }
-
   // Initialize poisson surface reconstruction
   pcl::Poisson<pcl::PointNormal> poisson;
-  poisson.setDepth(maxDepth);
+  poisson.setDepth(PoissonMaxDepth);
   poisson.setInputCloud(inputCloud);
 
   // Reconstruct surface
@@ -136,8 +110,6 @@ std::pair<std::vector<glm::dvec3>, std::vector<glm::dvec3>> Surface::reconstruct
 
   // Output results
   std::cout << "\nFinished Poisson Surface Reconstruction!"                   << std::endl;
-  std::cout << "\tVoxel num\t->\t"            << voxelNum                     << std::endl;
-  std::cout << "\tMax Depth\t->\t"            << maxDepth                     << std::endl;
   std::cout << "\tVertex num\t->\t"           << meshVertices->points.size()  << std::endl;
   std::cout << "\tFace num\t->\t"             << mesh.polygons.size()         << std::endl;
   std::cout << "\tInput Vertices Size\t->\t"  << Vertices->size()             << std::endl;
@@ -267,17 +239,19 @@ std::pair<std::vector<glm::dvec3>, std::vector<glm::dvec3>> Surface::projectMLSS
 //  - averageDistance:  
 //      For greedy surface, used to determine the search radius
 //      For pseudo surface, the radius of the shown hexagons
-//  - enabled: If true, enable the registered pseudo surface
+//  - greedyEnabled: If true, enable the registered greedy surface
+//  - pseudoEnabled: If true, enable the registered pseudo surface
 int Surface::renderPointCloudSurface(
   std::string greedyName,
   std::string pseudoName,
   double averageDistance, 
-  bool enabled
+  bool greedyEnabled,
+  bool pseudoEnabled
 ) {
   // Greedy Surface
-  std::set<int> boundaryVerticesIdx = renderGreedySurface(greedyName, averageDistance, enabled);
+  std::set<int> boundaryVerticesIdx = renderGreedySurface(greedyName, averageDistance, greedyEnabled);
   // Pseudo Surface
-  renderPseudoSurface(pseudoName, averageDistance, enabled, boundaryVerticesIdx);
+  renderPseudoSurface(pseudoName, averageDistance, pseudoEnabled, boundaryVerticesIdx);
 
   return boundaryVerticesIdx.size();
 }

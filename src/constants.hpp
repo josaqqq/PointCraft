@@ -64,7 +64,9 @@ const int FeatureSurfacePointNum = 5;
 //
 // Poisson Surface Reconstruction
 //
-const int PoissonMaxDepth = 6;
+const std::string PoissonSurfaceName = "Poisson Surface";
+
+const int PoissonMaxDepth = 8;
 const int PoissonThreadNum = 4;
 
 const std::string PoissonName = "Poisson Surface Reconstruction";
