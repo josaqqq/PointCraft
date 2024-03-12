@@ -1,6 +1,7 @@
 # PointCraft
-{: align="center"}
+<div align="center">
 <img width="421" alt="image" src="https://github.com/sakajo6/PointCraft/assets/68010363/e44dc25e-1f69-44ac-84b3-2732bbc83735">
+</div>
 
 This project is a newly proposed user interface for point cloud editing. As the above picture shows, users can edit a point cloud via a sketch-based interface. Users can add new points and erase unnecessary points. 
 
