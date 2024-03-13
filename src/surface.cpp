@@ -377,7 +377,7 @@ void Surface::renderPseudoSurface(
   std::vector<glm::dvec3> meshFC(N*6, PseudoSurfaceColor); // Mesh Face Colors
 
   // Calculate rotation matrix
-  double angleInDegrees = 60.0d;
+  double angleInDegrees = 60.0;
   double angleInRadians = glm::radians(angleInDegrees);
   glm::dmat4 rot = glm::rotate(angleInRadians, glm::dvec3(0.0, 0.0, 1.0));
 

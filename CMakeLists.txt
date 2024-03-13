@@ -62,9 +62,6 @@ else()
   message( FATAL_ERROR "Unrecognized compiler [${CMAKE_CXX_COMPILER_ID}]" )
 endif()
 
-# Find Eigen
-find_package(Eigen3 3.3 REQUIRED NO_MODULE)
-
 # Find PCL
 find_package(PCL 1.10 REQUIRED)
 

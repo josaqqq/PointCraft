@@ -301,7 +301,7 @@ void PointCloud::setPointCloudUpdated(bool newval) {
 // Move points to set the gravity point to (0.0, 0.0, 0.0),
 // and then scale the point cloud so that the bounding box side is 1.0
 void PointCloud::scalePointCloud() {
-  glm::dvec3 center;
+  glm::dvec3 center(0.0);
 
   // Move points to set the gravity point to (0.0, 0.0, 0.0),
   for (size_t i = 0; i < Vertices.size(); i++) {
@@ -321,7 +321,7 @@ void PointCloud::scalePointCloud() {
   for (size_t i = 0; i < Vertices.size(); i++) {
     // The bounding box is centered at the origin,
     // so it is normalized by multiplying by 0.t
-    Vertices[i] *= (PointCloudBoundingBoxSide/2.0d) / boundingBoxSide;
+    Vertices[i] *= (PointCloudBoundingBoxSide/2.0) / boundingBoxSide;
   }
   boundingBoxSide = PointCloudBoundingBoxSide;
 }
@@ -360,7 +360,7 @@ std::set<int> PointCloud::downsampling(double voxelSide) {
       (double)std::get<1>(idx)*voxelSide,
       (double)std::get<2>(idx)*voxelSide
     );
-    glm::dvec3 voxelCenter = voxelBasis + 0.5d*glm::dvec3(voxelSide, voxelSide, voxelSide);
+    glm::dvec3 voxelCenter = voxelBasis + 0.5*glm::dvec3(voxelSide, voxelSide, voxelSide);
     double currentDist = glm::length(p - voxelCenter);
     if (currentDist < currentCandidateDist) {
       voxels[idx] = { currentDist, i };

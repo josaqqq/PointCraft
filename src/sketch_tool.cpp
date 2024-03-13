@@ -543,7 +543,7 @@ std::set<int> SketchTool::filterWithVoxel(std::vector<glm::dvec3> &filteredPoint
       (double)std::get<1>(idx)*voxelSide,
       (double)std::get<2>(idx)*voxelSide
     );
-    glm::dvec3 voxelCenter = voxelBasis + 0.5d*glm::dvec3(voxelSide, voxelSide, voxelSide);
+    glm::dvec3 voxelCenter = voxelBasis + 0.5*glm::dvec3(voxelSide, voxelSide, voxelSide);
     double currentDist = glm::length(p - voxelCenter);
     if (currentDist < currentCandidateDist) {
       voxels[idx] = { currentDist, i };
@@ -788,11 +788,11 @@ bool SketchTool::crossLines(double x, double y, glm::dvec2 u, glm::dvec2 v) {
 
   // If u, v are too close to (x, y), then offset. 
   if (std::abs(u.y - y) < EPS) {
-    if (u.y - y >= 0.0d)  u.y += EPS;
+    if (u.y - y >= 0.0)  u.y += EPS;
     else u.y -= EPS;
   }
   if (std::abs(v.y - y) < EPS) {
-    if (v.y - y >= 0.0d)  v.y += EPS;
+    if (v.y - y >= 0.0)  v.y += EPS;
     else v.y -= EPS;
   }
 
@@ -800,7 +800,7 @@ bool SketchTool::crossLines(double x, double y, glm::dvec2 u, glm::dvec2 v) {
   if (std::abs(u.y - y) < EPS && std::abs(v.y - y) < EPS) return false;
 
   // If u, v are in the same side of the half-line, then skip it.
-  if ((u.y - y)*(v.y - y) >= 0.0d) return false;
+  if ((u.y - y)*(v.y - y) >= 0.0) return false;
 
   // If (u, v) doesn't intersect the half-line, then skip it.
   double crossX = u.x + (v.x - u.x)*std::abs(y - u.y)/std::abs(v.y - u.y);
