@@ -1,87 +1,128 @@
-#include <iostream>
-#include <string>
+#include <imgui.h>
+#include <imgui_impl_glfw.h>
+#include <imgui_impl_opengl3.h>
 
 #include "ray.hpp"
-#include "plane.hpp"
-#include "constants.hpp"
 
-// Ray from { xScreen, yScreen }
-Ray::Ray(double xScreen, double yScreen) {
-  cameraOrig  = polyscope::view::getCameraWorldPosition();
-  rayDir      = polyscope::view::screenCoordsToWorldRay(glm::vec2(xScreen, yScreen));
-  cameraDir   = polyscope::view::screenCoordsToWorldRay(glm::vec2(polyscope::view::windowWidth/2, polyscope::view::windowHeight/2));
+// Ray from camera origin to {xScreen, yScreen}
+Ray::Ray(Camera* camera, float xScreen, float yScreen) : camera(camera) {
+	cameraOrig = camera->getWorldPosition();
+	cameraDir = camera->getWorldDirection();
+
+	rayDir = glm::normalize(camera->mapScreenToWorld(glm::vec2(xScreen, yScreen)) - cameraOrig);
 }
 
-// Ray from p to q
-Ray::Ray(glm::dvec3 p, glm::dvec3 q){
-  cameraOrig  = polyscope::view::getCameraWorldPosition();
-  rayDir      = glm::normalize(q - p);
-  cameraDir   = polyscope::view::screenCoordsToWorldRay(glm::vec2(polyscope::view::windowWidth/2, polyscope::view::windowHeight/2));
+// Ray from camera origin to p
+Ray::Ray(Camera* camera, glm::vec3 p) : camera(camera) {
+	cameraOrig = camera->getWorldPosition();
+	cameraDir = camera->getWorldDirection();
+
+	rayDir = glm::normalize(p - cameraOrig);
 }
 
-// Search pointCloud for the closest point to the screen
-// within the range of searchRadius
-Ray::Hit Ray::searchNearestNeighbor(PointCloud *pointCloud, double searchRadius) {
-  // Return value
-  Hit hitInfo;
+// Process ray-marching in the direction from camera to the specified point
+// 	- pointCloud:	search target
+//	- searchRadiusOnScreen: Radius of cross section by secreen of search area
+Ray::Hit Ray::rayMarching(PointCloud* pointCloud, float searchRadiusOnScreen) {
+	Hit hit;	// Return value
 
-  const double MaxDepth = 1e5;
-  double currentDepth = MaxDepth;
-  std::vector<glm::dvec3> *verticesPtr = pointCloud->getVertices();
-  std::vector<glm::dvec3> *normalsPtr = pointCloud->getNormals();
-  for (size_t i = 0; i < verticesPtr->size(); i++) {
-    glm::dvec3 p = (*verticesPtr)[i];
-    glm::dvec3 pn = (*normalsPtr)[i];
+	float nearClip = camera->getNearClip();
+	float windowWidth = camera->getWindowWidth();
+	float screenWidth = camera->getScreenWidth();
+	float windowHeight = camera->getWindowHeight();
+	float screenHeight = camera->getScreenHeight();
 
-    // If the distance from the ray line is greater than searchRadius, then skip it.
-    double distFromRayLine = glm::length(glm::cross(p - cameraOrig, rayDir));
-    if (distFromRayLine >= searchRadius) continue;
+	std::vector<Vertex>* vertices = pointCloud->getVertices();
+	pcl::octree::OctreePointCloudSearch<pcl::PointXYZ>* octree = pointCloud->getOctree();
 
-    // If the depth is less than currenDepth, then update hitInfo
-    double depthFromCameraOrig = glm::dot(p - cameraOrig, rayDir);
-    if (depthFromCameraOrig < currentDepth) {
-      currentDepth = depthFromCameraOrig;
+	float currentDepth = 0.0f;
+	float currentStep = 0;
+	while (currentDepth < maxDepth && currentStep < maxStep) {
+		/* Current center */
+		glm::vec3 p = cameraOrig + currentDepth*rayDir;
 
-      hitInfo.hit = true;
-      hitInfo.rayDir = rayDir;
-      
-      hitInfo.index = i;
-      hitInfo.pos = p;
-      hitInfo.normal = pn;
-    } 
-  }
+		/* Search the nearest neighbor */
+		std::vector<int>		hitPointIndices;
+		std::vector<float>	hitPointDistances;
+		int hitPointCount = octree->nearestKSearch(
+			pcl::PointXYZ(p.x, p.y, p.z),
+			1,
+			hitPointIndices,
+			hitPointDistances
+		);
+		if (hitPointCount == 0) {
+			hit.hit = false;
+			return hit;
+		}
 
-  if (currentDepth == MaxDepth) {
-    hitInfo.hit = false;
-    return hitInfo;
-  }
+		/* Check if the nearest neighbor is inside the search range */
+		// hit point values
+		int hitIndex = hitPointIndices[0];
+		Vertex hitVertex = (*vertices)[hitIndex];
+		glm::vec3 hit_p = glm::vec3(hitVertex.x, hitVertex.y, hitVertex.z);
+		glm::vec3 hit_n = glm::vec3(hitVertex.nx, hitVertex.ny, hitVertex.nz);
 
-  // If the normal of the hit point does not face rayDir, then return false
-  if (hitInfo.hit && glm::dot(hitInfo.normal, rayDir) >= 0.0) {
-    hitInfo.hit = false;
-  }
-  
-  return hitInfo;
+		float hitDistance = sqrt(hitPointDistances[0]);
+		float hitDistanceToRay = glm::length(glm::cross(rayDir, hit_p - p));
+		float hitDepth = glm::dot(rayDir, hit_p - cameraOrig);
+
+		// search range
+		float searchRadius = (searchRadiusOnScreen/nearClip)*hitDepth;
+
+		// return, if the hitVertex satisfies conditions
+		if (hitDistanceToRay < searchRadius) {
+			if (glm::dot(hit_n, rayDir) < 0.0) {
+				// the normal direct to the camera origin
+				hit.hit = true;
+				hit.index = hitIndex;
+
+				hit.rayDir = rayDir;
+				hit.pos = hit_p;
+				hit.normal = hit_n;
+			} else {
+				// the normal does not direct to the camera origin
+				hit.hit = false;
+			}
+			return hit;
+		}
+
+		/* Debug */
+		// ImGui::Text("p: (%.4f, %.4f, %.4f)", p.x, p.y, p.z);
+		// ImGui::Text("index: %d", hitIndex);
+		// ImGui::Text("hit_p: (%.4f, %.4f, %.4f)", hit_p.x, hit_p.y, hit_p.z);
+		// ImGui::Text("hit_n: (%.4f, %.4f, %.4f)", hit_n.x, hit_n.y, hit_n.z);
+		// ImGui::Text("Hit Distance: 				%.4f", hitDistance);
+		// ImGui::Text("Hit Distance to Ray: %.4f", hitDistanceToRay);
+		// ImGui::Text("Hit Depth: 					%.4f", hitDepth);
+		// ImGui::Text("Search Radius:				%.4f", searchRadius);
+		// ImGui::NewLine();
+
+		/* Proceed the ray */
+		currentDepth += hitDistance;
+		currentStep++;
+	}	
+
+	// No hit
+	hit.hit = false;
+	return hit;
 }
 
-// Cast the point to the specified plane
-Ray::Hit Ray::castPointToPlane(Plane* plane) {
-  // Return value
-  Hit hitInfo;
+Ray::Hit Ray::castPointToScreen() {
+	Hit hit;	// Return value
 
-  glm::dvec3 planeOrig = plane->getOrigin();
-  glm::dvec3 planeNormal = plane->getNormal();
+  glm::vec3 screenOrigin = camera->getScreenOrigin();
+  glm::vec3 screenNormal = cameraDir;
 
   // Calculate the intersection point
-  double D = glm::dot(planeNormal, planeOrig);
-  double t = (D - glm::dot(planeNormal, cameraOrig))/glm::dot(planeNormal, rayDir);
+  float D = glm::dot(screenNormal, screenOrigin);
+  float t = (D - glm::dot(screenNormal, cameraOrig))/glm::dot(screenNormal, rayDir);
 
-  hitInfo.hit = true; // must hit
-  hitInfo.rayDir = rayDir;
+	hit.hit = true;	// must hit
+	hit.index = -1;
 
-  hitInfo.index = -1;
-  hitInfo.pos = cameraOrig + t*rayDir;
-  hitInfo.normal = planeNormal;
+	hit.rayDir = rayDir;
+	hit.pos = cameraOrig + t*rayDir;
+	hit.normal = screenNormal;
 
-  return hitInfo;
+	return hit;	
 }
