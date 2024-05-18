@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.12)
 
-project(PointCraft)
+project(PointCloudEditor)
 set(PROJECT_VERSION 1.0.0)
 
 # Maybe stop from CMAKEing in the wrong place
@@ -62,47 +62,35 @@ else()
   message( FATAL_ERROR "Unrecognized compiler [${CMAKE_CXX_COMPILER_ID}]" )
 endif()
 
-# Find PCL
+# Include directories
+include_directories(include/PointCloudEditor)
+include_directories(include/glad/include)
+include_directories(include/glm)
+include_directories(include/imgui)
+
+# Find Package
 find_package(PCL 1.10 REQUIRED)
 
-# Add polyscope
-add_subdirectory("deps/polyscope")
+# Subdirectories
+add_subdirectory(include/glad)
+add_subdirectory(include/glfw)
 
-# Create an executable
+# Executable
+set(SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src")
+set(IMGUI_DIR "${CMAKE_CURRENT_SOURCE_DIR}/include/imgui")
+file(GLOB SOURCE_FILES "${SOURCE_DIR}/*.cpp")
+file(GLOB IMGUI_SOURCE_FILES "${IMGUI_DIR}/*.cpp")
 add_executable(
-    PointCraft
-    src/main.cpp
-    src/surface.cpp
-    src/ray.cpp
-    src/plane.cpp
-    src/cluster.cpp
-    src/gui.cpp
-    src/point_cloud.cpp
-    src/sketch_tool.cpp
-    src/sketch_interpolation_tool.cpp
-    src/spray_interpolation_tool.cpp
-    src/feature_tool.cpp
-    src/scratch_tool.cpp
-    src/delete_tool.cpp
+	PointCloudEditor
+  ${SOURCE_FILES}
+  ${IMGUI_SOURCE_FILES}
 )
 
-# Include settings
-# Specify the directories to be searched for included files (headers).
-# Use libigl as libIGL in "header only" mode.
-target_include_directories(PointCraft PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/deps/libigl/include")
-target_include_directories(PointCraft PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/deps/polyscope/deps/args/")
-target_include_directories(PointCraft PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/deps/polyscope/deps/json/include")
-
-# Link settings
-# Specify the libraries to be linked to your target (executable or library)
-target_link_libraries(PointCraft polyscope ${EIGEN_LIBRAIRES} ${PCL_LIBRARIES})
-
-message(STATUS "--------------------------------------------")
-message(STATUS "Info :")
-message(STATUS "  Project Name =            ${PROJECT_NAME}")
-message(STATUS "  Version =                 ${PROJECT_VERSION}")
-message(STATUS "  CMAKE_VERSION =           ${CMAKE_VERSION}")
-message(STATUS "  CMAKE_INSTALL_PREFIX =    ${CMAKE_INSTALL_PREFIX}")
-message(STATUS "  CMAKE_INSTALL_LIBDIR =    ${CMAKE_INSTALL_LIBDIR}")
-message(STATUS "  EIGEN_VERSION =           ${EIGEN_VERSION}")
-message(STATUS "  PCL_VERSION =             ${PCL_VERSION}")
+target_link_libraries(
+  PointCloudEditor 
+  glad
+  glfw
+  ${EIGEN_LIBRAIRES}
+  ${PCL_LIBRARIES}
+)
+set_property(TARGET PointCloudEditor PROPERTY CXX_STANDARD 17)
